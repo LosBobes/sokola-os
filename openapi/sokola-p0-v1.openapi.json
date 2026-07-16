@@ -110,6 +110,183 @@
         "title": "AttendanceStatus",
         "type": "string"
       },
+      "BillingPreviewItem": {
+        "properties": {
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person_id",
+          "display_name",
+          "amount_minor"
+        ],
+        "title": "BillingPreviewItem",
+        "type": "object"
+      },
+      "BillingPreviewRequest": {
+        "properties": {
+          "amount_minor": {
+            "exclusiveMinimum": 0.0,
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "description": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "period_label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Period Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "group_id",
+          "amount_minor",
+          "description",
+          "period_label"
+        ],
+        "title": "BillingPreviewRequest",
+        "type": "object"
+      },
+      "BillingPreviewResponse": {
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BillingPreviewItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "preview_hash": {
+            "title": "Preview Hash",
+            "type": "string"
+          },
+          "total_minor": {
+            "title": "Total Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "preview_hash",
+          "currency",
+          "total_minor",
+          "items"
+        ],
+        "title": "BillingPreviewResponse",
+        "type": "object"
+      },
+      "BillingRunResponse": {
+        "properties": {
+          "charge_count": {
+            "title": "Charge Count",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "period_label": {
+            "title": "Period Label",
+            "type": "string"
+          },
+          "total_minor": {
+            "title": "Total Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "description",
+          "period_label",
+          "currency",
+          "total_minor",
+          "charge_count"
+        ],
+        "title": "BillingRunResponse",
+        "type": "object"
+      },
+      "ChargeResponse": {
+        "properties": {
+          "amount_due_minor": {
+            "title": "Amount Due Minor",
+            "type": "integer"
+          },
+          "amount_paid_minor": {
+            "title": "Amount Paid Minor",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ChargeStatus"
+          }
+        },
+        "required": [
+          "id",
+          "person_id",
+          "description",
+          "currency",
+          "amount_due_minor",
+          "amount_paid_minor",
+          "status"
+        ],
+        "title": "ChargeResponse",
+        "type": "object"
+      },
+      "ChargeStatus": {
+        "enum": [
+          "OPEN",
+          "PARTIALLY_PAID",
+          "PAID",
+          "CANCELLED"
+        ],
+        "title": "ChargeStatus",
+        "type": "string"
+      },
       "ConflictCheckResponse": {
         "properties": {
           "conflicts": {
@@ -436,6 +613,37 @@
         "title": "OrganizationType",
         "type": "string"
       },
+      "Page_ChargeResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChargeResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[ChargeResponse]",
+        "type": "object"
+      },
       "Page_GroupResponse_": {
         "properties": {
           "items": {
@@ -496,6 +704,74 @@
           "offset"
         ],
         "title": "Page[PersonSummary]",
+        "type": "object"
+      },
+      "PaymentMethod": {
+        "enum": [
+          "CASH",
+          "BANK_TRANSFER",
+          "CARD_EXTERNAL",
+          "OTHER"
+        ],
+        "title": "PaymentMethod",
+        "type": "string"
+      },
+      "PaymentRecordStatus": {
+        "enum": [
+          "RECORDED",
+          "VOIDED"
+        ],
+        "title": "PaymentRecordStatus",
+        "type": "string"
+      },
+      "PaymentResponse": {
+        "properties": {
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "charge_amount_due_minor": {
+            "title": "Charge Amount Due Minor",
+            "type": "integer"
+          },
+          "charge_amount_paid_minor": {
+            "title": "Charge Amount Paid Minor",
+            "type": "integer"
+          },
+          "charge_id": {
+            "title": "Charge Id",
+            "type": "string"
+          },
+          "charge_status": {
+            "$ref": "#/components/schemas/ChargeStatus"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "method": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PaymentRecordStatus"
+          }
+        },
+        "required": [
+          "id",
+          "charge_id",
+          "amount_minor",
+          "currency",
+          "method",
+          "status",
+          "charge_status",
+          "charge_amount_due_minor",
+          "charge_amount_paid_minor"
+        ],
+        "title": "PaymentResponse",
         "type": "object"
       },
       "PersonIdentityStatus": {
@@ -563,6 +839,44 @@
         "title": "PersonSummary",
         "type": "object"
       },
+      "PostBillingRunRequest": {
+        "properties": {
+          "amount_minor": {
+            "exclusiveMinimum": 0.0,
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "description": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "period_label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Period Label",
+            "type": "string"
+          },
+          "preview_hash": {
+            "title": "Preview Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "group_id",
+          "amount_minor",
+          "description",
+          "period_label",
+          "preview_hash"
+        ],
+        "title": "PostBillingRunRequest",
+        "type": "object"
+      },
       "ReadinessResponse": {
         "properties": {
           "database": {
@@ -587,6 +901,24 @@
           "database"
         ],
         "title": "ReadinessResponse",
+        "type": "object"
+      },
+      "RecordPaymentRequest": {
+        "properties": {
+          "amount_minor": {
+            "exclusiveMinimum": 0.0,
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "method": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          }
+        },
+        "required": [
+          "amount_minor",
+          "method"
+        ],
+        "title": "RecordPaymentRequest",
         "type": "object"
       },
       "RoleCode": {
@@ -810,6 +1142,252 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/billing/runs": {
+      "post": {
+        "operationId": "postBillingRun",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostBillingRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Preview is stale; review again."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Billing Run",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/runs/preview": {
+      "post": {
+        "operationId": "previewBillingRun",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Billing Run",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/charges": {
+      "get": {
+        "operationId": "listCharges",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "person_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Person Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ChargeResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Charges",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/charges/{charge_id}/payments": {
+      "post": {
+        "operationId": "recordPayment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "charge_id",
+            "required": true,
+            "schema": {
+              "title": "Charge Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordPaymentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Overpayment, already settled, or cancelled charge."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Payment",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
     "/groups": {
       "get": {
         "operationId": "listGroups",

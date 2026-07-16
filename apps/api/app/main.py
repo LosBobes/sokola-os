@@ -13,10 +13,12 @@ from app import __version__
 from app.common.errors import register_exception_handlers
 from app.config import Settings, get_settings
 from app.domains.attendance.router import router as attendance_router
+from app.domains.billing.router import router as billing_router
 from app.domains.groups.router import router as groups_router
 from app.domains.health.router import router as health_router
 from app.domains.identity.router import router as identity_router
 from app.domains.organization.router import router as organization_router
+from app.domains.payments.router import router as payments_router
 from app.domains.people.router import router as people_router
 from app.domains.scheduling.router import router as scheduling_router
 
@@ -53,6 +55,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(groups_router)
     app.include_router(scheduling_router)
     app.include_router(attendance_router)
+    app.include_router(billing_router)
+    app.include_router(payments_router)
 
     return app
 
