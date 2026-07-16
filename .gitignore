@@ -13,6 +13,8 @@ htmlcov/
 node_modules/
 apps/web/dist/
 apps/web/.vite/
+apps/web/cypress/screenshots/
+apps/web/cypress/videos/
 
 # Env & secrets
 .env
