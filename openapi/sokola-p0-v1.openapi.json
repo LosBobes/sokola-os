@@ -14,6 +14,123 @@
         "title": "AddGroupMemberRequest",
         "type": "object"
       },
+      "AttendanceEntry": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttendanceStatus"
+          }
+        },
+        "required": [
+          "person_id",
+          "display_name",
+          "status"
+        ],
+        "title": "AttendanceEntry",
+        "type": "object"
+      },
+      "AttendanceException": {
+        "properties": {
+          "override_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttendanceOverrideReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttendanceStatus"
+          }
+        },
+        "required": [
+          "person_id",
+          "status"
+        ],
+        "title": "AttendanceException",
+        "type": "object"
+      },
+      "AttendanceOverrideReasonCode": {
+        "enum": [
+          "LATE_ARRIVAL",
+          "EARLY_LEAVE",
+          "EXCUSED_ABSENCE",
+          "OTHER"
+        ],
+        "title": "AttendanceOverrideReasonCode",
+        "type": "string"
+      },
+      "AttendanceSheet": {
+        "description": "The roster to display. Everyone defaults to PRESENT; the trainer edits only\nexceptions. ``attendance_version`` must be echoed back on save.",
+        "properties": {
+          "attendance_version": {
+            "title": "Attendance Version",
+            "type": "integer"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "attendance_version",
+          "entries"
+        ],
+        "title": "AttendanceSheet",
+        "type": "object"
+      },
+      "AttendanceStatus": {
+        "enum": [
+          "PRESENT",
+          "ABSENT",
+          "EXCUSED",
+          "LATE"
+        ],
+        "title": "AttendanceStatus",
+        "type": "string"
+      },
+      "ConflictCheckResponse": {
+        "properties": {
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/SessionSummary"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "has_conflict": {
+            "title": "Has Conflict",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "has_conflict",
+          "conflicts"
+        ],
+        "title": "ConflictCheckResponse",
+        "type": "object"
+      },
       "ContextSummary": {
         "description": "One selectable acting context = an active role in one organization.",
         "properties": {
@@ -492,6 +609,158 @@
         ],
         "title": "RoleScopeType",
         "type": "string"
+      },
+      "SaveAttendanceRequest": {
+        "properties": {
+          "attendance_version": {
+            "minimum": 0.0,
+            "title": "Attendance Version",
+            "type": "integer"
+          },
+          "exceptions": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceException"
+            },
+            "title": "Exceptions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "attendance_version"
+        ],
+        "title": "SaveAttendanceRequest",
+        "type": "object"
+      },
+      "SaveAttendanceResponse": {
+        "properties": {
+          "absent": {
+            "title": "Absent",
+            "type": "integer"
+          },
+          "attendance_version": {
+            "title": "Attendance Version",
+            "type": "integer"
+          },
+          "excused": {
+            "title": "Excused",
+            "type": "integer"
+          },
+          "late": {
+            "title": "Late",
+            "type": "integer"
+          },
+          "present": {
+            "title": "Present",
+            "type": "integer"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "attendance_version",
+          "present",
+          "absent",
+          "excused",
+          "late"
+        ],
+        "title": "SaveAttendanceResponse",
+        "type": "object"
+      },
+      "SessionDraft": {
+        "description": "The proposed shape of a session \u2014 used for both conflict preview and create.",
+        "properties": {
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "group_id",
+          "starts_at",
+          "ends_at"
+        ],
+        "title": "SessionDraft",
+        "type": "object"
+      },
+      "SessionStatus": {
+        "enum": [
+          "SCHEDULED",
+          "CANCELLED",
+          "COMPLETED"
+        ],
+        "title": "SessionStatus",
+        "type": "string"
+      },
+      "SessionSummary": {
+        "properties": {
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "id",
+          "group_id",
+          "title",
+          "starts_at",
+          "ends_at",
+          "status"
+        ],
+        "title": "SessionSummary",
+        "type": "object"
       },
       "ValidationError": {
         "properties": {
@@ -1021,6 +1290,259 @@
         "summary": "Get Person",
         "tags": [
           "people"
+        ]
+      }
+    },
+    "/schedule/conflict-check": {
+      "post": {
+        "operationId": "checkSessionConflicts",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictCheckResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Conflict Check",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/schedule/sessions": {
+      "get": {
+        "operationId": "listSchedule",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Date To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionSummary"
+                  },
+                  "title": "Response Listschedule",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Schedule",
+        "tags": [
+          "schedule"
+        ]
+      },
+      "post": {
+        "operationId": "createSession",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Time conflict with an existing session."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Session",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/schedule/sessions/{session_id}/attendance": {
+      "get": {
+        "operationId": "getAttendanceSheet",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceSheet"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Attendance",
+        "tags": [
+          "attendance"
+        ]
+      },
+      "put": {
+        "operationId": "saveAttendance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAttendanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveAttendanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Attendance changed since it was loaded; reload."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Attendance",
+        "tags": [
+          "attendance"
         ]
       }
     }

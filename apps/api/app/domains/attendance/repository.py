@@ -1,0 +1,43 @@
+from __future__ import annotations
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session as DbSession
+
+from app.common.enums import RecordStatus
+from app.domains.attendance.models import AttendanceRecord
+from app.domains.groups.models import GroupMembership
+from app.domains.identity.models import Person
+from app.domains.scheduling.models import Session as TrainingSession
+
+
+def get_session(
+    db: DbSession, organization_id: str, session_id: str, *, for_update: bool = False
+) -> TrainingSession | None:
+    stmt = select(TrainingSession).where(
+        TrainingSession.id == session_id,
+        TrainingSession.organization_id == organization_id,
+        TrainingSession.record_status == RecordStatus.ACTIVE,
+    )
+    if for_update:
+        stmt = stmt.with_for_update()
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def list_roster(db: DbSession, group_id: str) -> list[Person]:
+    """Active members of the session's group, in display order."""
+    stmt = (
+        select(Person)
+        .join(GroupMembership, GroupMembership.person_id == Person.id)
+        .where(
+            GroupMembership.group_id == group_id,
+            GroupMembership.ended_at.is_(None),
+            Person.record_status == RecordStatus.ACTIVE,
+        )
+        .order_by(Person.display_name)
+    )
+    return list(db.execute(stmt).scalars().all())
+
+
+def records_by_person(db: DbSession, session_id: str) -> dict[str, AttendanceRecord]:
+    stmt = select(AttendanceRecord).where(AttendanceRecord.session_id == session_id)
+    return {r.person_id: r for r in db.execute(stmt).scalars().all()}
