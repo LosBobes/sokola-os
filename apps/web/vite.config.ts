@@ -7,12 +7,21 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    proxy: {
-      "/api": {
-        target: process.env.SOKOLA_API_URL ?? "http://localhost:8000",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
-      },
-    },
+    proxy: apiProxy(),
+  },
+  // `vite preview` (used in CI) needs its own proxy declaration.
+  preview: {
+    port: 5173,
+    proxy: apiProxy(),
   },
 });
+
+function apiProxy() {
+  return {
+    "/api": {
+      target: process.env.SOKOLA_API_URL ?? "http://localhost:8000",
+      changeOrigin: true,
+      rewrite: (path: string) => path.replace(/^\/api/, ""),
+    },
+  };
+}

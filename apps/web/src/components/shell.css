@@ -1,25 +1,33 @@
 .shell {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 270px 1fr;
   min-height: 100vh;
 }
 .shell__nav {
   background: var(--surface-raised);
-  border-right: 1px solid var(--border-default);
+  border-right: var(--ink-border) dashed var(--c-ink);
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 .shell__brand {
-  font-size: var(--text-lg);
+  font-family: var(--font-display);
+  font-size: 2rem;
   font-weight: 700;
-  color: var(--action-primary);
+  color: var(--accent-blue);
+  background: var(--c-yellow);
+  border: var(--ink-border) solid var(--c-ink);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sticker);
+  text-align: center;
   padding: var(--space-2);
+  transform: rotate(-2deg);
+  margin-bottom: var(--space-3);
 }
 .shell__main {
   padding: var(--space-5);
-  max-width: 960px;
+  max-width: 980px;
 }
 .navlink {
   display: flex;
@@ -27,22 +35,29 @@
   min-height: var(--target-min);
   justify-content: center;
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-hand-2);
+  border: var(--ink-border) solid transparent;
   color: var(--text-primary);
   text-decoration: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+.navlink:hover {
+  background: var(--c-paper-2);
 }
 .navlink[aria-current="page"] {
-  background: var(--action-surface);
-  color: var(--action-primary);
-  font-weight: 600;
+  background: var(--c-yellow);
+  border-color: var(--c-ink);
+  transform: rotate(-1deg);
 }
 .navlink small {
   color: var(--text-secondary);
   font-weight: 400;
+  font-family: var(--font-hand);
 }
 .context-switcher {
   margin-top: auto;
-  border-top: 1px solid var(--border-default);
+  border-top: 2.5px dashed var(--c-ink);
   padding-top: var(--space-3);
 }
 .pageheader {
@@ -54,8 +69,12 @@
   flex-wrap: wrap;
 }
 .pageheader h1 {
-  font-size: var(--text-xl);
   margin: 0;
+  background: var(--c-blue-soft);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-4);
+  transform: rotate(-1deg);
+  display: inline-block;
 }
 
 @media (max-width: 920px) {
@@ -70,9 +89,10 @@
     flex-direction: row;
     justify-content: space-around;
     border-right: none;
-    border-top: 1px solid var(--border-default);
+    border-top: var(--ink-border) dashed var(--c-ink);
     padding: var(--space-1);
     padding-bottom: env(safe-area-inset-bottom, var(--space-1));
+    background: var(--surface-raised);
     z-index: 20;
   }
   .shell__brand,

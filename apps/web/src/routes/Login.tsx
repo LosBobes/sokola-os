@@ -46,7 +46,7 @@ export function Login({ message }: { message?: string }) {
   return (
     <div style={{ maxWidth: 440, margin: "10vh auto" }}>
       <div className="card">
-        <h1 style={{ color: "var(--action-primary)" }}>SOKOLA OS</h1>
+        <h1>🐦 SOKOLA OS</h1>
         <p>Operativni sistem za sportske klubove i škole.</p>
         {message && <p className="notice notice--info">{message}</p>}
         {error ? <SystemState error={error} /> : null}

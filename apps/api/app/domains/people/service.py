@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.common.context import RequestContext
 from app.common.enums import AuditDataClass
 from app.common.errors import ConflictError, NotFoundError
 from app.common.pagination import Page, PageParams
@@ -17,6 +16,7 @@ from app.domains.people.schemas import (
 )
 from app.platform.audit.service import record_audit
 from app.platform.outbox.service import enqueue
+from app.security.context import RequestContext
 
 
 def create_provisional_person(

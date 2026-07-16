@@ -16,7 +16,6 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
-from app.common.context import RequestContext
 from app.common.enums import RecordStatus
 from app.common.errors import ForbiddenError, UnauthorizedError
 from app.config import Settings, get_settings
@@ -25,6 +24,7 @@ from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
 from app.domains.identity.models import RoleAssignment
 from app.domains.organization.models import Organization
 from app.security.auth import Principal, resolve_principal
+from app.security.context import RequestContext
 
 CONTEXT_HEADER = "x-sokola-role-assignment-id"
 

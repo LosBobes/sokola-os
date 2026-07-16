@@ -4,7 +4,6 @@ from collections import Counter
 
 from sqlalchemy.orm import Session as DbSession
 
-from app.common.context import RequestContext
 from app.common.enums import AuditDataClass
 from app.common.errors import BadRequestError, NotFoundError, VersionConflictError
 from app.domains.attendance import repository
@@ -17,6 +16,7 @@ from app.domains.attendance.schemas import (
     SaveAttendanceResponse,
 )
 from app.platform.audit.service import record_audit
+from app.security.context import RequestContext
 
 
 def get_sheet(db: DbSession, context: RequestContext, session_id: str) -> AttendanceSheet:

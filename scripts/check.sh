@@ -18,6 +18,9 @@ echo "==> ruff"
 echo "==> mypy"
 "$PY/mypy" app
 
+echo "==> architecture gate"
+"$PY/python" -m scripts.check_architecture
+
 echo "==> alembic upgrade head"
 "$PY/alembic" upgrade head
 

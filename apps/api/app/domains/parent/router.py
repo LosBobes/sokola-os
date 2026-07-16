@@ -10,12 +10,12 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.common.context import RequestContext
 from app.common.enums import RecordStatus
 from app.domains.identity.enums import RoleCode
 from app.domains.identity.models import Person
 from app.domains.people.enums import GuardianAccessStatus
 from app.domains.people.models import GuardianOrganizationAccess
+from app.security.context import RequestContext
 from app.security.deps import ContextDep, DbDep, require_roles
 
 router = APIRouter(tags=["parent"])

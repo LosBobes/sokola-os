@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import pytest
-from app.common.context import RequestContext
 from app.common.errors import ForbiddenError, UnauthorizedError
 from app.config import get_settings
 from app.domains.identity.enums import RoleCode, RoleScopeType
 from app.security.auth import DEV_PERSON_HEADER, Principal, resolve_principal
+from app.security.context import RequestContext
 from app.security.deps import CONTEXT_HEADER, get_context, require_roles
 from sqlalchemy.orm import Session
 from starlette.requests import Request
+
 from tests.factories import assign_role, make_organization, make_person
 
 

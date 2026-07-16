@@ -12,21 +12,34 @@ body,
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-hand);
   font-size: var(--text-base);
   color: var(--text-primary);
-  background: var(--surface-page);
-  line-height: 1.5;
+  background-color: var(--surface-page);
+  /* faint dotted "paper" texture */
+  background-image: radial-gradient(var(--c-yellow-soft) 1.5px, transparent 1.6px);
+  background-size: 22px 22px;
+  line-height: 1.45;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+h1 {
+  font-size: var(--text-xl);
 }
 
 a {
-  color: var(--action-primary);
+  color: var(--accent-blue);
 }
 
 :focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
-  border-radius: var(--radius-sm);
 }
 
 .skip-link {
@@ -35,11 +48,34 @@ a {
   top: var(--space-2);
   background: var(--surface-raised);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
   z-index: 100;
 }
 .skip-link:focus {
   left: var(--space-2);
+}
+
+/* --- hand-drawn ink outline, shared by boxy elements (not form inputs, which
+   can't render pseudo-elements). The ::before carries the wobble filter so the
+   element's text stays crisp. --- */
+.card,
+.btn,
+.badge,
+.notice {
+  position: relative;
+  background: var(--surface-raised);
+  border: none;
+}
+.card::before,
+.btn::before,
+.badge::before,
+.notice::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: var(--ink-border) solid var(--c-ink);
+  border-radius: var(--radius-hand);
+  filter: url(#wobble);
+  pointer-events: none;
 }
 
 button {
@@ -49,30 +85,36 @@ button {
 
 .btn {
   min-height: var(--target-min);
-  padding: 0 var(--space-4);
-  border-radius: var(--radius-md);
-  border: 1px solid transparent;
-  font-weight: 600;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-hand);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-base);
+  color: var(--text-on-action);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sticker);
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  transition: background var(--duration);
+  transition: transform var(--duration);
+}
+.btn:hover {
+  transform: translate(-1px, -1px) rotate(-1deg);
+}
+.btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--c-ink);
 }
 .btn--primary {
   background: var(--action-primary);
-  color: var(--text-on-action);
-}
-.btn--primary:hover {
-  background: var(--action-primary-hover);
 }
 .btn--secondary {
   background: var(--surface-raised);
-  color: var(--text-primary);
-  border-color: var(--border-default);
 }
 .btn:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .field {
@@ -82,6 +124,8 @@ button {
   margin-bottom: var(--space-3);
 }
 .field label {
+  font-family: var(--font-display);
+  font-weight: 700;
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
@@ -91,77 +135,98 @@ button {
   font: inherit;
   min-height: var(--target-min);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+  border: var(--ink-border) solid var(--c-ink);
+  border-radius: var(--radius-hand-2);
   background: var(--surface-raised);
   color: var(--text-primary);
 }
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  background: var(--c-yellow-soft);
+}
 .field .field-error {
-  color: var(--tone-error-fg);
-  font-size: var(--text-sm);
+  color: var(--accent-red);
+  font-weight: 700;
 }
 
 .card {
-  background: var(--surface-raised);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
   padding: var(--space-5);
-  box-shadow: var(--elevation-1);
+  border-radius: var(--radius-hand);
+  box-shadow: var(--shadow-sticker);
+  margin-bottom: var(--space-4);
+}
+.card:nth-of-type(even) {
+  transform: rotate(-0.5deg);
+}
+.card:nth-of-type(odd) {
+  transform: rotate(0.4deg);
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 2px var(--space-2);
-  border-radius: 999px;
-  font-size: var(--text-sm);
-  font-weight: 600;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-weight: 700;
+  transform: rotate(-2deg);
+}
+.badge::before {
+  border-radius: var(--radius-pill);
 }
 .badge--success {
   background: var(--tone-success-bg);
-  color: var(--tone-success-fg);
 }
 .badge--warning {
   background: var(--tone-warning-bg);
-  color: var(--tone-warning-fg);
 }
 .badge--error {
   background: var(--tone-error-bg);
-  color: var(--tone-error-fg);
 }
 .badge--info {
   background: var(--tone-info-bg);
-  color: var(--tone-info-fg);
 }
 
 .notice {
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-hand-2);
   margin: var(--space-3) 0;
+  font-weight: 700;
 }
 .notice--error {
   background: var(--tone-error-bg);
-  color: var(--tone-error-fg);
 }
 .notice--info {
   background: var(--tone-info-bg);
-  color: var(--tone-info-fg);
 }
 .notice--warning {
   background: var(--tone-warning-bg);
-  color: var(--tone-warning-fg);
 }
 
 table.data {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 table.data th,
 table.data td {
   text-align: left;
   padding: var(--space-3);
-  border-bottom: 1px solid var(--border-default);
+  border-bottom: 2.5px dashed var(--c-ink);
+}
+table.data th {
+  font-family: var(--font-display);
+  background: var(--c-yellow-soft);
+}
+
+dialog.card {
+  border: none;
+  max-width: 480px;
+}
+dialog::backdrop {
+  background: rgba(32, 32, 28, 0.35);
 }
 
 .visually-hidden {

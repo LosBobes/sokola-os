@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.common.context import RequestContext
 from app.common.enums import AuditDataClass
 from app.common.errors import ConflictError, ForbiddenError, NotFoundError
 from app.domains.events import repository
@@ -21,6 +20,7 @@ from app.domains.events.schemas import (
 from app.platform.audit.service import record_audit
 from app.platform.idempotency import service as idempotency
 from app.platform.outbox.service import enqueue
+from app.security.context import RequestContext
 
 
 def create_event(db: Session, context: RequestContext, req: CreateEventRequest) -> EventResponse:

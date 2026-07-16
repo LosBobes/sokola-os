@@ -6,7 +6,6 @@ import json
 
 from sqlalchemy.orm import Session
 
-from app.common.context import RequestContext
 from app.common.enums import AuditDataClass
 from app.common.errors import ConflictError, NotFoundError
 from app.domains.communications import repository
@@ -21,6 +20,7 @@ from app.domains.communications.schemas import (
 from app.platform.audit.service import record_audit
 from app.platform.idempotency import service as idempotency
 from app.platform.outbox.service import enqueue
+from app.security.context import RequestContext
 
 
 def _resolve_recipients(

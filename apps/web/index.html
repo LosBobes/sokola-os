@@ -4,8 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SOKOLA OS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Patrick+Hand&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
+    <!-- Hand-drawn edge filters: feTurbulence + feDisplacementMap wobble the
+         ink borders (applied to pseudo-elements so text stays crisp). -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <filter id="wobble">
+          <feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="4" />
+        </filter>
+        <filter id="wobble-strong">
+          <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="6" />
+        </filter>
+      </defs>
+    </svg>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

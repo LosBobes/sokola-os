@@ -4,7 +4,6 @@ import datetime as dt
 
 from sqlalchemy.orm import Session
 
-from app.common.context import RequestContext
 from app.common.enums import AuditDataClass
 from app.common.errors import ConflictError, NotFoundError
 from app.common.pagination import Page, PageParams
@@ -17,6 +16,7 @@ from app.domains.groups.schemas import (
     GroupResponse,
 )
 from app.platform.audit.service import record_audit
+from app.security.context import RequestContext
 
 
 def create_group(db: Session, context: RequestContext, req: CreateGroupRequest) -> GroupResponse:

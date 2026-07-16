@@ -4,7 +4,6 @@ import datetime as dt
 
 from sqlalchemy.orm import Session as DbSession
 
-from app.common.context import RequestContext
 from app.common.enums import AuditDataClass
 from app.common.errors import ConflictError, NotFoundError
 from app.domains.scheduling import repository
@@ -17,6 +16,7 @@ from app.domains.scheduling.schemas import (
 from app.platform.audit.service import record_audit
 from app.platform.idempotency import service as idempotency
 from app.platform.outbox.service import enqueue
+from app.security.context import RequestContext
 
 
 def check_conflicts(
