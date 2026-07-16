@@ -884,6 +884,17 @@
             "title": "Name",
             "type": "string"
           },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
           "timezone": {
             "title": "Timezone",
             "type": "string"
@@ -895,6 +906,7 @@
         "required": [
           "id",
           "name",
+          "slug",
           "type",
           "timezone"
         ],
@@ -1486,6 +1498,30 @@
           "status"
         ],
         "title": "SessionSummary",
+        "type": "object"
+      },
+      "TenantPublic": {
+        "description": "Public tenant discovery result \u2014 the minimum needed to route a login to\nthe right school. Reveals no member data.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "organization_id",
+          "name",
+          "slug"
+        ],
+        "title": "TenantPublic",
         "type": "object"
       },
       "ValidationError": {
@@ -2874,6 +2910,49 @@
         "summary": "Save Attendance",
         "tags": [
           "attendance"
+        ]
+      }
+    },
+    "/tenants/{slug}": {
+      "get": {
+        "description": "Public tenant discovery: map a school code to the tenant to log in to.",
+        "operationId": "lookupTenant",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lookup Tenant",
+        "tags": [
+          "organizations"
         ]
       }
     }

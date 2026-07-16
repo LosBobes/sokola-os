@@ -130,20 +130,37 @@ button {
   color: var(--text-secondary);
 }
 .field input,
-.field select,
-.field textarea {
+.field textarea,
+select {
   font: inherit;
   min-height: var(--target-min);
   padding: var(--space-2) var(--space-3);
   border: var(--ink-border) solid var(--c-ink);
   border-radius: var(--radius-hand-2);
-  background: var(--surface-raised);
+  background-color: var(--surface-raised);
   color: var(--text-primary);
 }
 .field input:focus,
-.field select:focus,
-.field textarea:focus {
-  background: var(--c-yellow-soft);
+.field textarea:focus,
+select:focus {
+  background-color: var(--c-yellow-soft);
+}
+
+/* Native dropdowns: hide the OS chrome and paint a hand-drawn caret so every
+   select matches the crayon theme (the popup list itself is OS-rendered). */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  font-family: var(--font-hand);
+  padding-right: calc(var(--space-6) + var(--space-3));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M4 8 Q7 10 11 14 Q15 10 18 8' fill='none' stroke='%2320201c' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  background-size: 20px 20px;
+}
+select:focus {
+  transform: rotate(-0.6deg);
 }
 .field .field-error {
   color: var(--accent-red);

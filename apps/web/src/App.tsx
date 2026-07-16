@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { useSession } from "./auth/session";
 import { ProductShell } from "./components/shell";
 import { LoadingState } from "./components/ui";
-import { Login } from "./routes/Login";
+import { Entry } from "./routes/Entry";
 import { RoleHome } from "./routes/RoleHome";
 import { PeoplePage } from "./routes/manager/People";
 import { SchedulePage } from "./routes/manager/Schedule";
@@ -15,12 +15,10 @@ export function App() {
   const { me, activeContext, loading } = useSession();
 
   if (loading) return <LoadingState label="Učitavanje sesije…" />;
-  if (!me) return <Login />;
+  if (!me) return <Entry />;
   if (!activeContext)
     return (
-      <Login
-        message="Vaš nalog nema aktivnu ulogu ni u jednoj školi. Osnujte školu da biste počeli."
-      />
+      <Entry initialMessage="Vaš nalog nema aktivnu ulogu ni u jednoj školi. Osnujte školu ili se prijavite kodom škole." />
     );
 
   return (

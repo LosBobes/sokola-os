@@ -16,5 +16,15 @@ class OrganizationResponse(BaseModel):
 
     id: str
     name: str
+    slug: str | None
     type: OrganizationType
     timezone: str
+
+
+class TenantPublic(BaseModel):
+    """Public tenant discovery result — the minimum needed to route a login to
+    the right school. Reveals no member data."""
+
+    organization_id: str
+    name: str
+    slug: str

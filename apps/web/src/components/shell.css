@@ -30,25 +30,44 @@
   max-width: 980px;
 }
 .navlink {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: var(--target-min);
   justify-content: center;
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-hand-2);
-  border: var(--ink-border) solid transparent;
   color: var(--text-primary);
   text-decoration: none;
   font-family: var(--font-display);
   font-weight: 700;
 }
-.navlink:hover {
+/* Hand-drawn hover/active: the filled + outlined pseudo-element carries the
+   wobble filter and sits behind the text, so both the fill edge and the ink
+   border are squiggly while the label stays crisp. */
+.navlink::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: var(--ink-border) solid transparent;
+  border-radius: var(--radius-hand-2);
+  filter: url(#wobble);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration);
+}
+.navlink:hover::before {
+  opacity: 1;
   background: var(--c-paper-2);
+  border-color: var(--c-ink);
 }
 .navlink[aria-current="page"] {
+  transform: rotate(-1deg);
+}
+.navlink[aria-current="page"]::before {
+  opacity: 1;
   background: var(--c-yellow);
   border-color: var(--c-ink);
-  transform: rotate(-1deg);
 }
 .navlink small {
   color: var(--text-secondary);

@@ -3,10 +3,20 @@ from __future__ import annotations
 from fastapi import APIRouter, status
 
 from app.domains.organization import service
-from app.domains.organization.schemas import CreateOrganizationRequest, OrganizationResponse
+from app.domains.organization.schemas import (
+    CreateOrganizationRequest,
+    OrganizationResponse,
+    TenantPublic,
+)
 from app.security.deps import ContextDep, DbDep, PrincipalDep
 
 router = APIRouter(tags=["organizations"])
+
+
+@router.get("/tenants/{slug}", response_model=TenantPublic, operation_id="lookupTenant")
+def lookup_tenant(slug: str, db: DbDep) -> TenantPublic:
+    """Public tenant discovery: map a school code to the tenant to log in to."""
+    return service.lookup_tenant(db, slug)
 
 
 @router.post(

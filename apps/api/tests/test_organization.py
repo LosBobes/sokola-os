@@ -34,3 +34,20 @@ def test_get_current_organization_uses_context(client: TestClient, db: Session) 
     resp = client.get("/organizations/current", headers=actor.headers)
     assert resp.status_code == 200
     assert resp.json()["id"] == actor.organization.id
+
+
+def test_tenant_lookup_by_slug(client: TestClient, db: Session) -> None:
+    person = make_person(db, given="Osnivač")
+    created = client.post(
+        "/organizations",
+        headers={DEV_PERSON_HEADER: person.id},
+        json={"name": "Plesni Studio Ritam", "type": "DANCE_SCHOOL"},
+    ).json()
+    assert created["slug"]
+
+    # Public discovery resolves the code to the tenant (no auth required).
+    found = client.get(f"/tenants/{created['slug']}")
+    assert found.status_code == 200
+    assert found.json()["organization_id"] == created["id"]
+
+    assert client.get("/tenants/ne-postoji").status_code == 404

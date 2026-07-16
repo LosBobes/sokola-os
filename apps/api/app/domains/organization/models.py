@@ -17,6 +17,8 @@ class Organization(Base, TimestampMixin, RecordStatusMixin):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("org"))
     name: Mapped[str] = mapped_column(String(200), nullable=False)
+    # Tenant discovery code used at login (unique). Nullable for legacy rows.
+    slug: Mapped[str | None] = mapped_column(String(80), unique=True, nullable=True)
     type: Mapped[OrganizationType] = mapped_column(
         enum_type(OrganizationType), nullable=False, default=OrganizationType.OTHER
     )

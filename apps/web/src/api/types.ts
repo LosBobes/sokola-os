@@ -25,8 +25,15 @@ export interface Me {
 export interface Organization {
   id: string;
   name: string;
+  slug: string | null;
   type: string;
   timezone: string;
+}
+
+export interface TenantPublic {
+  organization_id: string;
+  name: string;
+  slug: string;
 }
 
 export interface Page<T> {

@@ -426,6 +426,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tenants/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lookup Tenant
+         * @description Public tenant discovery: map a school code to the tenant to log in to.
+         */
+        get: operations["lookupTenant"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -769,6 +789,8 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            /** Slug */
+            slug: string | null;
             /** Timezone */
             timezone: string;
             type: components["schemas"]["OrganizationType"];
@@ -1004,6 +1026,19 @@ export interface components {
             status: components["schemas"]["SessionStatus"];
             /** Title */
             title: string | null;
+        };
+        /**
+         * TenantPublic
+         * @description Public tenant discovery result — the minimum needed to route a login to
+         *     the right school. Reveals no member data.
+         */
+        TenantPublic: {
+            /** Name */
+            name: string;
+            /** Organization Id */
+            organization_id: string;
+            /** Slug */
+            slug: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -1971,6 +2006,37 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lookupTenant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantPublic"];
+                };
             };
             /** @description Validation Error */
             422: {
