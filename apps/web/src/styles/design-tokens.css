@@ -1,0 +1,96 @@
+/*
+ * Semantic design system. Brand/neutral primitives are separated from semantic
+ * roles; product components consume ONLY the semantic aliases below (never raw
+ * primitives, never hex values in TSX).
+ */
+:root {
+  /* --- primitives (never used directly by components) --- */
+  --c-brand-600: #1f6f4a;
+  --c-brand-500: #2a8b5e;
+  --c-brand-050: #e7f3ec;
+  --c-neutral-000: #ffffff;
+  --c-neutral-050: #f6f7f8;
+  --c-neutral-100: #eceef0;
+  --c-neutral-200: #d9dde1;
+  --c-neutral-400: #9aa3ab;
+  --c-neutral-600: #5b656e;
+  --c-neutral-800: #262c31;
+  --c-neutral-900: #14181b;
+  --c-red-600: #b3261e;
+  --c-red-050: #fbe9e8;
+  --c-amber-600: #8a5a00;
+  --c-amber-050: #fbf1de;
+  --c-green-600: #1f6f4a;
+  --c-green-050: #e7f3ec;
+  --c-blue-600: #1b5fa8;
+  --c-blue-050: #e6eefa;
+
+  /* --- semantic roles --- */
+  --surface-page: var(--c-neutral-050);
+  --surface-raised: var(--c-neutral-000);
+  --surface-sunken: var(--c-neutral-100);
+  --border-default: var(--c-neutral-200);
+  --border-strong: var(--c-neutral-400);
+  --text-primary: var(--c-neutral-900);
+  --text-secondary: var(--c-neutral-600);
+  --text-on-action: var(--c-neutral-000);
+
+  --action-primary: var(--c-brand-600);
+  --action-primary-hover: var(--c-brand-500);
+  --action-surface: var(--c-brand-050);
+
+  --tone-success-fg: var(--c-green-600);
+  --tone-success-bg: var(--c-green-050);
+  --tone-warning-fg: var(--c-amber-600);
+  --tone-warning-bg: var(--c-amber-050);
+  --tone-error-fg: var(--c-red-600);
+  --tone-error-bg: var(--c-red-050);
+  --tone-info-fg: var(--c-blue-600);
+  --tone-info-bg: var(--c-blue-050);
+
+  --focus-ring: 0 0 0 3px rgba(31, 111, 74, 0.4);
+
+  /* spacing / type / radius / elevation */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.6rem;
+  --elevation-1: 0 1px 2px rgba(20, 24, 27, 0.08);
+  --elevation-2: 0 4px 16px rgba(20, 24, 27, 0.12);
+  --target-min: 44px;
+  --duration: 160ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-page: var(--c-neutral-900);
+    --surface-raised: var(--c-neutral-800);
+    --surface-sunken: #1c2226;
+    --border-default: #333b41;
+    --border-strong: var(--c-neutral-600);
+    --text-primary: #eef1f3;
+    --text-secondary: #aab3ba;
+    --action-primary: var(--c-brand-500);
+    --action-surface: #12352a;
+    --tone-success-bg: #12352a;
+    --tone-warning-bg: #3a2c10;
+    --tone-error-bg: #3a1512;
+    --tone-info-bg: #10233c;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration: 0ms;
+  }
+}

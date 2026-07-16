@@ -384,6 +384,24 @@
         "title": "ChargeStatus",
         "type": "string"
       },
+      "ChildSummary": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person_id",
+          "display_name"
+        ],
+        "title": "ChildSummary",
+        "type": "object"
+      },
       "ConflictCheckResponse": {
         "properties": {
           "conflicts": {
@@ -447,6 +465,28 @@
           "scope_ref_id"
         ],
         "title": "ContextSummary",
+        "type": "object"
+      },
+      "CreateDevIdentityRequest": {
+        "properties": {
+          "family_name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Family Name",
+            "type": "string"
+          },
+          "given_name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Given Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "given_name",
+          "family_name"
+        ],
+        "title": "CreateDevIdentityRequest",
         "type": "object"
       },
       "CreateEventRequest": {
@@ -598,6 +638,24 @@
           "family_name"
         ],
         "title": "CreatePersonRequest",
+        "type": "object"
+      },
+      "DevIdentityResponse": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person_id",
+          "display_name"
+        ],
+        "title": "DevIdentityResponse",
         "type": "object"
       },
       "EventCapacityMode": {
@@ -2250,6 +2308,47 @@
         ]
       }
     },
+    "/internal/dev/identities": {
+      "post": {
+        "operationId": "createDevIdentity",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDevIdentityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DevIdentityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Dev Identity",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/me": {
       "get": {
         "description": "The authenticated person and the contexts they may act in. Called before a\ncontext is chosen, so it requires authentication but no active context.",
@@ -2357,6 +2456,31 @@
         "summary": "Get Current Organization",
         "tags": [
           "organizations"
+        ]
+      }
+    },
+    "/parent/children": {
+      "get": {
+        "operationId": "listMyChildren",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ChildSummary"
+                  },
+                  "title": "Response Listmychildren",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List My Children",
+        "tags": [
+          "parent"
         ]
       }
     },
