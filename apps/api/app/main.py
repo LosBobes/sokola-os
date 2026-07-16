@@ -13,6 +13,7 @@ from app import __version__
 from app.common.errors import register_exception_handlers
 from app.config import Settings, get_settings
 from app.domains.health.router import router as health_router
+from app.domains.identity.router import router as identity_router
 
 API_TITLE = "SOKOLA OS P0 API"
 
@@ -41,6 +42,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_exception_handlers(app)
 
     app.include_router(health_router)
+    app.include_router(identity_router)
 
     return app
 

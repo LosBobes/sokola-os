@@ -1,6 +1,50 @@
 {
   "components": {
     "schemas": {
+      "ContextSummary": {
+        "description": "One selectable acting context = an active role in one organization.",
+        "properties": {
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "organization_name": {
+            "title": "Organization Name",
+            "type": "string"
+          },
+          "role_assignment_id": {
+            "title": "Role Assignment Id",
+            "type": "string"
+          },
+          "role_code": {
+            "$ref": "#/components/schemas/RoleCode"
+          },
+          "scope_ref_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Ref Id"
+          },
+          "scope_type": {
+            "$ref": "#/components/schemas/RoleScopeType"
+          }
+        },
+        "required": [
+          "role_assignment_id",
+          "organization_id",
+          "organization_name",
+          "role_code",
+          "scope_type",
+          "scope_ref_id"
+        ],
+        "title": "ContextSummary",
+        "type": "object"
+      },
       "LivenessResponse": {
         "properties": {
           "status": {
@@ -19,6 +63,47 @@
         ],
         "title": "LivenessResponse",
         "type": "object"
+      },
+      "MeResponse": {
+        "properties": {
+          "contexts": {
+            "items": {
+              "$ref": "#/components/schemas/ContextSummary"
+            },
+            "title": "Contexts",
+            "type": "array"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "identity_status": {
+            "$ref": "#/components/schemas/PersonIdentityStatus"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person_id",
+          "display_name",
+          "identity_status",
+          "contexts"
+        ],
+        "title": "MeResponse",
+        "type": "object"
+      },
+      "PersonIdentityStatus": {
+        "enum": [
+          "PROVISIONAL",
+          "CLAIMED",
+          "VERIFIED",
+          "MERGED",
+          "ARCHIVED"
+        ],
+        "title": "PersonIdentityStatus",
+        "type": "string"
       },
       "ReadinessResponse": {
         "properties": {
@@ -45,6 +130,27 @@
         ],
         "title": "ReadinessResponse",
         "type": "object"
+      },
+      "RoleCode": {
+        "enum": [
+          "OWNER",
+          "MANAGER",
+          "ADMIN",
+          "TRAINER",
+          "PARENT",
+          "STUDENT"
+        ],
+        "title": "RoleCode",
+        "type": "string"
+      },
+      "RoleScopeType": {
+        "enum": [
+          "ORGANIZATION",
+          "BRANCH",
+          "GROUP"
+        ],
+        "title": "RoleScopeType",
+        "type": "string"
       }
     }
   },
@@ -93,6 +199,53 @@
         "summary": "Readiness",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/me": {
+      "get": {
+        "description": "The authenticated person and the contexts they may act in. Called before a\ncontext is chosen, so it requires authentication but no active context.",
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Me",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/contexts": {
+      "get": {
+        "operationId": "listMyContexts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ContextSummary"
+                  },
+                  "title": "Response Listmycontexts",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List My Contexts",
+        "tags": [
+          "me"
         ]
       }
     }
