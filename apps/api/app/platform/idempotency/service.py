@@ -36,7 +36,8 @@ def hash_params(params: dict[str, Any]) -> str:
 @dataclass
 class Guard:
     record: IdempotencyRecord
-    replay: dict[str, Any] | None  # {"status": int, "body": Any} when replaying
+    # {"status": int, "body": <object or array>} when replaying, else None.
+    replay: dict[str, Any] | None
 
 
 def begin(
@@ -84,9 +85,7 @@ def begin(
     return Guard(record=record, replay=None)
 
 
-def complete(
-    session: Session, guard: Guard, *, status: int, body: dict[str, Any] | None
-) -> None:
+def complete(session: Session, guard: Guard, *, status: int, body: Any) -> None:
     guard.record.status = IdempotencyStatus.COMPLETED
     guard.record.response_status = status
     guard.record.response_body = body

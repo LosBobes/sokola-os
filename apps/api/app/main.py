@@ -14,6 +14,8 @@ from app.common.errors import register_exception_handlers
 from app.config import Settings, get_settings
 from app.domains.attendance.router import router as attendance_router
 from app.domains.billing.router import router as billing_router
+from app.domains.communications.router import router as communications_router
+from app.domains.events.router import router as events_router
 from app.domains.groups.router import router as groups_router
 from app.domains.health.router import router as health_router
 from app.domains.identity.router import router as identity_router
@@ -57,6 +59,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(attendance_router)
     app.include_router(billing_router)
     app.include_router(payments_router)
+    app.include_router(events_router)
+    app.include_router(communications_router)
 
     return app
 

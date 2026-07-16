@@ -37,4 +37,5 @@ class IdempotencyRecord(Base, TimestampMixin):
         enum_type(IdempotencyStatus), nullable=False, default=IdempotencyStatus.IN_PROGRESS
     )
     response_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    response_body: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    # A JSON response body — may be an object or an array.
+    response_body: Mapped[Any | None] = mapped_column(JSONB, nullable=True)

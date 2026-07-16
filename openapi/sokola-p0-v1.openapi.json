@@ -14,6 +14,103 @@
         "title": "AddGroupMemberRequest",
         "type": "object"
       },
+      "AnnouncementDraft": {
+        "properties": {
+          "body": {
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "target_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Group Id"
+          },
+          "target_type": {
+            "$ref": "#/components/schemas/AnnouncementTargetType"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "body",
+          "target_type"
+        ],
+        "title": "AnnouncementDraft",
+        "type": "object"
+      },
+      "AnnouncementPreviewResponse": {
+        "properties": {
+          "recipient_count": {
+            "title": "Recipient Count",
+            "type": "integer"
+          },
+          "snapshot_hash": {
+            "title": "Snapshot Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipient_count",
+          "snapshot_hash"
+        ],
+        "title": "AnnouncementPreviewResponse",
+        "type": "object"
+      },
+      "AnnouncementResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "recipient_count": {
+            "title": "Recipient Count",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AnnouncementStatus"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status",
+          "recipient_count"
+        ],
+        "title": "AnnouncementResponse",
+        "type": "object"
+      },
+      "AnnouncementStatus": {
+        "enum": [
+          "DRAFT",
+          "PUBLISHED"
+        ],
+        "title": "AnnouncementStatus",
+        "type": "string"
+      },
+      "AnnouncementTargetType": {
+        "enum": [
+          "ORGANIZATION",
+          "GROUP"
+        ],
+        "title": "AnnouncementTargetType",
+        "type": "string"
+      },
       "AttendanceEntry": {
         "properties": {
           "display_name": {
@@ -352,6 +449,63 @@
         "title": "ContextSummary",
         "type": "object"
       },
+      "CreateEventRequest": {
+        "properties": {
+          "capacity": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity"
+          },
+          "capacity_mode": {
+            "$ref": "#/components/schemas/EventCapacityMode",
+            "default": "UNLIMITED"
+          },
+          "category": {
+            "$ref": "#/components/schemas/EventCategory",
+            "default": "INTERNAL"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/EventType",
+            "default": "OTHER"
+          }
+        },
+        "required": [
+          "title",
+          "starts_at"
+        ],
+        "title": "CreateEventRequest",
+        "type": "object"
+      },
       "CreateGroupRequest": {
         "properties": {
           "capacity": {
@@ -445,6 +599,95 @@
         ],
         "title": "CreatePersonRequest",
         "type": "object"
+      },
+      "EventCapacityMode": {
+        "enum": [
+          "UNLIMITED",
+          "LIMITED"
+        ],
+        "title": "EventCapacityMode",
+        "type": "string"
+      },
+      "EventCategory": {
+        "enum": [
+          "INTERNAL",
+          "EXTERNAL"
+        ],
+        "title": "EventCategory",
+        "type": "string"
+      },
+      "EventResponse": {
+        "properties": {
+          "capacity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity"
+          },
+          "capacity_mode": {
+            "$ref": "#/components/schemas/EventCapacityMode"
+          },
+          "category": {
+            "$ref": "#/components/schemas/EventCategory"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EventStatus"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/EventType"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "type",
+          "category",
+          "status",
+          "starts_at",
+          "capacity_mode",
+          "capacity"
+        ],
+        "title": "EventResponse",
+        "type": "object"
+      },
+      "EventStatus": {
+        "enum": [
+          "DRAFT",
+          "PUBLISHED",
+          "CANCELLED",
+          "COMPLETED"
+        ],
+        "title": "EventStatus",
+        "type": "string"
+      },
+      "EventType": {
+        "enum": [
+          "TRAINING_CAMP",
+          "COMPETITION",
+          "WORKSHOP",
+          "SOCIAL",
+          "OTHER"
+        ],
+        "title": "EventType",
+        "type": "string"
       },
       "GroupCapacityMode": {
         "enum": [
@@ -877,6 +1120,47 @@
         "title": "PostBillingRunRequest",
         "type": "object"
       },
+      "PublishAnnouncementRequest": {
+        "properties": {
+          "body": {
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "snapshot_hash": {
+            "title": "Snapshot Hash",
+            "type": "string"
+          },
+          "target_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Group Id"
+          },
+          "target_type": {
+            "$ref": "#/components/schemas/AnnouncementTargetType"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "body",
+          "target_type",
+          "snapshot_hash"
+        ],
+        "title": "PublishAnnouncementRequest",
+        "type": "object"
+      },
       "ReadinessResponse": {
         "properties": {
           "database": {
@@ -920,6 +1204,58 @@
         ],
         "title": "RecordPaymentRequest",
         "type": "object"
+      },
+      "RegisterChildrenRequest": {
+        "properties": {
+          "child_person_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Child Person Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "child_person_ids"
+        ],
+        "title": "RegisterChildrenRequest",
+        "type": "object"
+      },
+      "RegistrationResponse": {
+        "properties": {
+          "child_person_id": {
+            "title": "Child Person Id",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "registration_id": {
+            "title": "Registration Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RegistrationStatus"
+          }
+        },
+        "required": [
+          "registration_id",
+          "child_person_id",
+          "display_name",
+          "status"
+        ],
+        "title": "RegistrationResponse",
+        "type": "object"
+      },
+      "RegistrationStatus": {
+        "enum": [
+          "REGISTERED",
+          "CANCELLED"
+        ],
+        "title": "RegistrationStatus",
+        "type": "string"
       },
       "RoleCode": {
         "enum": [
@@ -1385,6 +1721,299 @@
         "summary": "Record Payment",
         "tags": [
           "payments"
+        ]
+      }
+    },
+    "/communications/announcements": {
+      "post": {
+        "operationId": "publishAnnouncement",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishAnnouncementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnouncementResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Recipient snapshot changed; review again."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Publish Announcement",
+        "tags": [
+          "communications"
+        ]
+      }
+    },
+    "/communications/announcements/preview": {
+      "post": {
+        "operationId": "previewAnnouncement",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnouncementDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnouncementPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Announcement",
+        "tags": [
+          "communications"
+        ]
+      }
+    },
+    "/events": {
+      "get": {
+        "operationId": "listEvents",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventResponse"
+                  },
+                  "title": "Response Listevents",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Events",
+        "tags": [
+          "events"
+        ]
+      },
+      "post": {
+        "operationId": "createEvent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/events/{event_id}/registrations": {
+      "post": {
+        "operationId": "registerChildren",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterChildrenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RegistrationResponse"
+                  },
+                  "title": "Response Registerchildren",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Event full or registration closed."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Children",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/events/{event_id}/registrations/{registration_id}/cancel": {
+      "post": {
+        "operationId": "cancelRegistration",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "registration_id",
+            "required": true,
+            "schema": {
+              "title": "Registration Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Registration",
+        "tags": [
+          "events"
         ]
       }
     },

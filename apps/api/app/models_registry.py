@@ -12,6 +12,8 @@ from app.common.base import Base  # noqa: F401
 # Base.metadata. Appended increment by increment.
 from app.domains.attendance import models as _attendance_models  # noqa: F401
 from app.domains.billing import models as _billing_models  # noqa: F401
+from app.domains.communications import models as _communications_models  # noqa: F401
+from app.domains.events import models as _events_models  # noqa: F401
 from app.domains.groups import models as _groups_models  # noqa: F401
 from app.domains.identity import models as _identity_models  # noqa: F401
 from app.domains.organization import models as _organization_models  # noqa: F401

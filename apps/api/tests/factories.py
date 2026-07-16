@@ -9,6 +9,8 @@ from app.domains.identity.enums import RoleCode
 from app.domains.identity.models import Person, RoleAssignment
 from app.domains.organization.enums import OrganizationType
 from app.domains.organization.models import Organization, OrganizationMembership
+from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
+from app.domains.people.models import GuardianOrganizationAccess, GuardianRelationship
 from app.security.auth import DEV_PERSON_HEADER
 from app.security.deps import CONTEXT_HEADER
 from sqlalchemy.orm import Session
@@ -75,3 +77,38 @@ def bootstrap_actor(
     add_membership(db, person=person, organization=org)
     assignment = assign_role(db, person=person, organization=org, role=role)
     return Actor(person=person, organization=org, assignment=assignment)
+
+
+def add_actor(
+    db: Session, *, organization: Organization, role: RoleCode, given: str = "Osoba"
+) -> Actor:
+    """Another actor in an EXISTING organization (same tenant as another actor)."""
+    person = make_person(db, given=given, family="X")
+    add_membership(db, person=person, organization=organization)
+    assignment = assign_role(db, person=person, organization=organization, role=role)
+    return Actor(person=person, organization=organization, assignment=assignment)
+
+
+def make_child_with_guardian(
+    db: Session, *, organization: Organization, guardian: Person, given: str = "Dete"
+) -> Person:
+    """A child who is an org member and to whom ``guardian`` has active access."""
+    child = make_person(db, given=given, family="D")
+    add_membership(db, person=child, organization=organization)
+    db.add(
+        GuardianRelationship(
+            guardian_person_id=guardian.id,
+            child_person_id=child.id,
+            relationship_type=GuardianRelationshipType.PARENT,
+        )
+    )
+    db.add(
+        GuardianOrganizationAccess(
+            organization_id=organization.id,
+            guardian_person_id=guardian.id,
+            child_person_id=child.id,
+            status=GuardianAccessStatus.ACTIVE,
+        )
+    )
+    db.commit()
+    return child
