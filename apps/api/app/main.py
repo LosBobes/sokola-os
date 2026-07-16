@@ -12,8 +12,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import __version__
 from app.common.errors import register_exception_handlers
 from app.config import Settings, get_settings
+from app.domains.groups.router import router as groups_router
 from app.domains.health.router import router as health_router
 from app.domains.identity.router import router as identity_router
+from app.domains.organization.router import router as organization_router
+from app.domains.people.router import router as people_router
 
 API_TITLE = "SOKOLA OS P0 API"
 
@@ -43,6 +46,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(identity_router)
+    app.include_router(organization_router)
+    app.include_router(people_router)
+    app.include_router(groups_router)
 
     return app
 
