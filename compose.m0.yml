@@ -1,0 +1,48 @@
+# M0 local topology: database + API + outbox worker.
+# The web app is added as apps/web is built out.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sokola
+      POSTGRES_PASSWORD: sokola
+      POSTGRES_DB: sokola
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sokola"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - sokola_pg:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      SOKOLA_ENVIRONMENT: local
+      SOKOLA_DATABASE_URL: postgresql+psycopg://sokola:sokola@db:5432/sokola
+      SOKOLA_ALLOW_INSECURE_DEV_AUTH: "true"
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./apps/api
+    environment:
+      SOKOLA_ENVIRONMENT: local
+      SOKOLA_DATABASE_URL: postgresql+psycopg://sokola:sokola@db:5432/sokola
+    command: python -m app.worker
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  sokola_pg:

@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: API — lint · types · migrations · tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sokola
+          POSTGRES_PASSWORD: sokola
+          POSTGRES_DB: sokola
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sokola"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      SOKOLA_ENVIRONMENT: test
+      SOKOLA_ALLOW_INSECURE_DEV_AUTH: "true"
+      SOKOLA_DATABASE_URL: postgresql+psycopg://sokola:sokola@localhost:5432/sokola
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/api/pyproject.toml
+
+      - name: Install dependencies
+        run: pip install -e '.[dev]'
+
+      - name: Ruff (lint)
+        run: ruff check app tests
+
+      - name: Mypy (types)
+        run: mypy app
+
+      - name: Alembic upgrade head
+        run: alembic upgrade head
+
+      - name: Alembic check (models match migrations)
+        run: alembic check
+
+      - name: Pytest (integration against real Postgres)
+        run: pytest
+
+      - name: OpenAPI ↔ router parity gate
+        run: python -m scripts.check_openapi_parity

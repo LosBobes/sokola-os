@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Node / web
+node_modules/
+apps/web/dist/
+apps/web/.vite/
+
+# Env & secrets
+.env
+.env.local
+*.local
+
+# OS
+.DS_Store
+
+# Archive (kept, but not part of the build)
+SOKOLA_COMPLETE_MASTER_ARCHIVE_*/

@@ -1,0 +1,7 @@
+# Default owner for everything in the repo.
+* @Vbatocanin
+
+# Security-sensitive areas warrant extra care on review.
+/apps/api/app/security/      @Vbatocanin
+/apps/api/app/platform/      @Vbatocanin
+/.github/                    @Vbatocanin
