@@ -51,6 +51,14 @@ interface RequestOptions {
   mutation?: boolean;
 }
 
+const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+/** Read the JS-readable CSRF cookie set by the Google login callback. */
+function readCsrfToken(): string | null {
+  const match = document.cookie.match(/(?:^|;\s*)sokola_csrf=([^;]+)/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
 function classify(status: number, mutation: boolean): CanonicalState {
   if (status === 401 || status === 403) return "permission";
   if (status === 404) return "not_found";
@@ -69,12 +77,19 @@ export async function apiRequest<T>(
   if (authPersonId) headers["x-sokola-person-id"] = authPersonId;
   if (authRoleAssignmentId) headers["x-sokola-role-assignment-id"] = authRoleAssignmentId;
   if (opts.idempotencyKey) headers["Idempotency-Key"] = opts.idempotencyKey;
+  // Synchronizer token for cookie-authenticated mutations. The server ignores it
+  // for dev-header requests (no session), so sending it unconditionally is safe.
+  if (UNSAFE_METHODS.has(method.toUpperCase())) {
+    const csrf = readCsrfToken();
+    if (csrf) headers["X-CSRF-Token"] = csrf;
+  }
 
   let response: Response;
   try {
     response = await fetch(`/api${path}`, {
       method,
       headers,
+      credentials: "include",
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     });
   } catch {

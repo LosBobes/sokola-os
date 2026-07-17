@@ -22,7 +22,8 @@ from starlette.requests import Request
 from app.common.enums import RecordStatus
 from app.common.errors import UnauthorizedError
 from app.config import Settings
-from app.domains.identity.models import Person
+from app.domains.identity.enums import AuthAccountStatus
+from app.domains.identity.models import AuthAccount, Person
 
 DEV_PERSON_HEADER = "x-sokola-person-id"
 
@@ -63,9 +64,22 @@ def _resolve_session(request: Request, db: Session) -> Principal | None:
         return None
     if not _is_active_person(db, person_id):
         return None
+    # Revocation: a Google session outlives any single request, so honour an
+    # account that has since been disabled (deprovisioned / access revoked).
+    if _account_revoked(db, person_id):
+        return None
     return Principal(person_id=person_id)
 
 
 def _is_active_person(db: Session, person_id: str) -> bool:
     person = db.get(Person, person_id)
     return person is not None and person.record_status is not RecordStatus.ARCHIVED
+
+
+def _account_revoked(db: Session, person_id: str) -> bool:
+    """True when the person's external auth account has been disabled. A person
+    with no ``AuthAccount`` (e.g. dev-only) is never considered revoked here."""
+    account = (
+        db.query(AuthAccount).filter(AuthAccount.person_id == person_id).one_or_none()
+    )
+    return account is not None and account.status is AuthAccountStatus.DISABLED

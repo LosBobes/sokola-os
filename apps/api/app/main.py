@@ -27,6 +27,7 @@ from app.domains.parent.router import router as parent_router
 from app.domains.payments.router import router as payments_router
 from app.domains.people.router import router as people_router
 from app.domains.scheduling.router import router as scheduling_router
+from app.security.csrf import CsrfMiddleware
 
 API_TITLE = "SOKOLA OS P0 API"
 
@@ -42,6 +43,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url="/openapi.json",
     )
 
+    # Middleware runs outermost-last-added. We want, request-inward:
+    #   CORS -> Session -> CSRF -> app
+    # so Session is available when CSRF checks the cookie. Add in reverse.
+    app.add_middleware(CsrfMiddleware)
+
+    # Signed session cookie backing OIDC login. Secure cookies in prod-like envs.
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.session_secret,
+        same_site="lax",
+        https_only=settings.is_production_like,
+    )
+
     # Restricted CORS. Production origins are injected, never wildcarded.
     allowed_origins = ["http://localhost:5173"] if settings.environment == "local" else []
     app.add_middleware(
@@ -50,14 +64,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["*"],
-    )
-
-    # Signed session cookie backing OIDC login. Secure cookies in prod-like envs.
-    app.add_middleware(
-        SessionMiddleware,
-        secret_key=settings.session_secret,
-        same_site="lax",
-        https_only=settings.is_production_like,
     )
 
     register_exception_handlers(app)

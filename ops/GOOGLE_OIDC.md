@@ -49,6 +49,17 @@ and the web app shows **"Prijava Google nalogom"**.
   server re-checks it on every request.
 - First-time Google users are provisioned with `identity_status = VERIFIED` but
   have **no** organization roles until they create or are invited to a school.
-- Production hardening still to do (Part 11): token-revocation handling,
-  provider-outage behavior, and CSRF hardening for cookie-authenticated
-  mutations (currently mitigated by `SameSite=Lax`).
+
+## Hardening (implemented)
+
+- **Account revocation.** Every session-cookie request re-checks the person's
+  `AuthAccount`; setting its `status` to `DISABLED` immediately invalidates all
+  outstanding sessions (`app/security/auth.py::_account_revoked`).
+- **Provider-outage behavior.** If Google's discovery, redirect, or token
+  exchange fails, the login/callback endpoints don't 500 — they redirect to
+  `SOKOLA_WEB_POST_LOGIN_URL?login=failed` and the SPA shows a soft retry notice.
+- **CSRF.** Cookie-authenticated mutations require a synchronizer token: a random
+  value is stored in the signed session at login and mirrored in a JS-readable
+  `sokola_csrf` cookie; the SPA echoes it in `X-CSRF-Token`. `SameSite=Lax` on
+  the session cookie is the first line; this token is defense-in-depth. Dev-header
+  requests carry no session and are unaffected (`app/security/csrf.py`).
