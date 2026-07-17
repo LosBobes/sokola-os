@@ -1,28 +1,28 @@
-"""Principal resolution.
+"""Principal resolution — who is making the request.
 
-Two paths:
+Order:
 
-* **OIDC (production):** a bearer token is validated and its subject mapped, via
-  ``AuthIdentifier`` -> ``AuthAccount`` -> ``Person``. (Token validation itself is
-  a completion gate; the mapping is implemented here.)
-* **Dev header adapter (local only):** ``x-sokola-person-id`` names the acting
-  person directly. This path is refused unless ``allow_insecure_dev_auth`` is on,
-  and that flag is refused in staging/production at startup.
+1. **Dev header adapter** (local only): ``x-sokola-person-id`` names the acting
+   person. Refused unless ``allow_insecure_dev_auth`` is on (and that flag is
+   refused in staging/production at startup).
+2. **OIDC session**: a signed session cookie carrying ``person_id``, established
+   by the Google login callback (see :mod:`app.security.oidc`).
+
+The acting organization/role is resolved separately and re-checked on every
+request (see :mod:`app.security.deps`).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
 from app.common.enums import RecordStatus
 from app.common.errors import UnauthorizedError
 from app.config import Settings
-from app.domains.identity.enums import AuthAccountStatus, AuthIdentifierType
-from app.domains.identity.models import AuthAccount, AuthIdentifier, Person
+from app.domains.identity.models import Person
 
 DEV_PERSON_HEADER = "x-sokola-person-id"
 
@@ -38,9 +38,9 @@ def resolve_principal(request: Request, db: Session, settings: Settings) -> Prin
         if principal is not None:
             return principal
 
-    token = _bearer_token(request)
-    if token is not None:
-        return _resolve_oidc(token, db, settings)
+    principal = _resolve_session(request, db)
+    if principal is not None:
+        return principal
 
     raise UnauthorizedError("Nedostaje prijava.")
 
@@ -49,39 +49,23 @@ def _resolve_dev_header(request: Request, db: Session) -> Principal | None:
     person_id = request.headers.get(DEV_PERSON_HEADER)
     if not person_id:
         return None
-    person = db.get(Person, person_id)
-    if person is None or person.record_status is RecordStatus.ARCHIVED:
+    if not _is_active_person(db, person_id):
         raise UnauthorizedError("Nepoznata osoba.")
-    return Principal(person_id=person.id)
+    return Principal(person_id=person_id)
 
 
-def _bearer_token(request: Request) -> str | None:
-    header = request.headers.get("authorization", "")
-    if header.lower().startswith("bearer "):
-        return header[7:].strip() or None
-    return None
+def _resolve_session(request: Request, db: Session) -> Principal | None:
+    # Read from the raw scope so this works with or without SessionMiddleware
+    # installed (e.g. in unit tests that construct a bare Request).
+    session = request.scope.get("session") or {}
+    person_id = session.get("person_id")
+    if not person_id:
+        return None
+    if not _is_active_person(db, person_id):
+        return None
+    return Principal(person_id=person_id)
 
 
-def _resolve_oidc(token: str, db: Session, settings: Settings) -> Principal:
-    subject = _validate_and_extract_subject(token, settings)
-    row = db.execute(
-        select(Person)
-        .join(AuthAccount, AuthAccount.person_id == Person.id)
-        .join(AuthIdentifier, AuthIdentifier.auth_account_id == AuthAccount.id)
-        .where(
-            AuthIdentifier.type == AuthIdentifierType.SUBJECT,
-            AuthIdentifier.value == subject,
-            AuthAccount.status == AuthAccountStatus.ACTIVE,
-        )
-    ).scalar_one_or_none()
-    if row is None:
-        raise UnauthorizedError("Identitet nije povezan sa nalogom.")
-    return Principal(person_id=row.id)
-
-
-def _validate_and_extract_subject(token: str, settings: Settings) -> str:
-    # Full JWKS signature/issuer/audience/expiry validation is a completion gate
-    # (Part 11 §2). Until an issuer is configured, no token is trusted.
-    if not settings.oidc_issuer:
-        raise UnauthorizedError("OIDC prijava nije konfigurisana.")
-    raise UnauthorizedError("Validacija tokena još nije aktivirana.")  # pragma: no cover
+def _is_active_person(db: Session, person_id: str) -> bool:
+    person = db.get(Person, person_id)
+    return person is not None and person.record_status is not RecordStatus.ARCHIVED

@@ -36,6 +36,11 @@ export interface TenantPublic {
   slug: string;
 }
 
+export interface AuthConfig {
+  google_enabled: boolean;
+  dev_auth_enabled: boolean;
+}
+
 export interface Page<T> {
   items: T[];
   total: number;

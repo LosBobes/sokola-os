@@ -31,14 +31,26 @@ class Settings(BaseSettings):
 
     default_currency: str = "RSD"
 
-    # OIDC (production identity). Empty in local dev.
-    oidc_issuer: str = ""
-    oidc_audience: str = ""
-    oidc_jwks_url: str = ""
+    # --- Auth session (signed cookie). Change the secret outside local. ---
+    session_secret: str = "dev-insecure-session-secret-change-me"
+
+    # --- Google OIDC. When client id + secret are set, the Google login flow
+    # is enabled; otherwise the app falls back to the dev header adapter. ---
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_discovery_url: str = "https://accounts.google.com/.well-known/openid-configuration"
+    # Must exactly match an authorized redirect URI in the Google OAuth client.
+    oidc_redirect_url: str = "http://localhost:5173/api/auth/google/callback"
+    # Where the browser lands after a successful login.
+    web_post_login_url: str = "http://localhost:5173/"
 
     @property
     def is_production_like(self) -> bool:
         return self.environment in ("staging", "production")
+
+    @property
+    def oidc_enabled(self) -> bool:
+        return bool(self.google_client_id and self.google_client_secret)
 
 
 @lru_cache

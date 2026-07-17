@@ -7,14 +7,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api, setAuthHeaders } from "../api/client";
+import { api, apiRequest, setAuthHeaders } from "../api/client";
 import type { Context, Me } from "../api/types";
 
 /*
- * Client session state. In local dev the "identity" is just a person id (the
- * server's dev header adapter). The chosen context is a RoleAssignment id; the
- * server re-derives and re-checks organization/role on every request — the
- * client never grants access.
+ * Client session state. Two identity paths converge on the same `/me`:
+ *  - dev header adapter (local): a person id sent as a header, persisted locally;
+ *  - Google OIDC (prod-like): a signed session cookie set by the login callback.
+ * Either way the chosen context is a RoleAssignment id the server re-checks on
+ * every request; the client never grants access.
  */
 
 export class NoTenantAccessError extends Error {}
@@ -23,8 +24,8 @@ interface SessionState {
   me: Me | null;
   activeContext: Context | null;
   signInAs: (personId: string) => Promise<Me>;
-  /** Log a person in directly to one tenant; throws if they have no role there. */
   signInToTenant: (personId: string, organizationId: string) => Promise<Context>;
+  signInWithGoogle: (organizationId?: string) => void;
   chooseContext: (roleAssignmentId: string) => void;
   signOut: () => void;
   loading: boolean;
@@ -34,6 +35,7 @@ const SessionCtx = createContext<SessionState | null>(null);
 
 const PERSON_KEY = "sokola.personId";
 const CONTEXT_KEY = "sokola.roleAssignmentId";
+const PENDING_ORG_KEY = "sokola.pendingOrg";
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
@@ -48,50 +50,65 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     else localStorage.removeItem(CONTEXT_KEY);
   }, []);
 
-  const fetchMe = useCallback(async (personId: string): Promise<Me> => {
-    setAuthHeaders(personId, null);
+  const fetchMe = useCallback(async (): Promise<Me> => {
     const next = await api.get<Me>("/me");
     setMe(next);
-    localStorage.setItem(PERSON_KEY, personId);
     return next;
   }, []);
 
-  const loadMe = useCallback(
-    async (personId: string): Promise<Me> => {
-      const next = await fetchMe(personId);
+  // Pick the context to activate: a pending tenant (set before a Google
+  // redirect), else the last-used one, else the first available.
+  const activateContexts = useCallback(
+    (next: Me) => {
+      const pending = localStorage.getItem(PENDING_ORG_KEY);
       const stored = localStorage.getItem(CONTEXT_KEY);
-      const preferred = next.contexts.find((c) => c.role_assignment_id === stored);
-      applyContext(next, (preferred ?? next.contexts[0])?.role_assignment_id ?? null);
+      const chosen =
+        (pending && next.contexts.find((c) => c.organization_id === pending)) ||
+        next.contexts.find((c) => c.role_assignment_id === stored) ||
+        next.contexts[0];
+      applyContext(next, chosen?.role_assignment_id ?? null);
+      localStorage.removeItem(PENDING_ORG_KEY);
+    },
+    [applyContext],
+  );
+
+  useEffect(() => {
+    const stored = localStorage.getItem(PERSON_KEY);
+    if (stored) setAuthHeaders(stored, null);
+    fetchMe()
+      .then((next) => activateContexts(next))
+      .catch(() => localStorage.removeItem(PERSON_KEY))
+      .finally(() => setLoading(false));
+  }, [fetchMe, activateContexts]);
+
+  const signInAs = useCallback(
+    async (personId: string): Promise<Me> => {
+      setAuthHeaders(personId, null);
+      localStorage.setItem(PERSON_KEY, personId);
+      const next = await fetchMe();
+      activateContexts(next);
       return next;
     },
-    [applyContext, fetchMe],
+    [fetchMe, activateContexts],
   );
 
   const signInToTenant = useCallback(
     async (personId: string, organizationId: string): Promise<Context> => {
-      const next = await fetchMe(personId);
+      setAuthHeaders(personId, null);
+      localStorage.setItem(PERSON_KEY, personId);
+      const next = await fetchMe();
       const ctx = next.contexts.find((c) => c.organization_id === organizationId);
       if (!ctx) throw new NoTenantAccessError("Nemate pristup ovoj školi.");
       applyContext(next, ctx.role_assignment_id);
       return ctx;
     },
-    [applyContext, fetchMe],
+    [fetchMe, applyContext],
   );
 
-  useEffect(() => {
-    const stored = localStorage.getItem(PERSON_KEY);
-    if (!stored) {
-      setLoading(false);
-      return;
-    }
-    loadMe(stored)
-      .catch(() => {
-        localStorage.removeItem(PERSON_KEY);
-      })
-      .finally(() => setLoading(false));
-  }, [loadMe]);
-
-  const signInAs = useCallback((personId: string) => loadMe(personId), [loadMe]);
+  const signInWithGoogle = useCallback((organizationId?: string) => {
+    if (organizationId) localStorage.setItem(PENDING_ORG_KEY, organizationId);
+    window.location.href = "/api/auth/google/login";
+  }, []);
 
   const chooseContext = useCallback(
     (roleAssignmentId: string) => applyContext(me, roleAssignmentId),
@@ -99,6 +116,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(() => {
+    void apiRequest("POST", "/auth/logout").catch(() => undefined);
     localStorage.removeItem(PERSON_KEY);
     localStorage.removeItem(CONTEXT_KEY);
     setAuthHeaders(null, null);
@@ -107,8 +125,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ me, activeContext, signInAs, signInToTenant, chooseContext, signOut, loading }),
-    [me, activeContext, signInAs, signInToTenant, chooseContext, signOut, loading],
+    () => ({
+      me,
+      activeContext,
+      signInAs,
+      signInToTenant,
+      signInWithGoogle,
+      chooseContext,
+      signOut,
+      loading,
+    }),
+    [me, activeContext, signInAs, signInToTenant, signInWithGoogle, chooseContext, signOut, loading],
   );
 
   return <SessionCtx.Provider value={value}>{children}</SessionCtx.Provider>;

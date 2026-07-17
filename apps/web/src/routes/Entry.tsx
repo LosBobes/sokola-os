@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, setAuthHeaders } from "../api/client";
 import { NoTenantAccessError, useSession } from "../auth/session";
 import { SystemState } from "../components/ui";
-import type { Organization, TenantPublic } from "../api/types";
+import type { AuthConfig, Organization, TenantPublic } from "../api/types";
 
 interface DevIdentityResponse {
   person_id: string;
@@ -11,6 +11,14 @@ interface DevIdentityResponse {
 
 type View = "landing" | "login-code" | "login-id" | "register" | "registered";
 
+function GoogleButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button className="btn btn--secondary" onClick={onClick} data-cy="google-login">
+      Prijava Google nalogom
+    </button>
+  );
+}
+
 /**
  * Unauthenticated entry. Login is tenant-first: you name the school (its code),
  * get routed to that tenant's login, then authenticate into it. Creating a new
@@ -18,9 +26,15 @@ type View = "landing" | "login-code" | "login-id" | "register" | "registered";
  * here it's the dev access code (a person id).
  */
 export function Entry({ initialMessage }: { initialMessage?: string }) {
+  const { signInWithGoogle } = useSession();
   const [view, setView] = useState<View>("landing");
   const [tenant, setTenant] = useState<TenantPublic | null>(null);
   const [created, setCreated] = useState<{ slug: string; personId: string } | null>(null);
+  const [config, setConfig] = useState<AuthConfig>({ google_enabled: false, dev_auth_enabled: true });
+
+  useEffect(() => {
+    api.get<AuthConfig>("/auth/config").then(setConfig).catch(() => undefined);
+  }, []);
 
   return (
     <div style={{ maxWidth: 460, margin: "8vh auto" }}>
@@ -30,7 +44,14 @@ export function Entry({ initialMessage }: { initialMessage?: string }) {
           <p className="notice notice--info">{initialMessage}</p>
         ) : null}
 
-        {view === "landing" && <Landing onLogin={() => setView("login-code")} onRegister={() => setView("register")} />}
+        {view === "landing" && (
+          <Landing
+            google={config.google_enabled}
+            onGoogle={() => signInWithGoogle()}
+            onLogin={() => setView("login-code")}
+            onRegister={() => setView("register")}
+          />
+        )}
         {view === "login-code" && (
           <FindTenant
             onFound={(t) => {
@@ -40,7 +61,14 @@ export function Entry({ initialMessage }: { initialMessage?: string }) {
             onBack={() => setView("landing")}
           />
         )}
-        {view === "login-id" && tenant && <TenantLogin tenant={tenant} onBack={() => setView("login-code")} />}
+        {view === "login-id" && tenant && (
+          <TenantLogin
+            tenant={tenant}
+            config={config}
+            onGoogle={() => signInWithGoogle(tenant.organization_id)}
+            onBack={() => setView("login-code")}
+          />
+        )}
         {view === "register" && (
           <Register
             onCreated={(slug, personId) => {
@@ -56,10 +84,21 @@ export function Entry({ initialMessage }: { initialMessage?: string }) {
   );
 }
 
-function Landing({ onLogin, onRegister }: { onLogin: () => void; onRegister: () => void }) {
+function Landing({
+  onLogin,
+  onRegister,
+  google,
+  onGoogle,
+}: {
+  onLogin: () => void;
+  onRegister: () => void;
+  google: boolean;
+  onGoogle: () => void;
+}) {
   return (
     <div style={{ display: "grid", gap: "var(--space-3)" }}>
       <p>Platforma za vođenje sportskih klubova, plesnih i drugih škola.</p>
+      {google ? <GoogleButton onClick={onGoogle} /> : null}
       <button className="btn btn--primary" onClick={onLogin} data-cy="go-login">
         Prijavi se u školu
       </button>
@@ -108,7 +147,17 @@ function FindTenant({ onFound, onBack }: { onFound: (t: TenantPublic) => void; o
   );
 }
 
-function TenantLogin({ tenant, onBack }: { tenant: TenantPublic; onBack: () => void }) {
+function TenantLogin({
+  tenant,
+  config,
+  onGoogle,
+  onBack,
+}: {
+  tenant: TenantPublic;
+  config: AuthConfig;
+  onGoogle: () => void;
+  onBack: () => void;
+}) {
   const { signInToTenant } = useSession();
   const [personId, setPersonId] = useState("");
   const [error, setError] = useState<unknown>(null);
@@ -129,7 +178,7 @@ function TenantLogin({ tenant, onBack }: { tenant: TenantPublic; onBack: () => v
   }
 
   return (
-    <form onSubmit={submit}>
+    <div>
       <h2 style={{ margin: "0 0 var(--space-2)" }}>Prijava — {tenant.name}</h2>
       {error instanceof NoTenantAccessError ? (
         <div className="notice notice--warning" data-cy="login-error">
@@ -140,23 +189,32 @@ function TenantLogin({ tenant, onBack }: { tenant: TenantPublic; onBack: () => v
           Neispravan pristupni kôd ili nemate pristup ovoj školi.
         </div>
       ) : null}
-      <div className="field">
-        <label htmlFor="pid">Pristupni kôd</label>
-        <input id="pid" value={personId} onChange={(e) => setPersonId(e.target.value)} required data-cy="access-code" />
-        <small style={{ color: "var(--text-secondary)" }}>
-          Privremeni razvojni način prijave — unesite ID osobe dobijen pri registraciji.
-          U produkciji ovde stoji „Prijava nalogom“ (OIDC).
-        </small>
-      </div>
-      <div style={{ display: "flex", gap: "var(--space-2)" }}>
-        <button className="btn btn--primary" type="submit" disabled={busy} data-cy="do-login">
-          Uđi
-        </button>
-        <button className="btn btn--secondary" type="button" onClick={onBack}>
-          Druga škola
-        </button>
-      </div>
-    </form>
+
+      {config.google_enabled ? (
+        <div style={{ marginBottom: "var(--space-3)" }}>
+          <GoogleButton onClick={onGoogle} />
+        </div>
+      ) : null}
+
+      {config.dev_auth_enabled ? (
+        <form onSubmit={submit}>
+          <div className="field">
+            <label htmlFor="pid">Pristupni kôd</label>
+            <input id="pid" value={personId} onChange={(e) => setPersonId(e.target.value)} required data-cy="access-code" />
+            <small style={{ color: "var(--text-secondary)" }}>
+              Privremeni razvojni način prijave — unesite ID osobe iz registracije.
+            </small>
+          </div>
+          <button className="btn btn--primary" type="submit" disabled={busy} data-cy="do-login">
+            Uđi
+          </button>
+        </form>
+      ) : null}
+
+      <button className="btn btn--secondary" type="button" onClick={onBack} style={{ marginTop: "var(--space-3)" }}>
+        Druga škola
+      </button>
+    </div>
   );
 }
 

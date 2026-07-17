@@ -8,11 +8,13 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from app import __version__
 from app.common.errors import register_exception_handlers
 from app.config import Settings, get_settings
 from app.domains.attendance.router import router as attendance_router
+from app.domains.auth.router import router as auth_router
 from app.domains.billing.router import router as billing_router
 from app.domains.communications.router import router as communications_router
 from app.domains.events.router import router as events_router
@@ -50,9 +52,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Signed session cookie backing OIDC login. Secure cookies in prod-like envs.
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.session_secret,
+        same_site="lax",
+        https_only=settings.is_production_like,
+    )
+
     register_exception_handlers(app)
 
     app.include_router(health_router)
+    app.include_router(auth_router)
     app.include_router(internal_router)
     app.include_router(identity_router)
     app.include_router(organization_router)
@@ -70,11 +81,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
 
 def _guard_dev_auth(settings: Settings) -> None:
-    """The dev header auth adapter must be impossible to enable in production."""
+    """The dev header auth adapter must be impossible to enable in production, and
+    the session secret must be changed away from the insecure default."""
     if settings.allow_insecure_dev_auth and settings.is_production_like:
         raise RuntimeError(
             "ALLOW_INSECURE_DEV_AUTH must never be enabled in staging/production."
         )
+    if settings.is_production_like and "insecure" in settings.session_secret:
+        raise RuntimeError("SOKOLA_SESSION_SECRET must be set in staging/production.")
 
 
 app = create_app()

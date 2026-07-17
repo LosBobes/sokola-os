@@ -207,6 +207,24 @@
         "title": "AttendanceStatus",
         "type": "string"
       },
+      "AuthConfig": {
+        "properties": {
+          "dev_auth_enabled": {
+            "title": "Dev Auth Enabled",
+            "type": "boolean"
+          },
+          "google_enabled": {
+            "title": "Google Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "google_enabled",
+          "dev_auth_enabled"
+        ],
+        "title": "AuthConfig",
+        "type": "object"
+      },
       "BillingPreviewItem": {
         "properties": {
           "amount_minor": {
@@ -1572,6 +1590,80 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/auth/config": {
+      "get": {
+        "description": "Tell the frontend which sign-in methods are available.",
+        "operationId": "authConfig",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthConfig"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Auth Config",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/google/callback": {
+      "get": {
+        "operationId": "googleCallback",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Google Callback",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/google/login": {
+      "get": {
+        "operationId": "googleLogin",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Google Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/billing/runs": {
       "post": {
         "operationId": "postBillingRun",
