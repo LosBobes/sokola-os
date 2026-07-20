@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, RecordStatusMixin, TimestampMixin
@@ -34,6 +34,14 @@ class OrganizationMembership(Base, TimestampMixin, RecordStatusMixin):
     __tablename__ = "organization_membership"
     __table_args__ = (
         UniqueConstraint("organization_id", "person_id", name="uq_org_membership"),
+        # School-local member code is unique within the tenant *when set* (§8/§9).
+        Index(
+            "uq_org_local_member_code",
+            "organization_id",
+            "local_member_code",
+            unique=True,
+            postgresql_where=text("local_member_code IS NOT NULL"),
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("mem"))
@@ -46,3 +54,7 @@ class OrganizationMembership(Base, TimestampMixin, RecordStatusMixin):
     status: Mapped[MembershipStatus] = mapped_column(
         enum_type(MembershipStatus), nullable=False, default=MembershipStatus.ACTIVE
     )
+    # School-local ("na ruke") member data. Lives on the org-scoped membership, so
+    # it is never shared across tenants and never touches the global Person.
+    local_member_code: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    admin_note: Mapped[str | None] = mapped_column(Text, nullable=True)

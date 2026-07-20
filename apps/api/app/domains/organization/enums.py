@@ -15,6 +15,9 @@ class OrganizationType(enum.StrEnum):
 
 class MembershipStatus(enum.StrEnum):
     ACTIVE = "ACTIVE"
+    # Temporarily inactive; membership may be resumed (§20/§21).
+    SUSPENDED = "SUSPENDED"
+    # Terminal. Reactivation is a new membership period, never a revived row.
     ENDED = "ENDED"
 
 

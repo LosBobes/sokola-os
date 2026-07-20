@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Index, String, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, TimestampMixin
@@ -41,6 +41,14 @@ class GuardianOrganizationAccess(Base, TimestampMixin):
             "child_person_id",
             name="uq_guardian_org_access",
         ),
+        # At most one primary contact per child within a tenant (§25).
+        Index(
+            "uq_guardian_primary_contact",
+            "organization_id",
+            "child_person_id",
+            unique=True,
+            postgresql_where=text("is_primary_contact"),
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("goa"))
@@ -56,6 +64,8 @@ class GuardianOrganizationAccess(Base, TimestampMixin):
     status: Mapped[GuardianAccessStatus] = mapped_column(
         enum_type(GuardianAccessStatus), nullable=False, default=GuardianAccessStatus.ACTIVE
     )
+    # The one contact a school reaches first for this child (§25).
+    is_primary_contact: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class ExternalPersonReference(Base, TimestampMixin):

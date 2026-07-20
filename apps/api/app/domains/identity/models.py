@@ -14,6 +14,7 @@ from app.domains.identity.enums import (
     InvitationStatus,
     InvitationType,
     PersonIdentityStatus,
+    PersonMergeStatus,
     RoleAssignmentStatus,
     RoleCode,
     RoleScopeType,
@@ -137,15 +138,25 @@ class Invitation(Base, TimestampMixin):
 
 
 class PersonMergeRecord(Base, TimestampMixin):
-    """Append-only evidence of a merge. There is no self-service dedup endpoint;
-    merges are deliberate, reviewed operations."""
+    """A duplicate-review case, and — once decided — append-only evidence of a
+    merge. There is no self-service dedup endpoint; merges are deliberate,
+    reviewed operations scoped to the organization that raised them."""
 
     __tablename__ = "person_merge_record"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("mrg"))
+    # The tenant that flagged the pair; the review never crosses org boundaries.
+    organization_id: Mapped[str] = mapped_column(
+        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    )
     source_person_id: Mapped[str] = mapped_column(String(64), nullable=False)
     target_person_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[PersonMergeStatus] = mapped_column(
+        enum_type(PersonMergeStatus), nullable=False, default=PersonMergeStatus.FLAGGED
+    )
     reason: Mapped[str] = mapped_column(Text, nullable=False)
+    # Who raised the case at intake, and who decided it.
+    flagged_by_person_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     performed_by_person_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
