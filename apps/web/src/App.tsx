@@ -10,6 +10,7 @@ import { SchedulePage } from "./routes/manager/Schedule";
 import { AttendancePage } from "./routes/manager/Attendance";
 import { MoneyPage } from "./routes/manager/Money";
 import { CommunicationsPage } from "./routes/manager/Communications";
+import { DocumentsPage } from "./routes/manager/Documents";
 import { EventsPage } from "./routes/parent/Events";
 import { MorePage } from "./routes/More";
 import { ParentNotificationsPage } from "./routes/parent/Notifications";
@@ -34,6 +35,7 @@ export function App() {
         <Route path="/raspored/:sessionId/prisustvo" element={<AttendancePage />} />
         <Route path="/finansije" element={<MoneyPage />} />
         <Route path="/komunikacija" element={<CommunicationsPage />} />
+        <Route path="/dokumenti" element={<DocumentsPage />} />
         <Route path="/dogadjaji" element={<EventsPage />} />
         <Route path="/obavestenja" element={<ParentNotificationsPage />} />
         <Route path="/vise" element={<MorePage />} />
