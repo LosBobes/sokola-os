@@ -1,0 +1,218 @@
+/*
+ * M12 · Izveštaji.
+ * Consumes only semantic role tokens from styles/design-tokens.css — no raw
+ * hex, no --green-/--gold-/--neutral- primitive ramp value.
+ */
+
+.reports-subtitle {
+  margin: 0 0 var(--space-4);
+  color: var(--text-secondary);
+}
+
+/* --- Stat tiles: six-up grid, each tile wrapped in a Link -------------- */
+.reports-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.reports-stat-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-lg);
+}
+.reports-stat-link:hover .stat-tile {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+.reports-stat-link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* --- Main row: chart + "Traži pažnju" ----------------------------------*/
+.reports-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (max-width: 920px) {
+  .reports-main {
+    grid-template-columns: 1fr;
+  }
+}
+.reports-chart-card,
+.reports-attention-card {
+  margin-bottom: 0;
+}
+
+/* --- "Traži pažnju" list ------------------------------------------------*/
+.reports-attention-list {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.reports-attention-row {
+  border: var(--ink-border) solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.reports-attention-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  color: inherit;
+  text-decoration: none;
+  min-height: var(--target-min);
+}
+.reports-attention-link:hover,
+.reports-attention-link:focus-visible {
+  background: var(--surface-sunken);
+}
+.reports-attention-link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.reports-attention-row__icon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--action-surface);
+  color: var(--action-primary-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.reports-attention-row__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.reports-attention-row__title {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.reports-attention-row__subtitle {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.reports-attention-row__arrow {
+  flex: none;
+  color: var(--text-secondary);
+}
+.reports-attention-progress {
+  padding-top: var(--space-3);
+  border-top: var(--ink-border) solid var(--border-default);
+}
+
+/* --- Footnote ------------------------------------------------------------*/
+.reports-footnote {
+  margin: var(--space-4) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-style: italic;
+}
+
+/* ===================================================================== */
+/* Chart — "Prisustvo po nedeljama" (dataviz-skill mark spec)            */
+/* ===================================================================== */
+
+.reports-chart__head {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-2);
+}
+.reports-chart__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.reports-chart__grid {
+  stroke: var(--border-default);
+  stroke-width: 1;
+}
+.reports-chart__tick {
+  fill: var(--text-secondary);
+  font-size: 11px;
+}
+.reports-chart__area {
+  fill: var(--action-primary);
+  fill-opacity: 0.1;
+  stroke: none;
+}
+.reports-chart__line {
+  fill: none;
+  stroke: var(--action-primary);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.reports-chart__dot {
+  fill: var(--action-primary);
+  stroke: var(--surface-raised);
+  stroke-width: 2;
+}
+.reports-chart__hit {
+  fill: transparent;
+  cursor: pointer;
+}
+.reports-chart__hit:focus {
+  outline: none;
+}
+.reports-chart__endlabel {
+  fill: var(--text-primary);
+  font-weight: 700;
+  font-size: 13px;
+}
+.reports-chart__crosshair {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.reports-chart__axis {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 12px 0 34px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.reports-chart__tooltip {
+  margin-top: var(--space-2);
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  border: var(--ink-border) solid var(--border-default);
+  font-size: var(--text-sm);
+}
+
+/* --- Pending ("graf uskoro") state -------------------------------------*/
+.reports-chart-pending {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  padding: var(--space-5) var(--space-4);
+  color: var(--text-secondary);
+}
+.reports-chart-pending__ghost {
+  width: 100%;
+  max-width: 560px;
+  height: 120px;
+}
+.reports-chart-pending__ghost line {
+  stroke: var(--border-default);
+  stroke-width: 1;
+}
+.reports-chart-pending p {
+  margin: 0;
+  max-width: 440px;
+}

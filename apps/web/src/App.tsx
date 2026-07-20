@@ -10,6 +10,7 @@ import { SchedulePage } from "./routes/manager/Schedule";
 import { AttendancePage } from "./routes/manager/Attendance";
 import { MoneyPage } from "./routes/manager/Money";
 import { CommunicationsPage } from "./routes/manager/Communications";
+import { ReportsPage } from "./routes/manager/Reports";
 import { EventsPage } from "./routes/parent/Events";
 
 export function App() {
@@ -33,6 +34,7 @@ export function App() {
         <Route path="/finansije" element={<MoneyPage />} />
         <Route path="/komunikacija" element={<CommunicationsPage />} />
         <Route path="/dogadjaji" element={<EventsPage />} />
+        <Route path="/izvestaji" element={<ReportsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ProductShell>
