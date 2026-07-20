@@ -580,6 +580,70 @@
         "title": "ConflictCheckResponse",
         "type": "object"
       },
+      "ConsentResponse": {
+        "properties": {
+          "granted_at": {
+            "format": "date-time",
+            "title": "Granted At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ConsentScope"
+          }
+        },
+        "required": [
+          "id",
+          "person_id",
+          "scope",
+          "granted_at",
+          "revoked_at",
+          "note"
+        ],
+        "title": "ConsentResponse",
+        "type": "object"
+      },
+      "ConsentScope": {
+        "description": "What a consent covers \u2014 a closed vocabulary of processing purposes a\nperson may grant or withdraw, independent of any one domain's own\nfeature set.",
+        "enum": [
+          "DATA_PROCESSING",
+          "MARKETING_COMMUNICATIONS",
+          "PHOTO_VIDEO",
+          "THIRD_PARTY_SHARING"
+        ],
+        "title": "ConsentScope",
+        "type": "string"
+      },
       "ContextSummary": {
         "description": "One selectable acting context = an active role in one organization.",
         "properties": {
@@ -659,6 +723,36 @@
           "family_name"
         ],
         "title": "CreateDevIdentityRequest",
+        "type": "object"
+      },
+      "CreateDsarRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "person_id": {
+            "minLength": 1,
+            "title": "Person Id",
+            "type": "string"
+          },
+          "request_type": {
+            "$ref": "#/components/schemas/DsarRequestType"
+          }
+        },
+        "required": [
+          "person_id",
+          "request_type"
+        ],
+        "title": "CreateDsarRequest",
         "type": "object"
       },
       "CreateEventRequest": {
@@ -1024,6 +1118,36 @@
         "title": "CreateProgramRequest",
         "type": "object"
       },
+      "CreateRetentionPeriodRequest": {
+        "properties": {
+          "data_category": {
+            "$ref": "#/components/schemas/DataCategory"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "retention_period_days": {
+            "exclusiveMinimum": 0.0,
+            "title": "Retention Period Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data_category",
+          "retention_period_days"
+        ],
+        "title": "CreateRetentionPeriodRequest",
+        "type": "object"
+      },
       "CreateRoomRequest": {
         "properties": {
           "capacity": {
@@ -1067,6 +1191,35 @@
           "name"
         ],
         "title": "CreateRoomRequest",
+        "type": "object"
+      },
+      "DataCategory": {
+        "description": "A category of stored personal data a retention period can be attached\nto. Deliberately domain-agnostic \u2014 one category may span several\ndomains' tables (e.g. DOCUMENTS covers files across the product).",
+        "enum": [
+          "PERSONAL_PROFILE",
+          "ATTENDANCE_RECORDS",
+          "BILLING_RECORDS",
+          "DOCUMENTS",
+          "COMMUNICATIONS",
+          "MEDIA"
+        ],
+        "title": "DataCategory",
+        "type": "string"
+      },
+      "DecideDsarRequest": {
+        "description": "Staff's decision note. Required \u2014 a fulfilment/rejection is always\nattested with a reason (v1 has no automated action to point to instead).",
+        "properties": {
+          "note": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "DecideDsarRequest",
         "type": "object"
       },
       "DevIdentityResponse": {
@@ -1203,6 +1356,94 @@
           "SUBJECT"
         ],
         "title": "DocumentVisibility",
+        "type": "string"
+      },
+      "DsarRequestResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decision_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Note"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          },
+          "request_type": {
+            "$ref": "#/components/schemas/DsarRequestType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DsarRequestStatus"
+          }
+        },
+        "required": [
+          "id",
+          "person_id",
+          "request_type",
+          "status",
+          "note",
+          "decision_note",
+          "decided_at",
+          "created_at"
+        ],
+        "title": "DsarRequestResponse",
+        "type": "object"
+      },
+      "DsarRequestStatus": {
+        "enum": [
+          "PENDING",
+          "IN_PROGRESS",
+          "FULFILLED",
+          "REJECTED"
+        ],
+        "title": "DsarRequestStatus",
+        "type": "string"
+      },
+      "DsarRequestType": {
+        "enum": [
+          "ACCESS",
+          "EXPORT",
+          "ERASURE"
+        ],
+        "title": "DsarRequestType",
         "type": "string"
       },
       "DuplicateCandidate": {
@@ -2233,6 +2474,37 @@
         "title": "Page[ChargeResponse]",
         "type": "object"
       },
+      "Page_ConsentResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConsentResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[ConsentResponse]",
+        "type": "object"
+      },
       "Page_DocumentResponse_": {
         "properties": {
           "items": {
@@ -2262,6 +2534,37 @@
           "offset"
         ],
         "title": "Page[DocumentResponse]",
+        "type": "object"
+      },
+      "Page_DsarRequestResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DsarRequestResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[DsarRequestResponse]",
         "type": "object"
       },
       "Page_GroupResponse_": {
@@ -2417,6 +2720,37 @@
           "offset"
         ],
         "title": "Page[ProgramResponse]",
+        "type": "object"
+      },
+      "Page_RetentionPeriodResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RetentionPeriodResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[RetentionPeriodResponse]",
         "type": "object"
       },
       "Page_RoleAssignmentResponse_": {
@@ -2775,6 +3109,36 @@
         "title": "ReadinessResponse",
         "type": "object"
       },
+      "RecordConsentRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "person_id": {
+            "minLength": 1,
+            "title": "Person Id",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ConsentScope"
+          }
+        },
+        "required": [
+          "person_id",
+          "scope"
+        ],
+        "title": "RecordConsentRequest",
+        "type": "object"
+      },
       "RecordPaymentRequest": {
         "properties": {
           "amount_minor": {
@@ -2865,6 +3229,44 @@
         ],
         "title": "RetentionPeriod",
         "type": "string"
+      },
+      "RetentionPeriodResponse": {
+        "properties": {
+          "data_category": {
+            "$ref": "#/components/schemas/DataCategory"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "retention_period_days": {
+            "title": "Retention Period Days",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RecordStatus"
+          }
+        },
+        "required": [
+          "id",
+          "data_category",
+          "retention_period_days",
+          "note",
+          "status"
+        ],
+        "title": "RetentionPeriodResponse",
+        "type": "object"
       },
       "RevokeGuardianAccessRequest": {
         "properties": {
@@ -3895,6 +4297,36 @@
         "title": "UpdateProgramRequest",
         "type": "object"
       },
+      "UpdateRetentionPeriodRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "retention_period_days": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Period Days"
+          }
+        },
+        "title": "UpdateRetentionPeriodRequest",
+        "type": "object"
+      },
       "UpdateRoomRequest": {
         "properties": {
           "capacity": {
@@ -3977,6 +4409,24 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WithdrawConsentRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "WithdrawConsentRequest",
         "type": "object"
       }
     }
@@ -4639,6 +5089,165 @@
         ]
       }
     },
+    "/consents": {
+      "get": {
+        "operationId": "listConsents",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ConsentResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Consents",
+        "tags": [
+          "privacy"
+        ]
+      },
+      "post": {
+        "operationId": "recordConsent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordConsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Consent",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/consents/{consent_id}/withdraw": {
+      "post": {
+        "operationId": "withdrawConsent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "consent_id",
+            "required": true,
+            "schema": {
+              "title": "Consent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawConsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Consent already withdrawn."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Withdraw Consent",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
     "/documents": {
       "get": {
         "operationId": "listDocuments",
@@ -4894,6 +5503,314 @@
         "summary": "Download Document Content",
         "tags": [
           "documents"
+        ]
+      }
+    },
+    "/dsar-requests": {
+      "get": {
+        "operationId": "listDsarRequests",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "person_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Person Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DsarRequestResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Dsar Requests",
+        "tags": [
+          "privacy"
+        ]
+      },
+      "post": {
+        "operationId": "createDsarRequest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDsarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsarRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Dsar Request",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/dsar-requests/{request_id}": {
+      "get": {
+        "operationId": "getDsarRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsarRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Dsar Request",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/dsar-requests/{request_id}/fulfill": {
+      "post": {
+        "operationId": "fulfillDsarRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideDsarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsarRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Request already decided."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fulfill Dsar Request",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/dsar-requests/{request_id}/reject": {
+      "post": {
+        "operationId": "rejectDsarRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideDsarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsarRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Request already decided."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Dsar Request",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/dsar-requests/{request_id}/start": {
+      "post": {
+        "operationId": "startDsarRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsarRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Only a PENDING request may be started."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Dsar Request",
+        "tags": [
+          "privacy"
         ]
       }
     },
@@ -7371,6 +8288,238 @@
         "summary": "Deactivate Program",
         "tags": [
           "structure"
+        ]
+      }
+    },
+    "/retention-periods": {
+      "get": {
+        "operationId": "listRetentionPeriods",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RetentionPeriodResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Retention Periods",
+        "tags": [
+          "privacy"
+        ]
+      },
+      "post": {
+        "operationId": "createRetentionPeriod",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRetentionPeriodRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPeriodResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "An active retention period already exists for this category."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Retention Period",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/retention-periods/{retention_period_id}": {
+      "get": {
+        "operationId": "getRetentionPeriod",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "retention_period_id",
+            "required": true,
+            "schema": {
+              "title": "Retention Period Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPeriodResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Retention Period",
+        "tags": [
+          "privacy"
+        ]
+      },
+      "patch": {
+        "operationId": "updateRetentionPeriod",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "retention_period_id",
+            "required": true,
+            "schema": {
+              "title": "Retention Period Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRetentionPeriodRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPeriodResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Retention Period",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/retention-periods/{retention_period_id}/deactivate": {
+      "post": {
+        "operationId": "deactivateRetentionPeriod",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "retention_period_id",
+            "required": true,
+            "schema": {
+              "title": "Retention Period Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPeriodResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deactivate Retention Period",
+        "tags": [
+          "privacy"
         ]
       }
     },
