@@ -230,6 +230,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/communications/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Inbox
+         * @description M3. Every authenticated person has an inbox — no COMMUNICATIONS
+         *     permission required, since a person always sees only their own items.
+         */
+        get: operations["listInbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/communications/inbox/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Inbox Read */
+        post: operations["markInboxRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/events": {
         parameters: {
             query?: never;
@@ -1932,6 +1970,49 @@ export interface components {
             /** Target Person Id */
             target_person_id: string;
         };
+        /**
+         * NotificationDeliveryStatus
+         * @description Delivery state of a single in-app :class:`Notification` row.
+         *
+         *     v1 has exactly one channel — the in-app inbox — so ``DELIVERED`` simply
+         *     means the row was committed successfully; there is no external send step
+         *     yet (email/push are out of scope, see PRD 08 M4). The states still model a
+         *     real state machine so a future channel can slot in without a schema change:
+         *
+         *     * ``PENDING`` — the row is being constructed; never observed once committed
+         *       (a handler either finishes and commits as ``DELIVERED``, or the whole
+         *       outbox message fails and retries — see ``app.platform.outbox``).
+         *     * ``DELIVERED`` — the in-app record exists and is visible in the recipient's
+         *       inbox. Terminal for v1.
+         *     * ``FAILED`` — reserved for a future external channel's delivery failure;
+         *       unused today because in-app "delivery" cannot partially fail (either the
+         *       transaction commits, or the outbox retries the whole event).
+         * @enum {string}
+         */
+        NotificationDeliveryStatus: "PENDING" | "DELIVERED" | "FAILED";
+        /** NotificationResponse */
+        NotificationResponse: {
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            delivery_status: components["schemas"]["NotificationDeliveryStatus"];
+            /** Entity Id */
+            entity_id: string | null;
+            /** Entity Type */
+            entity_type: string | null;
+            /** Event Type */
+            event_type: string;
+            /** Id */
+            id: string;
+            /** Read At */
+            read_at: string | null;
+            /** Title */
+            title: string;
+        };
         /** OrganizationResponse */
         OrganizationResponse: {
             /** Id */
@@ -1997,6 +2078,17 @@ export interface components {
         Page_LocationResponse_: {
             /** Items */
             items: components["schemas"]["LocationResponse"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[NotificationResponse] */
+        Page_NotificationResponse_: {
+            /** Items */
+            items: components["schemas"]["NotificationResponse"][];
             /** Limit */
             limit: number;
             /** Offset */
@@ -3064,6 +3156,76 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AnnouncementPreviewResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listInbox: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_NotificationResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    markInboxRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationResponse"];
+                };
+            };
+            /** @description Not found in the caller's own inbox. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
