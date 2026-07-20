@@ -1,0 +1,63 @@
+/*
+ * "Više" overflow / account-actions page (#18, M1).
+ * Consumes only semantic role tokens from styles/design-tokens.css.
+ */
+.more-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 560px;
+}
+.more-page__card {
+  margin-bottom: 0;
+}
+.more-page__rows {
+  display: flex;
+  gap: var(--space-3);
+}
+.more-page__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.more-page__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--target-min);
+  padding: var(--space-3) var(--space-4);
+  border: var(--ink-border) solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+}
+.more-page__row--btn {
+  cursor: pointer;
+  transition: box-shadow var(--duration), border-color var(--duration);
+}
+.more-page__row--btn:hover {
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border-strong);
+}
+.more-page__row--active {
+  border-color: var(--action-primary);
+  background: var(--action-surface);
+}
+.more-page__row-org {
+  font-weight: 600;
+}
+.more-page__row-role {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.more-page__help {
+  margin: 0;
+  color: var(--text-secondary);
+}

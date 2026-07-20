@@ -1,7 +1,7 @@
 """progress notes
 
 Revision ID: 4c3e8bf7e13a
-Revises: 83eee9b8c108
+Revises: d3d1b0e93328
 Create Date: 2026-07-20 21:29:27.850376
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 revision: str = '4c3e8bf7e13a'
-down_revision: str | None = '83eee9b8c108'
+down_revision: str | None = 'd3d1b0e93328'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -230,6 +230,196 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Consents */
+        get: operations["listConsents"];
+        put?: never;
+        /** Record Consent */
+        post: operations["recordConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/consents/{consent_id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw Consent */
+        post: operations["withdrawConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Documents */
+        get: operations["listDocuments"];
+        put?: never;
+        /** Upload Document */
+        post: operations["uploadDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Document */
+        get: operations["getDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acknowledge Document */
+        post: operations["acknowledgeDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Document Content */
+        get: operations["downloadDocumentContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsar-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Dsar Requests */
+        get: operations["listDsarRequests"];
+        put?: never;
+        /** Create Dsar Request */
+        post: operations["createDsarRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsar-requests/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Dsar Request */
+        get: operations["getDsarRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsar-requests/{request_id}/fulfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fulfill Dsar Request */
+        post: operations["fulfillDsarRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsar-requests/{request_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Dsar Request */
+        post: operations["rejectDsarRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsar-requests/{request_id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Dsar Request */
+        post: operations["startDsarRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/events": {
         parameters: {
             query?: never;
@@ -640,6 +830,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/onboarding/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate
+         * @description Leave "u pripremi": the school behaves normally from here on (§13).
+         */
+        post: operations["activateOnboarding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/onboarding/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Progress
+         * @description Per-step guided-onboarding progress for the caller's active school
+         *     (PRD 02 §24/§25) — what's done and what's left, including whether
+         *     activation is currently possible.
+         */
+        get: operations["getOnboardingProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations": {
         parameters: {
             query?: never;
@@ -1011,6 +1243,59 @@ export interface paths {
         put?: never;
         /** Deactivate Program */
         post: operations["deactivateProgram"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/retention-periods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Retention Periods */
+        get: operations["listRetentionPeriods"];
+        put?: never;
+        /** Create Retention Period */
+        post: operations["createRetentionPeriod"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/retention-periods/{retention_period_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Retention Period */
+        get: operations["getRetentionPeriod"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Retention Period */
+        patch: operations["updateRetentionPeriod"];
+        trace?: never;
+    };
+    "/retention-periods/{retention_period_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate Retention Period */
+        post: operations["deactivateRetentionPeriod"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1487,6 +1772,18 @@ export interface components {
             /** Total Minor */
             total_minor: number;
         };
+        /** Body_uploadDocument */
+        Body_uploadDocument: {
+            /** @default GENERAL */
+            document_type: components["schemas"]["DocumentType"];
+            /** File */
+            file: string;
+            retention_period?: components["schemas"]["RetentionPeriod"] | null;
+            /** Subject Person Id */
+            subject_person_id?: string | null;
+            /** @default STAFF_ONLY */
+            visibility: components["schemas"]["DocumentVisibility"];
+        };
         /** CategoryResponse */
         CategoryResponse: {
             /** Id */
@@ -1530,6 +1827,31 @@ export interface components {
             /** Has Conflict */
             has_conflict: boolean;
         };
+        /** ConsentResponse */
+        ConsentResponse: {
+            /**
+             * Granted At
+             * Format: date-time
+             */
+            granted_at: string;
+            /** Id */
+            id: string;
+            /** Note */
+            note: string | null;
+            /** Person Id */
+            person_id: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            scope: components["schemas"]["ConsentScope"];
+        };
+        /**
+         * ConsentScope
+         * @description What a consent covers — a closed vocabulary of processing purposes a
+         *     person may grant or withdraw, independent of any one domain's own
+         *     feature set.
+         * @enum {string}
+         */
+        ConsentScope: "DATA_PROCESSING" | "MARKETING_COMMUNICATIONS" | "PHOTO_VIDEO" | "THIRD_PARTY_SHARING";
         /**
          * ContextSummary
          * @description One selectable acting context = an active role in one organization.
@@ -1557,6 +1879,14 @@ export interface components {
             family_name: string;
             /** Given Name */
             given_name: string;
+        };
+        /** CreateDsarRequest */
+        CreateDsarRequest: {
+            /** Note */
+            note?: string | null;
+            /** Person Id */
+            person_id: string;
+            request_type: components["schemas"]["DsarRequestType"];
         };
         /** CreateEventRequest */
         CreateEventRequest: {
@@ -1669,6 +1999,14 @@ export interface components {
             /** Note */
             note: string;
         };
+        /** CreateRetentionPeriodRequest */
+        CreateRetentionPeriodRequest: {
+            data_category: components["schemas"]["DataCategory"];
+            /** Note */
+            note?: string | null;
+            /** Retention Period Days */
+            retention_period_days: number;
+        };
         /** CreateRoomRequest */
         CreateRoomRequest: {
             /** Capacity */
@@ -1680,6 +2018,23 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * DataCategory
+         * @description A category of stored personal data a retention period can be attached
+         *     to. Deliberately domain-agnostic — one category may span several
+         *     domains' tables (e.g. DOCUMENTS covers files across the product).
+         * @enum {string}
+         */
+        DataCategory: "PERSONAL_PROFILE" | "ATTENDANCE_RECORDS" | "BILLING_RECORDS" | "DOCUMENTS" | "COMMUNICATIONS" | "MEDIA";
+        /**
+         * DecideDsarRequest
+         * @description Staff's decision note. Required — a fulfilment/rejection is always
+         *     attested with a reason (v1 has no automated action to point to instead).
+         */
+        DecideDsarRequest: {
+            /** Note */
+            note: string;
+        };
         /** DevIdentityResponse */
         DevIdentityResponse: {
             /** Display Name */
@@ -1687,6 +2042,87 @@ export interface components {
             /** Person Id */
             person_id: string;
         };
+        /** DocumentResponse */
+        DocumentResponse: {
+            /** Acknowledged At */
+            acknowledged_at: string | null;
+            /** Acknowledged By Person Id */
+            acknowledged_by_person_id: string | null;
+            /** Content Type */
+            content_type: string;
+            document_type: components["schemas"]["DocumentType"];
+            /** Filename */
+            filename: string;
+            /** Id */
+            id: string;
+            /** Organization Id */
+            organization_id: string;
+            /** Owner Person Id */
+            owner_person_id: string;
+            retention_period: components["schemas"]["RetentionPeriod"] | null;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Subject Person Id */
+            subject_person_id: string | null;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
+            visibility: components["schemas"]["DocumentVisibility"];
+        };
+        /**
+         * DocumentType
+         * @description GENERAL is any uploaded file (photo, form, certificate, ...). CONTRACT is
+         *     a subtype that carries an acknowledgement (electronic "I have read/agree")
+         *     state — see ``acknowledged_at``/``acknowledged_by_person_id`` on the model.
+         * @enum {string}
+         */
+        DocumentType: "GENERAL" | "CONTRACT";
+        /**
+         * DocumentVisibility
+         * @description Who — beyond staff, who can always reach anything in their own tenant via
+         *     the DOCUMENTS permission — may see this document.
+         *
+         *     STAFF_ONLY: no one outside staff (e.g. internal admin paperwork).
+         *     SUBJECT: the person named in ``subject_person_id`` may see it, and — when
+         *     that subject is a child — so may any guardian with active
+         *     ``GuardianOrganizationAccess`` to that child in this organization. This
+         *     mirrors how the events domain already resolves "which children can this
+         *     parent act for" (see ``app.domains.events.repository.guardian_children``).
+         * @enum {string}
+         */
+        DocumentVisibility: "STAFF_ONLY" | "SUBJECT";
+        /** DsarRequestResponse */
+        DsarRequestResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decision Note */
+            decision_note: string | null;
+            /** Id */
+            id: string;
+            /** Note */
+            note: string | null;
+            /** Person Id */
+            person_id: string;
+            request_type: components["schemas"]["DsarRequestType"];
+            status: components["schemas"]["DsarRequestStatus"];
+        };
+        /**
+         * DsarRequestStatus
+         * @enum {string}
+         */
+        DsarRequestStatus: "PENDING" | "IN_PROGRESS" | "FULFILLED" | "REJECTED";
+        /**
+         * DsarRequestType
+         * @enum {string}
+         */
+        DsarRequestType: "ACCESS" | "EXPORT" | "ERASURE";
         /** DuplicateCandidate */
         DuplicateCandidate: {
             /** Display Name */
@@ -1972,10 +2408,63 @@ export interface components {
             /** Target Person Id */
             target_person_id: string;
         };
+        /** OnboardingProgressResponse */
+        OnboardingProgressResponse: {
+            /** Activated At */
+            activated_at: string | null;
+            /** Can Activate */
+            can_activate: boolean;
+            lifecycle_status: components["schemas"]["OrganizationLifecycleStatus"];
+            /** Organization Id */
+            organization_id: string;
+            /** Remaining Steps */
+            remaining_steps: components["schemas"]["OnboardingStep"][];
+            /** Steps */
+            steps: components["schemas"]["OnboardingStepStatus"][];
+        };
+        /**
+         * OnboardingStep
+         * @description A step of guided school setup, in the order a new owner walks them.
+         *
+         *     ``SCHOOL_PROFILE`` is satisfied by ``POST /organizations`` itself (name/
+         *     type/timezone are required at creation) so it is always complete.
+         *     ``LOCATIONS``/``ROOMS``/``PROGRAMS`` are satisfied by using the structure
+         *     domain's own create endpoints — onboarding does not duplicate them, it only
+         *     reports whether at least one active row exists for the school (see
+         *     ``app.domains.onboarding.service``). ``FIRST_INVITE`` is satisfied by
+         *     sending any invitation (in practice, during onboarding, the co-owner invite
+         *     — see ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).
+         *     ``ACTIVATE`` is the terminal step: leaving "u pripremi".
+         * @enum {string}
+         */
+        OnboardingStep: "SCHOOL_PROFILE" | "LOCATIONS" | "ROOMS" | "PROGRAMS" | "FIRST_INVITE" | "ACTIVATE";
+        /** OnboardingStepStatus */
+        OnboardingStepStatus: {
+            /** Completed */
+            completed: boolean;
+            /** Completed At */
+            completed_at: string | null;
+            step: components["schemas"]["OnboardingStep"];
+        };
+        /**
+         * OrganizationLifecycleStatus
+         * @description Where a school is in guided onboarding (PRD 02 §24/§25), independent of
+         *     ``record_status`` (which is the soft-delete/deactivation axis — §31).
+         *
+         *     A school created through ``POST /organizations`` starts ``IN_PREPARATION``
+         *     ("u pripremi"): the owner may set up structure and invite a co-owner, but
+         *     normal STAFF/PARENT/STUDENT invitations are blocked until ``ACTIVE`` (see
+         *     ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).
+         *     Legacy/seed rows default to ``ACTIVE`` so behaviour outside the real
+         *     signup path is unchanged.
+         * @enum {string}
+         */
+        OrganizationLifecycleStatus: "IN_PREPARATION" | "ACTIVE";
         /** OrganizationResponse */
         OrganizationResponse: {
             /** Id */
             id: string;
+            lifecycle_status: components["schemas"]["OrganizationLifecycleStatus"];
             /** Name */
             name: string;
             /** Slug */
@@ -2004,6 +2493,39 @@ export interface components {
         Page_ChargeResponse_: {
             /** Items */
             items: components["schemas"]["ChargeResponse"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[ConsentResponse] */
+        Page_ConsentResponse_: {
+            /** Items */
+            items: components["schemas"]["ConsentResponse"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[DocumentResponse] */
+        Page_DocumentResponse_: {
+            /** Items */
+            items: components["schemas"]["DocumentResponse"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[DsarRequestResponse] */
+        Page_DsarRequestResponse_: {
+            /** Items */
+            items: components["schemas"]["DsarRequestResponse"][];
             /** Limit */
             limit: number;
             /** Offset */
@@ -2059,6 +2581,17 @@ export interface components {
         Page_ProgramResponse_: {
             /** Items */
             items: components["schemas"]["ProgramResponse"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[RetentionPeriodResponse] */
+        Page_RetentionPeriodResponse_: {
+            /** Items */
+            items: components["schemas"]["RetentionPeriodResponse"][];
             /** Limit */
             limit: number;
             /** Offset */
@@ -2228,6 +2761,14 @@ export interface components {
              */
             status: "ready" | "degraded";
         };
+        /** RecordConsentRequest */
+        RecordConsentRequest: {
+            /** Note */
+            note?: string | null;
+            /** Person Id */
+            person_id: string;
+            scope: components["schemas"]["ConsentScope"];
+        };
         /** RecordPaymentRequest */
         RecordPaymentRequest: {
             /** Amount Minor */
@@ -2263,6 +2804,25 @@ export interface components {
          * @enum {string}
          */
         RegistrationStatus: "REGISTERED" | "CANCELLED";
+        /**
+         * RetentionPeriod
+         * @description A declared retention policy label recorded at upload time. Nothing in this
+         *     increment enforces expiry/deletion against it — it is metadata for a future
+         *     retention job, not a guarantee.
+         * @enum {string}
+         */
+        RetentionPeriod: "ONE_YEAR" | "THREE_YEARS" | "FIVE_YEARS" | "TEN_YEARS" | "INDEFINITE";
+        /** RetentionPeriodResponse */
+        RetentionPeriodResponse: {
+            data_category: components["schemas"]["DataCategory"];
+            /** Id */
+            id: string;
+            /** Note */
+            note: string | null;
+            /** Retention Period Days */
+            retention_period_days: number;
+            status: components["schemas"]["RecordStatus"];
+        };
         /** RevokeGuardianAccessRequest */
         RevokeGuardianAccessRequest: {
             /** Reason */
@@ -2653,6 +3213,13 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** UpdateRetentionPeriodRequest */
+        UpdateRetentionPeriodRequest: {
+            /** Note */
+            note?: string | null;
+            /** Retention Period Days */
+            retention_period_days?: number | null;
+        };
         /** UpdateRoomRequest */
         UpdateRoomRequest: {
             /** Capacity */
@@ -2674,6 +3241,11 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** WithdrawConsentRequest */
+        WithdrawConsentRequest: {
+            /** Note */
+            note?: string | null;
         };
     };
     responses: never;
@@ -3139,6 +3711,508 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AnnouncementPreviewResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listConsents: {
+        parameters: {
+            query: {
+                person_id: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ConsentResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recordConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordConsentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdrawConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                consent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WithdrawConsentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentResponse"];
+                };
+            };
+            /** @description Consent already withdrawn. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listDocuments: {
+        parameters: {
+            query?: {
+                document_type?: components["schemas"]["DocumentType"] | null;
+                subject_person_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_DocumentResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    uploadDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_uploadDocument"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponse"];
+                };
+            };
+            /** @description Unsupported format, empty, or oversized file. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    acknowledgeDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponse"];
+                };
+            };
+            /** @description Document is not a contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    downloadDocumentContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listDsarRequests: {
+        parameters: {
+            query?: {
+                person_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_DsarRequestResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createDsarRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDsarRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DsarRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getDsarRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DsarRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fulfillDsarRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideDsarRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DsarRequestResponse"];
+                };
+            };
+            /** @description Request already decided. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rejectDsarRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideDsarRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DsarRequestResponse"];
+                };
+            };
+            /** @description Request already decided. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    startDsarRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DsarRequestResponse"];
+                };
+            };
+            /** @description Only a PENDING request may be started. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -4123,6 +5197,53 @@ export interface operations {
             };
         };
     };
+    activateOnboarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingProgressResponse"];
+                };
+            };
+            /** @description Already active, or the minimum setup (a location) is missing. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getOnboardingProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingProgressResponse"];
+                };
+            };
+        };
+    };
     createOrganization: {
         parameters: {
             query?: never;
@@ -5001,6 +6122,175 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProgramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listRetentionPeriods: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_RetentionPeriodResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createRetentionPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRetentionPeriodRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionPeriodResponse"];
+                };
+            };
+            /** @description An active retention period already exists for this category. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getRetentionPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                retention_period_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionPeriodResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateRetentionPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                retention_period_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRetentionPeriodRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionPeriodResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivateRetentionPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                retention_period_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionPeriodResponse"];
                 };
             };
             /** @description Validation Error */
