@@ -11,6 +11,7 @@ import { AttendancePage } from "./routes/manager/Attendance";
 import { MoneyPage } from "./routes/manager/Money";
 import { CommunicationsPage } from "./routes/manager/Communications";
 import { EventsPage } from "./routes/parent/Events";
+import { ParentMoneyPage } from "./routes/parent/Money";
 
 export function App() {
   const { me, activeContext, loading } = useSession();
@@ -33,6 +34,7 @@ export function App() {
         <Route path="/finansije" element={<MoneyPage />} />
         <Route path="/komunikacija" element={<CommunicationsPage />} />
         <Route path="/dogadjaji" element={<EventsPage />} />
+        <Route path="/roditelj/finansije" element={<ParentMoneyPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ProductShell>
