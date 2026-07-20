@@ -72,7 +72,7 @@ function currentPeriodLabel(): string {
 export function MoneyPage() {
   const groups = useAsync(() => api.get<Page<Group>>("/groups"), []);
   const people = useAsync(() => api.get<Page<PersonSummary>>("/people"), []);
-  const charges = useAsync(() => api.get<Page<Charge>>("/charges?limit=200"), []);
+  const charges = useAsync(() => api.get<Page<Charge>>("/charges?limit=100"), []);
 
   const peopleMap = useMemo(
     () => Object.fromEntries((people.data?.items ?? []).map((p) => [p.id, p.display_name])),
@@ -100,7 +100,7 @@ export function MoneyPage() {
 
   // Client-side debts summary — see file header comment. Not a substitute
   // for a real aggregate endpoint (pagination/limit means this only covers
-  // the loaded page; today's /charges?limit=200 is a practical ceiling).
+  // the loaded page; the API caps limit at 100, today's practical ceiling).
   const summary = useMemo(() => {
     let totalDue = 0;
     let totalPaid = 0;

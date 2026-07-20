@@ -31,7 +31,7 @@ describe("Manager: finance and communications", () => {
     cy.get("[data-cy=charge-pay]").first().click();
     cy.get("[data-cy=pay-amount]").clear().type("1000");
     cy.get("[data-cy=confirm-dialog][open] [data-cy=confirm-yes]").click();
-    cy.get("[data-cy=charge-row]").contains("PARTIALLY_PAID").should("exist");
+    cy.get("[data-cy=charge-row]").contains("Delimično plaćeno").should("exist");
 
     // --- Journey 7: publish an announcement (preview snapshot → publish) ---
     cy.get("[data-cy='nav-/komunikacija']").click();

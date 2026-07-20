@@ -137,8 +137,8 @@ type ViewMode = "day" | "week" | "list";
 export function SchedulePage() {
   const { activeContext } = useSession();
   const org = useAsync(() => api.get<Organization>("/organizations/current"), []);
-  const groups = useAsync(() => api.get<Page<Group>>("/groups?limit=200"), []);
-  const people = useAsync(() => api.get<Page<PersonSummary>>("/people?limit=500"), []);
+  const groups = useAsync(() => api.get<Page<Group>>("/groups?limit=100"), []);
+  const people = useAsync(() => api.get<Page<PersonSummary>>("/people?limit=100"), []);
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [anchor, setAnchor] = useState(() => new Date());

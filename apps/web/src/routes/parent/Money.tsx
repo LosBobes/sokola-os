@@ -50,7 +50,7 @@ export function ParentMoneyPage() {
   const charges = useAsync(
     () =>
       activeId
-        ? api.get<Page<Charge>>(`/charges?person_id=${encodeURIComponent(activeId)}&limit=200`)
+        ? api.get<Page<Charge>>(`/charges?person_id=${encodeURIComponent(activeId)}&limit=100`)
         : Promise.resolve<Page<Charge>>({ items: [], total: 0, limit: 0, offset: 0 }),
     [activeId],
   );

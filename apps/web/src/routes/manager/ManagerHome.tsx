@@ -95,7 +95,7 @@ export function ManagerHome() {
   );
   const groups = useAsync(() => api.get<Page<Group>>("/groups"), []);
   const people = useAsync(() => api.get<Page<PersonSummary>>("/people"), []);
-  const charges = useAsync(() => api.get<Page<Charge>>("/charges?limit=200"), []);
+  const charges = useAsync(() => api.get<Page<Charge>>("/charges?limit=100"), []);
   const locations = useAsync(
     () =>
       activeContext?.scope_type === "BRANCH"
