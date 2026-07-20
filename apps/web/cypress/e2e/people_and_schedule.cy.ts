@@ -41,7 +41,10 @@ describe("Manager: people, groups, schedule, attendance", () => {
     // --- Journey 2: record attendance (exceptions only + version) ---
     cy.get("[data-cy=session-attendance]").first().click();
     cy.get("[data-cy=attendance-row]").should("have.length", 1);
-    cy.get("[data-cy=attendance-table] select").first().select("ABSENT");
+    // Mark the sole roster member Odsutan; the reason selector only appears
+    // once Odsutan is chosen, then pick Neopravdano (unexcused absence).
+    cy.get("[data-cy=attendance-row]").find("button[data-cy^=attendance-mark-absent-]").click();
+    cy.get("[data-cy=attendance-row]").find("button[data-cy^=attendance-reason-unexcused-]").click();
     cy.get("[data-cy=attendance-save]").click();
     cy.contains("Sačuvano prisustvo").should("exist");
   });
