@@ -437,6 +437,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/import/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Import Uploads */
+        get: operations["listImportUploads"];
+        put?: never;
+        /** Create Import Upload */
+        post: operations["createImportUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/import/uploads/{batch_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Import Upload */
+        get: operations["getImportUpload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/import/uploads/{batch_id}/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Commit Import Upload */
+        post: operations["commitImportUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/import/uploads/{batch_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Import Upload */
+        post: operations["previewImportUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/dev/identities": {
         parameters: {
             query?: never;
@@ -1455,6 +1524,11 @@ export interface components {
             /** Total Minor */
             total_minor: number;
         };
+        /** Body_createImportUpload */
+        Body_createImportUpload: {
+            /** File */
+            file: string;
+        };
         /** CategoryResponse */
         CategoryResponse: {
             /** Id */
@@ -1796,6 +1870,100 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** ImportBatchResponse */
+        ImportBatchResponse: {
+            /** Committed At */
+            committed_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Person Id */
+            created_by_person_id: string;
+            /** Created Rows */
+            created_rows: number;
+            /** Id */
+            id: string;
+            /** Invalid Rows */
+            invalid_rows: number;
+            /** Previewed At */
+            previewed_at: string | null;
+            /** Skipped Rows */
+            skipped_rows: number;
+            /** Source Filename */
+            source_filename: string;
+            status: components["schemas"]["ImportBatchStatus"];
+            /** Total Rows */
+            total_rows: number;
+            /** Valid Rows */
+            valid_rows: number;
+        };
+        /**
+         * ImportBatchStatus
+         * @description Lifecycle of one uploaded CSV file.
+         *
+         *     ``PENDING`` -> rows are staged, not yet validated. ``PREVIEWED`` -> every
+         *     row has been checked (dry-run) and the batch may be committed. ``COMMITTED``
+         *     is terminal: a batch can be committed at most once (§ import v1 — no
+         *     rollback, see service module docstring).
+         * @enum {string}
+         */
+        ImportBatchStatus: "PENDING" | "PREVIEWED" | "COMMITTED";
+        /** ImportCommitResponse */
+        ImportCommitResponse: {
+            batch: components["schemas"]["ImportBatchResponse"];
+            /** Rows */
+            rows: components["schemas"]["ImportRowCommitResult"][];
+        };
+        /** ImportPreviewResponse */
+        ImportPreviewResponse: {
+            batch: components["schemas"]["ImportBatchResponse"];
+            /** Rows */
+            rows: components["schemas"]["ImportRowPreviewResult"][];
+        };
+        /** ImportRowCommitResult */
+        ImportRowCommitResult: {
+            /** Family Name */
+            family_name: string;
+            /** Given Name */
+            given_name: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "CREATED" | "SKIPPED";
+            /** Person Id */
+            person_id: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Row Number */
+            row_number: number;
+        };
+        /**
+         * ImportRowPreviewResult
+         * @description One row's dry-run outcome. ``valid`` and ``duplicate_person_ids`` are
+         *     independent — a row can be valid AND look like an existing person; the
+         *     caller decides whether that's acceptable (v1 never blocks on it).
+         */
+        ImportRowPreviewResult: {
+            /** Duplicate Person Ids */
+            duplicate_person_ids: string[];
+            /** Family Name */
+            family_name: string;
+            /** Given Name */
+            given_name: string;
+            /** Group Name */
+            group_name: string | null;
+            /** Local Member Code */
+            local_member_code: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Row Number */
+            row_number: number;
+            /** Valid */
+            valid: boolean;
+        };
         /**
          * InvitationCreatedResponse
          * @description Send/reissue response. ``token`` is shown exactly once — only its hash is
@@ -1975,6 +2143,17 @@ export interface components {
         Page_GroupResponse_: {
             /** Items */
             items: components["schemas"]["GroupResponse"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[ImportBatchResponse] */
+        Page_ImportBatchResponse_: {
+            /** Items */
+            items: components["schemas"]["ImportBatchResponse"][];
             /** Limit */
             limit: number;
             /** Offset */
@@ -3586,6 +3765,185 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReadinessResponse"];
+                };
+            };
+        };
+    };
+    listImportUploads: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ImportBatchResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createImportUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_createImportUpload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportBatchResponse"];
+                };
+            };
+            /** @description CSV missing a required column. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getImportUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportBatchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commitImportUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportCommitResponse"];
+                };
+            };
+            /** @description Not yet previewed, or already committed. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    previewImportUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreviewResponse"];
+                };
+            };
+            /** @description Import already committed. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

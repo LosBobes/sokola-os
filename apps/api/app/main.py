@@ -17,6 +17,7 @@ from app.domains.attendance.router import router as attendance_router
 from app.domains.auth.router import router as auth_router
 from app.domains.billing.router import router as billing_router
 from app.domains.communications.router import router as communications_router
+from app.domains.data_import.router import router as data_import_router
 from app.domains.events.router import router as events_router
 from app.domains.groups.router import router as groups_router
 from app.domains.health.router import router as health_router
@@ -84,6 +85,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(events_router)
     app.include_router(communications_router)
     app.include_router(parent_router)
+    app.include_router(data_import_router)
 
     return app
 

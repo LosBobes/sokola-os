@@ -27,6 +27,11 @@ and identity routers gate on context alone), so including them in the
 administrative roles' defaults is behaviour-neutral: no route consults them yet.
 They are granted to OWNER/MANAGER/ADMIN so that a future area guard and the
 "restrict this assignment" UI have a coherent, non-empty administrative set.
+
+IMPORT (PRD 11, added with the CSV bulk-import feature) has no legacy
+``require_roles`` guard to audit — it is granted to OWNER/MANAGER/ADMIN
+directly, matching PEOPLE/GROUPS since importing people/groups is exactly the
+same administrative surface those areas already gate.
 """
 
 from __future__ import annotations
@@ -55,6 +60,7 @@ class PermissionArea(enum.StrEnum):
     COMMUNICATIONS = "COMMUNICATIONS"
     ORGANIZATION = "ORGANIZATION"
     ROLES = "ROLES"  # role / invitation administration
+    IMPORT = "IMPORT"  # bulk CSV import of people/groups (PRD 11)
 
 
 # Everything a staff role administers by default. ORGANIZATION/ROLES are
@@ -71,6 +77,7 @@ _STAFF_AREAS: frozenset[PermissionArea] = frozenset(
         PermissionArea.COMMUNICATIONS,
         PermissionArea.ORGANIZATION,
         PermissionArea.ROLES,
+        PermissionArea.IMPORT,
     }
 )
 
