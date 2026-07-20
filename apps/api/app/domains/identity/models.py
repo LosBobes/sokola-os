@@ -126,9 +126,17 @@ class StudentLoginAuthorization(Base, TimestampMixin):
 
 
 class Invitation(Base, TimestampMixin):
-    """An invitation to claim access. Invitations expire and may be reissued."""
+    """An invitation to claim access. Invitations expire and may be reissued.
+
+    ``role_code``/``scope_type``/``scope_ref_id``/``granted_areas`` describe the
+    :class:`RoleAssignment` that acceptance will create — an invitation is an
+    offer of a specific role, not a blank slate. ``target_child_person_id`` is
+    set only for a PARENT invitation (§19.4/19.5): the child the invited
+    guardian will get access to.
+    """
 
     __tablename__ = "invitation"
+    __table_args__ = (UniqueConstraint("token_hash", name="uq_invitation_token_hash"),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("inv"))
     organization_id: Mapped[str] = mapped_column(
@@ -138,10 +146,27 @@ class Invitation(Base, TimestampMixin):
     status: Mapped[InvitationStatus] = mapped_column(
         enum_type(InvitationStatus), nullable=False, default=InvitationStatus.PENDING
     )
+    # Set once acceptance resolves to a Person (never set at send time).
     person_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     target_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     token_hash: Mapped[str] = mapped_column(String(128), nullable=False)
     expires_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    accepted_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # The role assignment acceptance will create (or reactivate).
+    role_code: Mapped[RoleCode] = mapped_column(enum_type(RoleCode), nullable=False)
+    scope_type: Mapped[RoleScopeType] = mapped_column(
+        enum_type(RoleScopeType), nullable=False, default=RoleScopeType.ORGANIZATION
+    )
+    scope_ref_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    granted_areas: Mapped[list[str] | None] = mapped_column(ARRAY(String(40)), nullable=True)
+
+    # PARENT invites only: the child this guardian will be linked to.
+    target_child_person_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    invited_by_person_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Reissuing supersedes a PENDING/EXPIRED invitation with a fresh row/token;
+    # this points back at the one it replaced (chain, not mutation-in-place).
+    reissued_from_invitation_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class PersonMergeRecord(Base, TimestampMixin):

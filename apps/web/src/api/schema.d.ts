@@ -369,6 +369,101 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Invitations */
+        get: operations["listInvitations"];
+        put?: never;
+        /**
+         * Send Invitation
+         * @description Send an invitation. The raw token is returned exactly once — only its
+         *     hash is ever persisted.
+         */
+        post: operations["sendInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invitations/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept Invitation
+         * @description Accept an invitation as the already-authenticated caller — the same path
+         *     for a brand-new sign-up and an existing person (§21/§22); no active context
+         *     is required since acceptance is exactly how one is obtained.
+         */
+        post: operations["acceptInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invitations/{invitation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Invitation */
+        get: operations["getInvitation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invitations/{invitation_id}/reissue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reissue Invitation */
+        post: operations["reissueInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invitations/{invitation_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Invitation */
+        post: operations["revokeInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/locations": {
         parameters: {
             query?: never;
@@ -492,6 +587,50 @@ export interface paths {
         get: operations["getCurrentOrganization"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/organizations/current/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deactivate Organization
+         * @description §31 — deactivate the caller's active school. Locks out every future
+         *     context resolution against it; see ``reactivateOrganization``.
+         */
+        post: operations["deactivateOrganization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/organizations/{organization_id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivate Organization
+         * @description §31 — a deactivated school cannot be reached through the normal
+         *     context-selection path (a deactivated org is rejected at context
+         *     resolution), so this authenticates on the principal alone and checks
+         *     ownership of the named school directly.
+         */
+        post: operations["reactivateOrganization"];
         delete?: never;
         options?: never;
         head?: never;
@@ -775,6 +914,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Role Assignments */
+        get: operations["listRoleAssignments"];
+        put?: never;
+        /** Assign Role */
+        post: operations["assignRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/roles/ownership/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transfer Ownership */
+        post: operations["transferOwnership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/roles/{assignment_id}/granted-areas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Granted Areas */
+        patch: operations["updateGrantedAreas"];
+        trace?: never;
+    };
+    "/roles/{assignment_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Role Assignment */
+        post: operations["revokeRoleAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/roles/{assignment_id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suspend Role Assignment */
+        post: operations["suspendRoleAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/rooms": {
         parameters: {
             query?: never;
@@ -991,6 +1216,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AcceptInvitationRequest */
+        AcceptInvitationRequest: {
+            /** Token */
+            token: string;
+        };
+        /** AcceptInvitationResponse */
+        AcceptInvitationResponse: {
+            context: components["schemas"]["ContextSummary"];
+        };
         /** AddGroupMemberRequest */
         AddGroupMemberRequest: {
             /** Person Id */
@@ -1033,6 +1267,18 @@ export interface components {
          * @enum {string}
          */
         AnnouncementTargetType: "ORGANIZATION" | "GROUP";
+        /** AssignRoleRequest */
+        AssignRoleRequest: {
+            /** Granted Areas */
+            granted_areas?: string[] | null;
+            /** Person Id */
+            person_id: string;
+            role_code: components["schemas"]["RoleCode"];
+            /** Scope Ref Id */
+            scope_ref_id?: string | null;
+            /** @default ORGANIZATION */
+            scope_type: components["schemas"]["RoleScopeType"];
+        };
         /** AttendanceEntry */
         AttendanceEntry: {
             /** Display Name */
@@ -1224,6 +1470,21 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** CreateInvitationRequest */
+        CreateInvitationRequest: {
+            /** Granted Areas */
+            granted_areas?: string[] | null;
+            role_code?: components["schemas"]["RoleCode"] | null;
+            /** Scope Ref Id */
+            scope_ref_id?: string | null;
+            /** @default ORGANIZATION */
+            scope_type: components["schemas"]["RoleScopeType"];
+            /** Target Child Person Id */
+            target_child_person_id?: string | null;
+            /** Target Email */
+            target_email: string;
+            type: components["schemas"]["InvitationType"];
+        };
         /** CreateLocationRequest */
         CreateLocationRequest: {
             /** Address */
@@ -1399,6 +1660,63 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * InvitationCreatedResponse
+         * @description Send/reissue response. ``token`` is shown exactly once — only its hash is
+         *     ever persisted (see ``invite_tokens.py``).
+         */
+        InvitationCreatedResponse: {
+            invitation: components["schemas"]["InvitationResponse"];
+            /** Token */
+            token: string;
+        };
+        /** InvitationResponse */
+        InvitationResponse: {
+            /** Accepted At */
+            accepted_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Granted Areas */
+            granted_areas: string[] | null;
+            /** Id */
+            id: string;
+            /** Invited By Person Id */
+            invited_by_person_id: string | null;
+            /** Organization Id */
+            organization_id: string;
+            /** Person Id */
+            person_id: string | null;
+            /** Reissued From Invitation Id */
+            reissued_from_invitation_id: string | null;
+            role_code: components["schemas"]["RoleCode"];
+            /** Scope Ref Id */
+            scope_ref_id: string | null;
+            scope_type: components["schemas"]["RoleScopeType"];
+            status: components["schemas"]["InvitationStatus"];
+            /** Target Child Person Id */
+            target_child_person_id: string | null;
+            /** Target Email */
+            target_email: string | null;
+            type: components["schemas"]["InvitationType"];
+        };
+        /**
+         * InvitationStatus
+         * @enum {string}
+         */
+        InvitationStatus: "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED" | "REISSUED";
+        /**
+         * InvitationType
+         * @enum {string}
+         */
+        InvitationType: "STAFF" | "PARENT" | "STUDENT";
         /** LivenessResponse */
         LivenessResponse: {
             /**
@@ -1528,6 +1846,17 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** Page[InvitationResponse] */
+        Page_InvitationResponse_: {
+            /** Items */
+            items: components["schemas"]["InvitationResponse"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
         /** Page[LocationResponse] */
         Page_LocationResponse_: {
             /** Items */
@@ -1554,6 +1883,17 @@ export interface components {
         Page_ProgramResponse_: {
             /** Items */
             items: components["schemas"]["ProgramResponse"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[RoleAssignmentResponse] */
+        Page_RoleAssignmentResponse_: {
+            /** Items */
+            items: components["schemas"]["RoleAssignmentResponse"][];
             /** Limit */
             limit: number;
             /** Offset */
@@ -1724,6 +2064,34 @@ export interface components {
             /** Reason */
             reason?: string | null;
         };
+        /** RevokeInvitationRequest */
+        RevokeInvitationRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** RoleAssignmentResponse */
+        RoleAssignmentResponse: {
+            /** Display Name */
+            display_name: string;
+            /** Granted Areas */
+            granted_areas: string[] | null;
+            /** Id */
+            id: string;
+            /** Organization Id */
+            organization_id: string;
+            /** Person Id */
+            person_id: string;
+            role_code: components["schemas"]["RoleCode"];
+            /** Scope Ref Id */
+            scope_ref_id: string | null;
+            scope_type: components["schemas"]["RoleScopeType"];
+            status: components["schemas"]["RoleAssignmentStatus"];
+        };
+        /**
+         * RoleAssignmentStatus
+         * @enum {string}
+         */
+        RoleAssignmentStatus: "ACTIVE" | "SUSPENDED" | "REVOKED";
         /**
          * RoleCode
          * @enum {string}
@@ -1734,6 +2102,11 @@ export interface components {
          * @enum {string}
          */
         RoleScopeType: "ORGANIZATION" | "BRANCH" | "GROUP";
+        /** RoleTransitionRequest */
+        RoleTransitionRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
         /** RoomResponse */
         RoomResponse: {
             /** Capacity */
@@ -1991,10 +2364,30 @@ export interface components {
             /** Slug */
             slug: string;
         };
+        /** TransferOwnershipRequest */
+        TransferOwnershipRequest: {
+            /** New Owner Person Id */
+            new_owner_person_id: string;
+            /** Revoke From Person Id */
+            revoke_from_person_id?: string | null;
+        };
+        /** TransferOwnershipResponse */
+        TransferOwnershipResponse: {
+            new_owner: components["schemas"]["RoleAssignmentResponse"];
+            revoked_owner: components["schemas"]["RoleAssignmentResponse"] | null;
+        };
         /** UpdateCategoryRequest */
         UpdateCategoryRequest: {
             /** Name */
             name?: string | null;
+        };
+        /**
+         * UpdateGrantedAreasRequest
+         * @description ``null`` clears the restriction back to the role's full default areas.
+         */
+        UpdateGrantedAreasRequest: {
+            /** Granted Areas */
+            granted_areas?: string[] | null;
         };
         /** UpdateLocationRequest */
         UpdateLocationRequest: {
@@ -2856,6 +3249,229 @@ export interface operations {
             };
         };
     };
+    listInvitations: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_InvitationResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sendInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateInvitationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationCreatedResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    acceptInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptInvitationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcceptInvitationResponse"];
+                };
+            };
+            /** @description Invitation bound to a different account (§23). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invitation expired/revoked/already used. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reissueInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationCreatedResponse"];
+                };
+            };
+            /** @description Only a PENDING/EXPIRED invitation may be reissued. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revokeInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeInvitationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationResponse"];
+                };
+            };
+            /** @description Only a PENDING invitation may be revoked. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listLocations: {
         parameters: {
             query?: {
@@ -3107,6 +3723,85 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrganizationResponse"];
+                };
+            };
+        };
+    };
+    deactivateOrganization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationResponse"];
+                };
+            };
+            /** @description Already deactivated. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reactivateOrganization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationResponse"];
+                };
+            };
+            /** @description Caller is not an active owner of this school. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description School not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Already active. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3790,6 +4485,237 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProgramResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listRoleAssignments: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_RoleAssignmentResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assignRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleAssignmentResponse"];
+                };
+            };
+            /** @description Person already holds this exact role/scope. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transferOwnership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferOwnershipRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferOwnershipResponse"];
+                };
+            };
+            /** @description Already an owner, or would leave the school ownerless. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateGrantedAreas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGrantedAreasRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleAssignmentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revokeRoleAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleAssignmentResponse"];
+                };
+            };
+            /** @description Already revoked, or the school's last active owner. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suspendRoleAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleAssignmentResponse"];
+                };
+            };
+            /** @description Not active, or the school's last active owner. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

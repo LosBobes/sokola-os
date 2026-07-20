@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.domains.identity.enums import RoleCode
-from app.domains.identity.models import Person, RoleAssignment
+from app.domains.identity.enums import AuthAccountStatus, AuthIdentifierType, RoleCode
+from app.domains.identity.models import AuthAccount, AuthIdentifier, Person, RoleAssignment
 from app.domains.organization.enums import OrganizationType
 from app.domains.organization.models import Organization, OrganizationMembership
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
@@ -96,6 +96,20 @@ def add_actor(
         db, person=person, organization=organization, role=role, granted_areas=granted_areas
     )
     return Actor(person=person, organization=organization, assignment=assignment)
+
+
+def link_login_email(db: Session, *, person: Person, email: str) -> None:
+    """Simulate the email a person has verified sign-in with (as Google OIDC's
+    ``jit_provision`` would record it) — the surface invite acceptance checks
+    for "wrong account" rejection (§23), independent of the auth adapter used
+    to reach the request (dev header in tests, session cookie in prod)."""
+    account = AuthAccount(person_id=person.id, provider="google", status=AuthAccountStatus.ACTIVE)
+    db.add(account)
+    db.flush()
+    db.add(
+        AuthIdentifier(auth_account_id=account.id, type=AuthIdentifierType.EMAIL, value=email)
+    )
+    db.commit()
 
 
 def make_child_with_guardian(
