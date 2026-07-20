@@ -640,6 +640,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/onboarding/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate
+         * @description Leave "u pripremi": the school behaves normally from here on (§13).
+         */
+        post: operations["activateOnboarding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/onboarding/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Progress
+         * @description Per-step guided-onboarding progress for the caller's active school
+         *     (PRD 02 §24/§25) — what's done and what's left, including whether
+         *     activation is currently possible.
+         */
+        get: operations["getOnboardingProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations": {
         parameters: {
             query?: never;
@@ -1932,10 +1974,63 @@ export interface components {
             /** Target Person Id */
             target_person_id: string;
         };
+        /** OnboardingProgressResponse */
+        OnboardingProgressResponse: {
+            /** Activated At */
+            activated_at: string | null;
+            /** Can Activate */
+            can_activate: boolean;
+            lifecycle_status: components["schemas"]["OrganizationLifecycleStatus"];
+            /** Organization Id */
+            organization_id: string;
+            /** Remaining Steps */
+            remaining_steps: components["schemas"]["OnboardingStep"][];
+            /** Steps */
+            steps: components["schemas"]["OnboardingStepStatus"][];
+        };
+        /**
+         * OnboardingStep
+         * @description A step of guided school setup, in the order a new owner walks them.
+         *
+         *     ``SCHOOL_PROFILE`` is satisfied by ``POST /organizations`` itself (name/
+         *     type/timezone are required at creation) so it is always complete.
+         *     ``LOCATIONS``/``ROOMS``/``PROGRAMS`` are satisfied by using the structure
+         *     domain's own create endpoints — onboarding does not duplicate them, it only
+         *     reports whether at least one active row exists for the school (see
+         *     ``app.domains.onboarding.service``). ``FIRST_INVITE`` is satisfied by
+         *     sending any invitation (in practice, during onboarding, the co-owner invite
+         *     — see ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).
+         *     ``ACTIVATE`` is the terminal step: leaving "u pripremi".
+         * @enum {string}
+         */
+        OnboardingStep: "SCHOOL_PROFILE" | "LOCATIONS" | "ROOMS" | "PROGRAMS" | "FIRST_INVITE" | "ACTIVATE";
+        /** OnboardingStepStatus */
+        OnboardingStepStatus: {
+            /** Completed */
+            completed: boolean;
+            /** Completed At */
+            completed_at: string | null;
+            step: components["schemas"]["OnboardingStep"];
+        };
+        /**
+         * OrganizationLifecycleStatus
+         * @description Where a school is in guided onboarding (PRD 02 §24/§25), independent of
+         *     ``record_status`` (which is the soft-delete/deactivation axis — §31).
+         *
+         *     A school created through ``POST /organizations`` starts ``IN_PREPARATION``
+         *     ("u pripremi"): the owner may set up structure and invite a co-owner, but
+         *     normal STAFF/PARENT/STUDENT invitations are blocked until ``ACTIVE`` (see
+         *     ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).
+         *     Legacy/seed rows default to ``ACTIVE`` so behaviour outside the real
+         *     signup path is unchanged.
+         * @enum {string}
+         */
+        OrganizationLifecycleStatus: "IN_PREPARATION" | "ACTIVE";
         /** OrganizationResponse */
         OrganizationResponse: {
             /** Id */
             id: string;
+            lifecycle_status: components["schemas"]["OrganizationLifecycleStatus"];
             /** Name */
             name: string;
             /** Slug */
@@ -4044,6 +4139,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContextSummary"][];
+                };
+            };
+        };
+    };
+    activateOnboarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingProgressResponse"];
+                };
+            };
+            /** @description Already active, or the minimum setup (a location) is missing. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getOnboardingProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingProgressResponse"];
                 };
             };
         };

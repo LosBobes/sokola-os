@@ -1851,11 +1851,117 @@
         "title": "MergeReviewResponse",
         "type": "object"
       },
+      "OnboardingProgressResponse": {
+        "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "can_activate": {
+            "title": "Can Activate",
+            "type": "boolean"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/OrganizationLifecycleStatus"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "remaining_steps": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingStep"
+            },
+            "title": "Remaining Steps",
+            "type": "array"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingStepStatus"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "organization_id",
+          "lifecycle_status",
+          "steps",
+          "remaining_steps",
+          "can_activate",
+          "activated_at"
+        ],
+        "title": "OnboardingProgressResponse",
+        "type": "object"
+      },
+      "OnboardingStep": {
+        "description": "A step of guided school setup, in the order a new owner walks them.\n\n``SCHOOL_PROFILE`` is satisfied by ``POST /organizations`` itself (name/\ntype/timezone are required at creation) so it is always complete.\n``LOCATIONS``/``ROOMS``/``PROGRAMS`` are satisfied by using the structure\ndomain's own create endpoints \u2014 onboarding does not duplicate them, it only\nreports whether at least one active row exists for the school (see\n``app.domains.onboarding.service``). ``FIRST_INVITE`` is satisfied by\nsending any invitation (in practice, during onboarding, the co-owner invite\n\u2014 see ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).\n``ACTIVATE`` is the terminal step: leaving \"u pripremi\".",
+        "enum": [
+          "SCHOOL_PROFILE",
+          "LOCATIONS",
+          "ROOMS",
+          "PROGRAMS",
+          "FIRST_INVITE",
+          "ACTIVATE"
+        ],
+        "title": "OnboardingStep",
+        "type": "string"
+      },
+      "OnboardingStepStatus": {
+        "properties": {
+          "completed": {
+            "title": "Completed",
+            "type": "boolean"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "step": {
+            "$ref": "#/components/schemas/OnboardingStep"
+          }
+        },
+        "required": [
+          "step",
+          "completed",
+          "completed_at"
+        ],
+        "title": "OnboardingStepStatus",
+        "type": "object"
+      },
+      "OrganizationLifecycleStatus": {
+        "description": "Where a school is in guided onboarding (PRD 02 \u00a724/\u00a725), independent of\n``record_status`` (which is the soft-delete/deactivation axis \u2014 \u00a731).\n\nA school created through ``POST /organizations`` starts ``IN_PREPARATION``\n(\"u pripremi\"): the owner may set up structure and invite a co-owner, but\nnormal STAFF/PARENT/STUDENT invitations are blocked until ``ACTIVE`` (see\n``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).\nLegacy/seed rows default to ``ACTIVE`` so behaviour outside the real\nsignup path is unchanged.",
+        "enum": [
+          "IN_PREPARATION",
+          "ACTIVE"
+        ],
+        "title": "OrganizationLifecycleStatus",
+        "type": "string"
+      },
       "OrganizationResponse": {
         "properties": {
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/OrganizationLifecycleStatus"
           },
           "name": {
             "title": "Name",
@@ -1885,7 +1991,8 @@
           "name",
           "slug",
           "type",
-          "timezone"
+          "timezone",
+          "lifecycle_status"
         ],
         "title": "OrganizationResponse",
         "type": "object"
@@ -5662,6 +5769,53 @@
         "summary": "List My Contexts",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/onboarding/activate": {
+      "post": {
+        "description": "Leave \"u pripremi\": the school behaves normally from here on (\u00a713).",
+        "operationId": "activateOnboarding",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingProgressResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Already active, or the minimum setup (a location) is missing."
+          }
+        },
+        "summary": "Activate",
+        "tags": [
+          "onboarding"
+        ]
+      }
+    },
+    "/onboarding/progress": {
+      "get": {
+        "description": "Per-step guided-onboarding progress for the caller's active school\n(PRD 02 \u00a724/\u00a725) \u2014 what's done and what's left, including whether\nactivation is currently possible.",
+        "operationId": "getOnboardingProgress",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingProgressResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Progress",
+        "tags": [
+          "onboarding"
         ]
       }
     },
