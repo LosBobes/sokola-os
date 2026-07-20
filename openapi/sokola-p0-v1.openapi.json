@@ -2314,6 +2314,91 @@
         "title": "MergeReviewResponse",
         "type": "object"
       },
+      "NotificationDeliveryStatus": {
+        "description": "Delivery state of a single in-app :class:`Notification` row.\n\nv1 has exactly one channel \u2014 the in-app inbox \u2014 so ``DELIVERED`` simply\nmeans the row was committed successfully; there is no external send step\nyet (email/push are out of scope, see PRD 08 M4). The states still model a\nreal state machine so a future channel can slot in without a schema change:\n\n* ``PENDING`` \u2014 the row is being constructed; never observed once committed\n  (a handler either finishes and commits as ``DELIVERED``, or the whole\n  outbox message fails and retries \u2014 see ``app.platform.outbox``).\n* ``DELIVERED`` \u2014 the in-app record exists and is visible in the recipient's\n  inbox. Terminal for v1.\n* ``FAILED`` \u2014 reserved for a future external channel's delivery failure;\n  unused today because in-app \"delivery\" cannot partially fail (either the\n  transaction commits, or the outbox retries the whole event).",
+        "enum": [
+          "PENDING",
+          "DELIVERED",
+          "FAILED"
+        ],
+        "title": "NotificationDeliveryStatus",
+        "type": "string"
+      },
+      "NotificationResponse": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "delivery_status": {
+            "$ref": "#/components/schemas/NotificationDeliveryStatus"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "entity_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Type"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "event_type",
+          "entity_type",
+          "entity_id",
+          "title",
+          "body",
+          "delivery_status",
+          "created_at",
+          "read_at"
+        ],
+        "title": "NotificationResponse",
+        "type": "object"
+      },
       "OnboardingProgressResponse": {
         "properties": {
           "activated_at": {
@@ -2719,6 +2804,37 @@
           "offset"
         ],
         "title": "Page[LocationResponse]",
+        "type": "object"
+      },
+      "Page_NotificationResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[NotificationResponse]",
         "type": "object"
       },
       "Page_PersonSummary_": {
@@ -5230,6 +5346,108 @@
           }
         },
         "summary": "Preview Announcement",
+        "tags": [
+          "communications"
+        ]
+      }
+    },
+    "/communications/inbox": {
+      "get": {
+        "description": "M3. Every authenticated person has an inbox \u2014 no COMMUNICATIONS\npermission required, since a person always sees only their own items.",
+        "operationId": "listInbox",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_NotificationResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Inbox",
+        "tags": [
+          "communications"
+        ]
+      }
+    },
+    "/communications/inbox/{notification_id}/read": {
+      "post": {
+        "operationId": "markInboxRead",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": {
+              "title": "Notification Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not found in the caller's own inbox."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Inbox Read",
         "tags": [
           "communications"
         ]
