@@ -21,6 +21,8 @@ preserved exactly:
     EVENTS          | OWNER, MANAGER, ADMIN            (events _staff)
     COMMUNICATIONS  | OWNER, MANAGER, ADMIN            (communications _staff)
     PARENTS         | PARENT                           (parent router + events _parent)
+    DOCUMENTS       | OWNER, MANAGER, ADMIN            (documents _staff — new area, no
+                    |                                    require_roles precedent to audit)
 
 ORGANIZATION and ROLES have no ``require_roles`` guard today (the organization
 and identity routers gate on context alone), so including them in the
@@ -55,6 +57,7 @@ class PermissionArea(enum.StrEnum):
     COMMUNICATIONS = "COMMUNICATIONS"
     ORGANIZATION = "ORGANIZATION"
     ROLES = "ROLES"  # role / invitation administration
+    DOCUMENTS = "DOCUMENTS"
 
 
 # Everything a staff role administers by default. ORGANIZATION/ROLES are
@@ -71,6 +74,7 @@ _STAFF_AREAS: frozenset[PermissionArea] = frozenset(
         PermissionArea.COMMUNICATIONS,
         PermissionArea.ORGANIZATION,
         PermissionArea.ROLES,
+        PermissionArea.DOCUMENTS,
     }
 )
 

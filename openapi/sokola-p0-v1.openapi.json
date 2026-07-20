@@ -424,6 +424,49 @@
         "title": "BillingRunResponse",
         "type": "object"
       },
+      "Body_uploadDocument": {
+        "properties": {
+          "document_type": {
+            "$ref": "#/components/schemas/DocumentType",
+            "default": "GENERAL"
+          },
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "retention_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetentionPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subject_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Person Id"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/DocumentVisibility",
+            "default": "STAFF_ONLY"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_uploadDocument",
+        "type": "object"
+      },
       "CategoryResponse": {
         "properties": {
           "id": {
@@ -1043,6 +1086,124 @@
         ],
         "title": "DevIdentityResponse",
         "type": "object"
+      },
+      "DocumentResponse": {
+        "properties": {
+          "acknowledged_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged At"
+          },
+          "acknowledged_by_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged By Person Id"
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "document_type": {
+            "$ref": "#/components/schemas/DocumentType"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "owner_person_id": {
+            "title": "Owner Person Id",
+            "type": "string"
+          },
+          "retention_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetentionPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "subject_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Person Id"
+          },
+          "uploaded_at": {
+            "format": "date-time",
+            "title": "Uploaded At",
+            "type": "string"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/DocumentVisibility"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "owner_person_id",
+          "subject_person_id",
+          "filename",
+          "content_type",
+          "size_bytes",
+          "document_type",
+          "visibility",
+          "retention_period",
+          "uploaded_at",
+          "acknowledged_at",
+          "acknowledged_by_person_id"
+        ],
+        "title": "DocumentResponse",
+        "type": "object"
+      },
+      "DocumentType": {
+        "description": "GENERAL is any uploaded file (photo, form, certificate, ...). CONTRACT is\na subtype that carries an acknowledgement (electronic \"I have read/agree\")\nstate \u2014 see ``acknowledged_at``/``acknowledged_by_person_id`` on the model.",
+        "enum": [
+          "GENERAL",
+          "CONTRACT"
+        ],
+        "title": "DocumentType",
+        "type": "string"
+      },
+      "DocumentVisibility": {
+        "description": "Who \u2014 beyond staff, who can always reach anything in their own tenant via\nthe DOCUMENTS permission \u2014 may see this document.\n\nSTAFF_ONLY: no one outside staff (e.g. internal admin paperwork).\nSUBJECT: the person named in ``subject_person_id`` may see it, and \u2014 when\nthat subject is a child \u2014 so may any guardian with active\n``GuardianOrganizationAccess`` to that child in this organization. This\nmirrors how the events domain already resolves \"which children can this\nparent act for\" (see ``app.domains.events.repository.guardian_children``).",
+        "enum": [
+          "STAFF_ONLY",
+          "SUBJECT"
+        ],
+        "title": "DocumentVisibility",
+        "type": "string"
       },
       "DuplicateCandidate": {
         "properties": {
@@ -2072,6 +2233,37 @@
         "title": "Page[ChargeResponse]",
         "type": "object"
       },
+      "Page_DocumentResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[DocumentResponse]",
+        "type": "object"
+      },
       "Page_GroupResponse_": {
         "properties": {
           "items": {
@@ -2660,6 +2852,18 @@
           "CANCELLED"
         ],
         "title": "RegistrationStatus",
+        "type": "string"
+      },
+      "RetentionPeriod": {
+        "description": "A declared retention policy label recorded at upload time. Nothing in this\nincrement enforces expiry/deletion against it \u2014 it is metadata for a future\nretention job, not a guarantee.",
+        "enum": [
+          "ONE_YEAR",
+          "THREE_YEARS",
+          "FIVE_YEARS",
+          "TEN_YEARS",
+          "INDEFINITE"
+        ],
+        "title": "RetentionPeriod",
         "type": "string"
       },
       "RevokeGuardianAccessRequest": {
@@ -4432,6 +4636,264 @@
         "summary": "Preview Announcement",
         "tags": [
           "communications"
+        ]
+      }
+    },
+    "/documents": {
+      "get": {
+        "operationId": "listDocuments",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "document_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DocumentType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Document Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subject_person_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Person Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DocumentResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Documents",
+        "tags": [
+          "documents"
+        ]
+      },
+      "post": {
+        "operationId": "uploadDocument",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_uploadDocument"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Unsupported format, empty, or oversized file."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{document_id}": {
+      "get": {
+        "operationId": "getDocument",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{document_id}/acknowledge": {
+      "post": {
+        "operationId": "acknowledgeDocument",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Document is not a contract."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Acknowledge Document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{document_id}/content": {
+      "get": {
+        "operationId": "downloadDocumentContent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/octet-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Document Content",
+        "tags": [
+          "documents"
         ]
       }
     },
