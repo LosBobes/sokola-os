@@ -59,7 +59,12 @@ def assign_role(
     policy.validate_scope(
         db, context.organization_id, req.role_code, req.scope_type, req.scope_ref_id
     )
-    policy.validate_granted_areas(req.role_code, req.granted_areas)
+    policy.validate_granted_areas(
+        req.role_code,
+        req.granted_areas,
+        actor_role_code=context.role_code,
+        actor_granted_areas=context.granted_areas,
+    )
 
     existing = repository.find_assignment(
         db,
@@ -138,7 +143,12 @@ def update_granted_areas(
     db: Session, context: RequestContext, assignment_id: str, req: UpdateGrantedAreasRequest
 ) -> RoleAssignmentResponse:
     assignment, person = _load_assignment(db, context, assignment_id)
-    policy.validate_granted_areas(assignment.role_code, req.granted_areas)
+    policy.validate_granted_areas(
+        assignment.role_code,
+        req.granted_areas,
+        actor_role_code=context.role_code,
+        actor_granted_areas=context.granted_areas,
+    )
     assignment.granted_areas = req.granted_areas
     record_audit(
         db,

@@ -12,7 +12,8 @@ type IconName =
   | "komunikacija"
   | "dogadjaji"
   | "izvestaji"
-  | "vise";
+  | "vise"
+  | "prisustvo";
 
 interface Destination {
   to: string;
@@ -34,9 +35,16 @@ const NAV: Record<RoleCode, Destination[]> = {
   OWNER: managerNav(),
   MANAGER: managerNav(),
   ADMIN: managerNav(),
+  // T01 (#27): trainer bottom tab bar is Danas/Prisustvo/Raspored/Grupe/Više.
+  // Prisustvo/Grupe/Više have no dedicated screens yet (separate tickets), so —
+  // same as manager's Izveštaji/Više above — they fall through the router's
+  // `*` redirect to home until those land.
   TRAINER: [
     { to: "/", label: "Danas", hint: "Termini i prisustvo", icon: "danas" },
+    { to: "/prisustvo", label: "Prisustvo", hint: "Evidencija", icon: "prisustvo" },
     { to: "/raspored", label: "Raspored", hint: "Svi termini", icon: "raspored" },
+    { to: "/grupe", label: "Grupe", hint: "Moje grupe", icon: "ljudi" },
+    { to: "/vise", label: "Više", hint: "Ostalo", icon: "vise" },
   ],
   PARENT: [
     { to: "/", label: "Početna", hint: "Šta je sledeće", icon: "danas" },
@@ -151,10 +159,17 @@ function NavIcon({ name }: { name: IconName }) {
           <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6" />
         </svg>
       );
+    case "prisustvo":
+      return (
+        <svg {...p}>
+          <rect x="4" y="4.5" width="16" height="15" rx="2.5" />
+          <path d="M8.5 12l2.4 2.4L16 9" />
+        </svg>
+      );
   }
 }
 
-function BrandMark() {
+export function BrandMark() {
   return (
     <svg className="brandmark" viewBox="0 0 40 40" aria-hidden focusable="false">
       <rect className="brandmark__bg" x="1" y="1" width="38" height="38" rx="11" />

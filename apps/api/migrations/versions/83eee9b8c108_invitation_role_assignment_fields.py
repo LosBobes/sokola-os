@@ -1,7 +1,7 @@
 """invitation role assignment fields
 
 Revision ID: 83eee9b8c108
-Revises: 67466fa8faa5
+Revises: bb71ff179332
 Create Date: 2026-07-20 20:51:15.486847
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 revision: str = '83eee9b8c108'
-down_revision: str | None = '67466fa8faa5'
+down_revision: str | None = 'bb71ff179332'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

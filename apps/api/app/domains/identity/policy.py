@@ -15,7 +15,7 @@ from app.common.errors import BadRequestError, NotFoundError
 from app.domains.groups.models import Group
 from app.domains.identity.enums import InvitationType, RoleCode, RoleScopeType
 from app.domains.structure.models import Location
-from app.security.permissions import ROLE_DEFAULT_AREAS
+from app.security.permissions import ROLE_DEFAULT_AREAS, effective_areas, parse_granted_areas
 
 _STAFF_ROLE_CODES = frozenset({RoleCode.OWNER, RoleCode.MANAGER, RoleCode.ADMIN, RoleCode.TRAINER})
 
@@ -73,17 +73,49 @@ def validate_scope(
         raise NotFoundError("Grupa nije pronađena.")
 
 
-def validate_granted_areas(role_code: RoleCode, granted_areas: list[str] | None) -> None:
+def validate_granted_areas(
+    role_code: RoleCode,
+    granted_areas: list[str] | None,
+    *,
+    actor_role_code: RoleCode,
+    actor_granted_areas: tuple[str, ...] | None,
+) -> None:
     """A restriction can only narrow a role's default areas, never escalate
-    (§19.2/§25.5) — reject areas the role could never reach at write time."""
-    if granted_areas is None:
+    (§19.2/§25.5) — checked two ways:
+
+    1. Every requested area must be one the target role could ever reach
+       (reject areas outside the role's own defaults).
+    2. For a STAFF-family target role (OWNER/MANAGER/ADMIN/TRAINER — the roles
+       whose access is denominated in these areas at all), the resulting areas
+       must never exceed what the ACTING context itself effectively holds —
+       otherwise a restricted admin could invite/assign someone (or edit their
+       own assignment) into MORE access than they have, laundering a narrow
+       grant into a broad one. An unrestricted actor's effective areas already
+       cover every staff role's defaults, so this is a no-op for the common
+       case. PARENT/STUDENT are a different axis entirely — becoming a parent
+       or student isn't a point on the staff-area scale (no staff role's
+       defaults include PARENTS), so granting those role kinds is data
+       administration already gated by ROLES/PEOPLE, not an area escalation.
+    """
+    if granted_areas is not None:
+        defaults = {a.value for a in ROLE_DEFAULT_AREAS.get(role_code, frozenset())}
+        invalid = sorted(a for a in granted_areas if a not in defaults)
+        if invalid:
+            raise BadRequestError(
+                f"Nedozvoljene oblasti za ovu ulogu: {', '.join(invalid)}.",
+                details={"invalid_areas": invalid},
+            )
+
+    if role_code not in _STAFF_ROLE_CODES:
         return
-    defaults = {a.value for a in ROLE_DEFAULT_AREAS.get(role_code, frozenset())}
-    invalid = sorted(a for a in granted_areas if a not in defaults)
-    if invalid:
+
+    target_effective = effective_areas(role_code, parse_granted_areas(granted_areas))
+    actor_effective = effective_areas(actor_role_code, parse_granted_areas(actor_granted_areas))
+    excess = sorted(a.value for a in (target_effective - actor_effective))
+    if excess:
         raise BadRequestError(
-            f"Nedozvoljene oblasti za ovu ulogu: {', '.join(invalid)}.",
-            details={"invalid_areas": invalid},
+            f"Ne možete dodeliti oblasti koje sami nemate: {', '.join(excess)}.",
+            details={"invalid_areas": excess},
         )
 
 

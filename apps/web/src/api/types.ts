@@ -30,6 +30,11 @@ export interface Organization {
   timezone: string;
 }
 
+export interface LocationSummary {
+  id: string;
+  name: string;
+}
+
 export interface TenantPublic {
   organization_id: string;
   name: string;
@@ -48,10 +53,12 @@ export interface Page<T> {
   offset: number;
 }
 
+export type PersonIdentityStatus = "PROVISIONAL" | "CLAIMED" | "VERIFIED" | "MERGED" | "ARCHIVED";
+
 export interface PersonSummary {
   id: string;
   display_name: string;
-  identity_status: string;
+  identity_status: PersonIdentityStatus;
 }
 
 export interface Person {
@@ -59,7 +66,7 @@ export interface Person {
   given_name: string;
   family_name: string;
   display_name: string;
-  identity_status: string;
+  identity_status: PersonIdentityStatus;
 }
 
 export type PersonResponse = Person;
@@ -77,7 +84,44 @@ export interface GroupMember {
   display_name: string;
 }
 
+/* --- Membership (increment #6, merged to main) ------------------------ */
+
+export type MembershipStatus = "ACTIVE" | "SUSPENDED" | "ENDED";
+
+export interface MembershipResponse {
+  id: string;
+  person_id: string;
+  status: MembershipStatus;
+  local_member_code: string | null;
+  admin_note: string | null;
+}
+
+/* --- Guardians ---------------------------------------------------------- */
+
+export type GuardianRelationshipType = "PARENT" | "LEGAL_GUARDIAN" | "OTHER";
+export type GuardianAccessStatus = "ACTIVE" | "SUSPENDED" | "REVOKED";
+
+export interface GuardianContactResponse {
+  guardian_person_id: string;
+  display_name: string;
+  relationship_type: GuardianRelationshipType;
+  is_primary_contact: boolean;
+  access_status: GuardianAccessStatus;
+}
+
 export type SessionStatus = "SCHEDULED" | "CANCELLED" | "COMPLETED";
+
+export type SessionCancellationReasonCode =
+  | "WEATHER"
+  | "TRAINER_UNAVAILABLE"
+  | "HOLIDAY"
+  | "LOW_ATTENDANCE"
+  | "OTHER";
+
+export type SessionChangeReasonCode = "TIME_CHANGE" | "LOCATION_CHANGE" | "TRAINER_CHANGE" | "OTHER";
+
+/** Calendar-style edit scope for a session that belongs to a series. */
+export type SessionEditScope = "SINGLE" | "THIS_AND_FUTURE" | "ALL_FUTURE";
 
 export interface SessionSummary {
   id: string;
@@ -86,6 +130,25 @@ export interface SessionSummary {
   starts_at: string;
   ends_at: string;
   status: SessionStatus;
+  trainer_person_id?: string | null;
+  series_id?: string | null;
+  cancellation_reason?: SessionCancellationReasonCode | null;
+}
+
+/** PATCH /schedule/sessions/{id} body. Any field left undefined is unchanged. */
+export interface SessionEdit {
+  local_time?: string | null;
+  duration_minutes?: number | null;
+  title?: string | null;
+  trainer_person_id?: string | null;
+  reason: SessionChangeReasonCode;
+  scope: SessionEditScope;
+}
+
+/** POST /schedule/sessions/{id}/cancel body. */
+export interface SessionCancel {
+  reason: SessionCancellationReasonCode;
+  note?: string | null;
 }
 
 export interface ConflictCheck {

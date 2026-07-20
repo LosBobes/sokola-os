@@ -300,6 +300,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/groups/{group_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Group */
+        patch: operations["updateGroup"];
+        trace?: never;
+    };
     "/groups/{group_id}/members": {
         parameters: {
             query?: never;
@@ -312,6 +329,74 @@ export interface paths {
         put?: never;
         /** Add Group Member */
         post: operations["addGroupMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{group_id}/members/{membership_id}/discount": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Set Group Membership Discount */
+        patch: operations["setGroupMembershipDiscount"];
+        trace?: never;
+    };
+    "/groups/{group_id}/members/{membership_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End Group Membership */
+        post: operations["endGroupMembership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{group_id}/members/{membership_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Group Membership */
+        post: operations["resumeGroupMembership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{group_id}/members/{membership_id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suspend Group Membership */
+        post: operations["suspendGroupMembership"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1463,12 +1548,18 @@ export interface components {
         };
         /** CreateGroupRequest */
         CreateGroupRequest: {
+            /** Base Monthly Price Minor */
+            base_monthly_price_minor?: number | null;
             /** Capacity */
             capacity?: number | null;
             /** @default UNLIMITED */
             capacity_mode: components["schemas"]["GroupCapacityMode"];
+            /** Location Id */
+            location_id?: string | null;
             /** Name */
             name: string;
+            /** Program Id */
+            program_id?: string | null;
         };
         /** CreateInvitationRequest */
         CreateInvitationRequest: {
@@ -1572,6 +1663,12 @@ export interface components {
             /** Given Name */
             given_name: string;
         };
+        /** EndGroupMembershipRequest */
+        EndGroupMembershipRequest: {
+            end_reason: components["schemas"]["GroupMembershipEndReason"];
+            /** Reason */
+            reason?: string | null;
+        };
         /**
          * EventCapacityMode
          * @enum {string}
@@ -1617,22 +1714,61 @@ export interface components {
         GroupCapacityMode: "UNLIMITED" | "LIMITED";
         /** GroupMemberResponse */
         GroupMemberResponse: {
+            /** Discount Minor */
+            discount_minor: number;
             /** Display Name */
             display_name: string;
+            end_reason: components["schemas"]["GroupMembershipEndReason"] | null;
+            /** Ended At */
+            ended_at: string | null;
+            /**
+             * Joined At
+             * Format: date-time
+             */
+            joined_at: string;
             /** Membership Id */
             membership_id: string;
             /** Person Id */
             person_id: string;
+            status: components["schemas"]["GroupMembershipStatus"];
+        };
+        /**
+         * GroupMembershipEndReason
+         * @enum {string}
+         */
+        GroupMembershipEndReason: "LEFT" | "MOVED" | "REMOVED" | "SEASON_END";
+        /**
+         * GroupMembershipStatus
+         * @description Mirrors :class:`app.domains.organization.enums.MembershipStatus` at group
+         *     scope. ``ENDED`` is terminal — re-joining creates a brand-new membership row,
+         *     never a revived one (the unique constraint on ``(group_id, person_id)`` would
+         *     otherwise collide with history).
+         * @enum {string}
+         */
+        GroupMembershipStatus: "ACTIVE" | "SUSPENDED" | "ENDED";
+        /**
+         * GroupMembershipTransitionRequest
+         * @description Optional operator note explaining a suspend/resume.
+         */
+        GroupMembershipTransitionRequest: {
+            /** Reason */
+            reason?: string | null;
         };
         /** GroupResponse */
         GroupResponse: {
+            /** Base Monthly Price Minor */
+            base_monthly_price_minor: number | null;
             /** Capacity */
             capacity: number | null;
             capacity_mode: components["schemas"]["GroupCapacityMode"];
             /** Id */
             id: string;
+            /** Location Id */
+            location_id: string | null;
             /** Name */
             name: string;
+            /** Program Id */
+            program_id: string | null;
         };
         /**
          * GuardianAccessStatus
@@ -2341,6 +2477,16 @@ export interface components {
             /** Trainer Person Id */
             trainer_person_id?: string | null;
         };
+        /**
+         * SetMembershipDiscountRequest
+         * @description Absolute discount in minor currency units against the group's
+         *     ``base_monthly_price_minor`` — see :class:`app.domains.groups.models.
+         *     GroupMembership` for why this is absolute rather than a percentage.
+         */
+        SetMembershipDiscountRequest: {
+            /** Discount Minor */
+            discount_minor: number;
+        };
         /** SkippedOccurrence */
         SkippedOccurrence: {
             /** Reason */
@@ -2388,6 +2534,20 @@ export interface components {
         UpdateGrantedAreasRequest: {
             /** Granted Areas */
             granted_areas?: string[] | null;
+        };
+        /**
+         * UpdateGroupRequest
+         * @description Partial update. Only fields present in the request body are changed —
+         *     send ``null`` for ``program_id``/``location_id``/``base_monthly_price_minor``
+         *     to clear that link/price, omit a field entirely to leave it untouched.
+         */
+        UpdateGroupRequest: {
+            /** Base Monthly Price Minor */
+            base_monthly_price_minor?: number | null;
+            /** Location Id */
+            location_id?: string | null;
+            /** Program Id */
+            program_id?: string | null;
         };
         /** UpdateLocationRequest */
         UpdateLocationRequest: {
@@ -3099,6 +3259,55 @@ export interface operations {
                     "application/json": components["schemas"]["GroupResponse"];
                 };
             };
+            /** @description Program or location not found in this school. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupResponse"];
+                };
+            };
+            /** @description Group, program, or location not found in this school. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -3164,6 +3373,171 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GroupMemberResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    setGroupMembershipDiscount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+                membership_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMembershipDiscountRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupMemberResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    endGroupMembership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+                membership_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndGroupMembershipRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupMemberResponse"];
+                };
+            };
+            /** @description Membership already ended. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resumeGroupMembership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+                membership_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupMembershipTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupMemberResponse"];
+                };
+            };
+            /** @description Invalid transition for the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suspendGroupMembership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+                membership_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupMembershipTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupMemberResponse"];
+                };
+            };
+            /** @description Invalid transition for the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

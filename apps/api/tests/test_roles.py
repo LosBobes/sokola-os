@@ -92,6 +92,79 @@ def test_update_granted_areas_restricts_and_clears(client: TestClient, db: Sessi
     assert clear.json()["granted_areas"] is None
 
 
+def test_restricted_admin_cannot_grant_areas_beyond_their_own(
+    client: TestClient, db: Session
+) -> None:
+    # An ADMIN restricted to just ROLES+BILLING must not be able to launder
+    # that into broader access — for anyone, including themselves — by
+    # granting a wider set than they themselves effectively hold (§19.2/§25.5).
+    staff = bootstrap_actor(db)
+    restricted_admin = add_actor(
+        db,
+        organization=staff.organization,
+        role=RoleCode.ADMIN,
+        given="Ograničen",
+        granted_areas=["ROLES", "BILLING"],
+    )
+    target = add_actor(
+        db, organization=staff.organization, role=RoleCode.ADMIN, given="Meta"
+    )
+
+    # Cannot grant a third party more than the restricted admin itself holds.
+    escalate_other = client.patch(
+        f"/roles/{target.assignment.id}/granted-areas",
+        headers=restricted_admin.headers,
+        json={"granted_areas": ["PEOPLE"]},
+    )
+    assert escalate_other.status_code == 400
+
+    # Cannot self-escalate by clearing their own restriction to the full
+    # (unrestricted) ADMIN default either.
+    self_escalate = client.patch(
+        f"/roles/{restricted_admin.assignment.id}/granted-areas",
+        headers=restricted_admin.headers,
+        json={"granted_areas": None},
+    )
+    assert self_escalate.status_code == 400
+
+    # Narrowing to a set they still hold (ROLES stays, BILLING stays) is fine.
+    narrow = client.patch(
+        f"/roles/{restricted_admin.assignment.id}/granted-areas",
+        headers=restricted_admin.headers,
+        json={"granted_areas": ["ROLES", "BILLING"]},
+    )
+    assert narrow.status_code == 200
+
+    # Same bound applies to inviting a new staff member — an unrestricted
+    # ADMIN invite (granted_areas omitted) would exceed what this restricted
+    # actor itself holds.
+    invite_escalate = client.post(
+        "/invitations",
+        headers=restricted_admin.headers,
+        json={
+            "type": "STAFF",
+            "role_code": "ADMIN",
+            "target_email": "novi@example.com",
+            "scope_type": "ORGANIZATION",
+        },
+    )
+    assert invite_escalate.status_code == 400
+
+    # But inviting within the areas they actually hold succeeds.
+    invite_within_bounds = client.post(
+        "/invitations",
+        headers=restricted_admin.headers,
+        json={
+            "type": "STAFF",
+            "role_code": "ADMIN",
+            "target_email": "u-granicama@example.com",
+            "scope_type": "ORGANIZATION",
+            "granted_areas": ["BILLING"],
+        },
+    )
+    assert invite_within_bounds.status_code == 201
+
+
 def test_suspend_and_revoke_assignment(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
     trainer = add_actor(db, organization=staff.organization, role=RoleCode.TRAINER, given="T")

@@ -677,6 +677,18 @@
       },
       "CreateGroupRequest": {
         "properties": {
+          "base_monthly_price_minor": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Monthly Price Minor"
+          },
           "capacity": {
             "anyOf": [
               {
@@ -693,11 +705,33 @@
             "$ref": "#/components/schemas/GroupCapacityMode",
             "default": "UNLIMITED"
           },
+          "location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
+          },
           "name": {
             "maxLength": 160,
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "program_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program Id"
           }
         },
         "required": [
@@ -1054,6 +1088,30 @@
         "title": "DuplicateCluster",
         "type": "object"
       },
+      "EndGroupMembershipRequest": {
+        "properties": {
+          "end_reason": {
+            "$ref": "#/components/schemas/GroupMembershipEndReason"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "end_reason"
+        ],
+        "title": "EndGroupMembershipRequest",
+        "type": "object"
+      },
       "EventCapacityMode": {
         "enum": [
           "UNLIMITED",
@@ -1153,8 +1211,39 @@
       },
       "GroupMemberResponse": {
         "properties": {
+          "discount_minor": {
+            "title": "Discount Minor",
+            "type": "integer"
+          },
           "display_name": {
             "title": "Display Name",
+            "type": "string"
+          },
+          "end_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GroupMembershipEndReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "joined_at": {
+            "format": "date-time",
+            "title": "Joined At",
             "type": "string"
           },
           "membership_id": {
@@ -1164,18 +1253,76 @@
           "person_id": {
             "title": "Person Id",
             "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/GroupMembershipStatus"
           }
         },
         "required": [
           "membership_id",
           "person_id",
-          "display_name"
+          "display_name",
+          "status",
+          "discount_minor",
+          "joined_at",
+          "ended_at",
+          "end_reason"
         ],
         "title": "GroupMemberResponse",
         "type": "object"
       },
+      "GroupMembershipEndReason": {
+        "enum": [
+          "LEFT",
+          "MOVED",
+          "REMOVED",
+          "SEASON_END"
+        ],
+        "title": "GroupMembershipEndReason",
+        "type": "string"
+      },
+      "GroupMembershipStatus": {
+        "description": "Mirrors :class:`app.domains.organization.enums.MembershipStatus` at group\nscope. ``ENDED`` is terminal \u2014 re-joining creates a brand-new membership row,\nnever a revived one (the unique constraint on ``(group_id, person_id)`` would\notherwise collide with history).",
+        "enum": [
+          "ACTIVE",
+          "SUSPENDED",
+          "ENDED"
+        ],
+        "title": "GroupMembershipStatus",
+        "type": "string"
+      },
+      "GroupMembershipTransitionRequest": {
+        "description": "Optional operator note explaining a suspend/resume.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "GroupMembershipTransitionRequest",
+        "type": "object"
+      },
       "GroupResponse": {
         "properties": {
+          "base_monthly_price_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Monthly Price Minor"
+          },
           "capacity": {
             "anyOf": [
               {
@@ -1194,16 +1341,41 @@
             "title": "Id",
             "type": "string"
           },
+          "location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
+          },
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "program_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program Id"
           }
         },
         "required": [
           "id",
           "name",
           "capacity_mode",
-          "capacity"
+          "capacity",
+          "program_id",
+          "location_id",
+          "base_monthly_price_minor"
         ],
         "title": "GroupResponse",
         "type": "object"
@@ -3105,6 +3277,21 @@
         "title": "SessionSummary",
         "type": "object"
       },
+      "SetMembershipDiscountRequest": {
+        "description": "Absolute discount in minor currency units against the group's\n``base_monthly_price_minor`` \u2014 see :class:`app.domains.groups.models.\nGroupMembership` for why this is absolute rather than a percentage.",
+        "properties": {
+          "discount_minor": {
+            "minimum": 0.0,
+            "title": "Discount Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "discount_minor"
+        ],
+        "title": "SetMembershipDiscountRequest",
+        "type": "object"
+      },
       "SkippedOccurrence": {
         "properties": {
           "reason": {
@@ -3235,6 +3422,47 @@
           }
         },
         "title": "UpdateGrantedAreasRequest",
+        "type": "object"
+      },
+      "UpdateGroupRequest": {
+        "description": "Partial update. Only fields present in the request body are changed \u2014\nsend ``null`` for ``program_id``/``location_id``/``base_monthly_price_minor``\nto clear that link/price, omit a field entirely to leave it untouched.",
+        "properties": {
+          "base_monthly_price_minor": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Monthly Price Minor"
+          },
+          "location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
+          },
+          "program_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program Id"
+          }
+        },
+        "title": "UpdateGroupRequest",
         "type": "object"
       },
       "UpdateLocationRequest": {
@@ -4368,6 +4596,9 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "description": "Program or location not found in this school."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -4380,6 +4611,61 @@
           }
         },
         "summary": "Create Group",
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/groups/{group_id}": {
+      "patch": {
+        "operationId": "updateGroup",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "title": "Group Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGroupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Group, program, or location not found in this school."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Group",
         "tags": [
           "groups"
         ]
@@ -4476,6 +4762,259 @@
           }
         },
         "summary": "Add Group Member",
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/groups/{group_id}/members/{membership_id}/discount": {
+      "patch": {
+        "operationId": "setGroupMembershipDiscount",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "title": "Group Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMembershipDiscountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMemberResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Group Membership Discount",
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/groups/{group_id}/members/{membership_id}/end": {
+      "post": {
+        "operationId": "endGroupMembership",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "title": "Group Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndGroupMembershipRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMemberResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Membership already ended."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "End Group Membership",
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/groups/{group_id}/members/{membership_id}/resume": {
+      "post": {
+        "operationId": "resumeGroupMembership",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "title": "Group Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupMembershipTransitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMemberResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Invalid transition for the current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resume Group Membership",
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/groups/{group_id}/members/{membership_id}/suspend": {
+      "post": {
+        "operationId": "suspendGroupMembership",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "title": "Group Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupMembershipTransitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMemberResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Invalid transition for the current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Suspend Group Membership",
         "tags": [
           "groups"
         ]

@@ -81,7 +81,12 @@ def send_invitation(
 ) -> InvitationCreatedResponse:
     role_code = policy.role_code_for_invitation(req.type, req.role_code)
     policy.validate_scope(db, context.organization_id, role_code, req.scope_type, req.scope_ref_id)
-    policy.validate_granted_areas(role_code, req.granted_areas)
+    policy.validate_granted_areas(
+        role_code,
+        req.granted_areas,
+        actor_role_code=context.role_code,
+        actor_granted_areas=context.granted_areas,
+    )
 
     if req.type is InvitationType.PARENT:
         if not req.target_child_person_id:
