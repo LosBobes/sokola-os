@@ -1425,6 +1425,120 @@
         "title": "SaveAttendanceResponse",
         "type": "object"
       },
+      "SeriesGenerateRequest": {
+        "description": "Generate / top-up concrete sessions over a rolling horizon. Idempotent:\noccurrences that already exist for the series are left untouched.",
+        "properties": {
+          "from_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Date"
+          },
+          "weeks": {
+            "default": 12,
+            "maximum": 104.0,
+            "minimum": 1.0,
+            "title": "Weeks",
+            "type": "integer"
+          }
+        },
+        "title": "SeriesGenerateRequest",
+        "type": "object"
+      },
+      "SeriesGenerateResult": {
+        "properties": {
+          "created_count": {
+            "title": "Created Count",
+            "type": "integer"
+          },
+          "horizon_end": {
+            "format": "date",
+            "title": "Horizon End",
+            "type": "string"
+          },
+          "horizon_start": {
+            "format": "date",
+            "title": "Horizon Start",
+            "type": "string"
+          },
+          "series_id": {
+            "title": "Series Id",
+            "type": "string"
+          },
+          "skipped_conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/SkippedOccurrence"
+            },
+            "title": "Skipped Conflicts",
+            "type": "array"
+          },
+          "skipped_existing": {
+            "title": "Skipped Existing",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "series_id",
+          "created_count",
+          "skipped_existing",
+          "skipped_conflicts",
+          "horizon_start",
+          "horizon_end"
+        ],
+        "title": "SeriesGenerateResult",
+        "type": "object"
+      },
+      "SessionCancel": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/SessionCancellationReasonCode"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "SessionCancel",
+        "type": "object"
+      },
+      "SessionCancellationReasonCode": {
+        "enum": [
+          "WEATHER",
+          "TRAINER_UNAVAILABLE",
+          "HOLIDAY",
+          "LOW_ATTENDANCE",
+          "OTHER"
+        ],
+        "title": "SessionCancellationReasonCode",
+        "type": "string"
+      },
+      "SessionChangeReasonCode": {
+        "enum": [
+          "TIME_CHANGE",
+          "LOCATION_CHANGE",
+          "TRAINER_CHANGE",
+          "OTHER"
+        ],
+        "title": "SessionChangeReasonCode",
+        "type": "string"
+      },
       "SessionDraft": {
         "description": "The proposed shape of a session \u2014 used for both conflict preview and create.",
         "properties": {
@@ -1463,6 +1577,228 @@
         "title": "SessionDraft",
         "type": "object"
       },
+      "SessionEdit": {
+        "description": "Edit a generated session at the chosen scope. Any field left ``None`` is\nunchanged. ``local_time``/``duration_minutes`` re-materialize UTC instants.",
+        "properties": {
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1440.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Minutes"
+          },
+          "local_time": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Time"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/SessionChangeReasonCode",
+            "default": "OTHER"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/SessionEditScope"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "trainer_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trainer Person Id"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "title": "SessionEdit",
+        "type": "object"
+      },
+      "SessionEditScope": {
+        "description": "Calendar-style edit scope for a session that belongs to a series.\n\n* ``SINGLE`` \u2014 change only this one occurrence; the series is untouched.\n* ``THIS_AND_FUTURE`` \u2014 change the series template and every scheduled\n  occurrence from this one forward; past occurrences keep their old values.\n* ``ALL_FUTURE`` \u2014 change the series template and every upcoming scheduled\n  occurrence (from now on), regardless of which occurrence was edited.",
+        "enum": [
+          "SINGLE",
+          "THIS_AND_FUTURE",
+          "ALL_FUTURE"
+        ],
+        "title": "SessionEditScope",
+        "type": "string"
+      },
+      "SessionSeriesCreate": {
+        "description": "A weekly recurrence rule: weekday(s) + local time + start date, bound to a\ngroup and (optionally) a trainer.",
+        "properties": {
+          "duration_minutes": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1440.0,
+            "title": "Duration Minutes",
+            "type": "integer"
+          },
+          "frequency": {
+            "$ref": "#/components/schemas/SessionSeriesFrequency",
+            "default": "WEEKLY"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "local_time": {
+            "format": "time",
+            "title": "Local Time",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "timezone": {
+            "default": "Europe/Belgrade",
+            "maxLength": 64,
+            "title": "Timezone",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 160,
+            "title": "Title",
+            "type": "string"
+          },
+          "trainer_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trainer Person Id"
+          },
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 1,
+            "title": "Weekdays",
+            "type": "array"
+          }
+        },
+        "required": [
+          "group_id",
+          "title",
+          "weekdays",
+          "start_date",
+          "local_time",
+          "duration_minutes"
+        ],
+        "title": "SessionSeriesCreate",
+        "type": "object"
+      },
+      "SessionSeriesFrequency": {
+        "enum": [
+          "WEEKLY",
+          "BIWEEKLY",
+          "MONTHLY"
+        ],
+        "title": "SessionSeriesFrequency",
+        "type": "string"
+      },
+      "SessionSeriesSummary": {
+        "properties": {
+          "duration_minutes": {
+            "title": "Duration Minutes",
+            "type": "integer"
+          },
+          "frequency": {
+            "$ref": "#/components/schemas/SessionSeriesFrequency"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "local_time": {
+            "format": "time",
+            "title": "Local Time",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "trainer_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trainer Person Id"
+          },
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "group_id",
+          "trainer_person_id",
+          "title",
+          "frequency",
+          "weekdays",
+          "start_date",
+          "timezone",
+          "local_time",
+          "duration_minutes"
+        ],
+        "title": "SessionSeriesSummary",
+        "type": "object"
+      },
       "SessionStatus": {
         "enum": [
           "SCHEDULED",
@@ -1474,6 +1810,16 @@
       },
       "SessionSummary": {
         "properties": {
+          "cancellation_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionCancellationReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "ends_at": {
             "format": "date-time",
             "title": "Ends At",
@@ -1486,6 +1832,17 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "series_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Id"
           },
           "starts_at": {
             "format": "date-time",
@@ -1505,6 +1862,17 @@
               }
             ],
             "title": "Title"
+          },
+          "trainer_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trainer Person Id"
           }
         },
         "required": [
@@ -1516,6 +1884,25 @@
           "status"
         ],
         "title": "SessionSummary",
+        "type": "object"
+      },
+      "SkippedOccurrence": {
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "starts_at",
+          "reason"
+        ],
+        "title": "SkippedOccurrence",
         "type": "object"
       },
       "TenantPublic": {
@@ -2793,6 +3180,122 @@
         ]
       }
     },
+    "/schedule/series": {
+      "get": {
+        "operationId": "listSessionSeries",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionSeriesSummary"
+                  },
+                  "title": "Response Listsessionseries",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Series",
+        "tags": [
+          "schedule"
+        ]
+      },
+      "post": {
+        "operationId": "createSessionSeries",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionSeriesCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSeriesSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Series",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/schedule/series/{series_id}/generate": {
+      "post": {
+        "operationId": "generateSeriesSessions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeriesGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesGenerateResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Series Sessions",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
     "/schedule/sessions": {
       "get": {
         "operationId": "listSchedule",
@@ -2910,6 +3413,65 @@
         ]
       }
     },
+    "/schedule/sessions/{session_id}": {
+      "patch": {
+        "operationId": "editSession",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionSummary"
+                  },
+                  "title": "Response Editsession",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Time conflict with an existing session."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Edit Session",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
     "/schedule/sessions/{session_id}/attendance": {
       "get": {
         "operationId": "getAttendanceSheet",
@@ -3002,6 +3564,103 @@
         "summary": "Save Attendance",
         "tags": [
           "attendance"
+        ]
+      }
+    },
+    "/schedule/sessions/{session_id}/cancel": {
+      "post": {
+        "operationId": "cancelSession",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionCancel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Session",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/schedule/sessions/{session_id}/reactivate": {
+      "post": {
+        "operationId": "reactivateSession",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Time conflict with an existing session."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reactivate Session",
+        "tags": [
+          "schedule"
         ]
       }
     },

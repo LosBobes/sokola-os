@@ -4,7 +4,13 @@ import datetime as dt
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.domains.scheduling.enums import SessionStatus
+from app.domains.scheduling.enums import (
+    SessionCancellationReasonCode,
+    SessionChangeReasonCode,
+    SessionEditScope,
+    SessionSeriesFrequency,
+    SessionStatus,
+)
 
 
 class SessionDraft(BaseModel):
@@ -27,12 +33,106 @@ class SessionSummary(BaseModel):
 
     id: str
     group_id: str
+    series_id: str | None = None
+    trainer_person_id: str | None = None
     title: str | None
     starts_at: dt.datetime
     ends_at: dt.datetime
     status: SessionStatus
+    cancellation_reason: SessionCancellationReasonCode | None = None
 
 
 class ConflictCheckResponse(BaseModel):
     has_conflict: bool
     conflicts: list[SessionSummary]
+
+
+# --- Recurring series -------------------------------------------------------
+
+
+class SessionSeriesCreate(BaseModel):
+    """A weekly recurrence rule: weekday(s) + local time + start date, bound to a
+    group and (optionally) a trainer."""
+
+    group_id: str
+    trainer_person_id: str | None = None
+    title: str = Field(max_length=160)
+    frequency: SessionSeriesFrequency = SessionSeriesFrequency.WEEKLY
+    weekdays: list[int] = Field(min_length=1)
+    start_date: dt.date
+    timezone: str = Field(default="Europe/Belgrade", max_length=64)
+    local_time: dt.time
+    duration_minutes: int = Field(gt=0, le=24 * 60)
+
+    @model_validator(mode="after")
+    def _validate(self) -> SessionSeriesCreate:
+        if any(d < 0 or d > 6 for d in self.weekdays):
+            raise ValueError("weekdays must be integers 0 (Monday) .. 6 (Sunday)")
+        # Normalize to a sorted, de-duplicated set so generation is deterministic.
+        self.weekdays = sorted(set(self.weekdays))
+        return self
+
+
+class SessionSeriesSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    group_id: str
+    trainer_person_id: str | None
+    title: str
+    frequency: SessionSeriesFrequency
+    weekdays: list[int]
+    start_date: dt.date
+    timezone: str
+    local_time: dt.time
+    duration_minutes: int
+
+
+class SeriesGenerateRequest(BaseModel):
+    """Generate / top-up concrete sessions over a rolling horizon. Idempotent:
+    occurrences that already exist for the series are left untouched."""
+
+    from_date: dt.date | None = None
+    weeks: int = Field(default=12, ge=1, le=104)
+
+
+class SkippedOccurrence(BaseModel):
+    starts_at: dt.datetime
+    reason: str
+
+
+class SeriesGenerateResult(BaseModel):
+    series_id: str
+    created_count: int
+    skipped_existing: int
+    skipped_conflicts: list[SkippedOccurrence]
+    horizon_start: dt.date
+    horizon_end: dt.date
+
+
+class SessionEdit(BaseModel):
+    """Edit a generated session at the chosen scope. Any field left ``None`` is
+    unchanged. ``local_time``/``duration_minutes`` re-materialize UTC instants."""
+
+    scope: SessionEditScope
+    reason: SessionChangeReasonCode = SessionChangeReasonCode.OTHER
+    title: str | None = Field(default=None, max_length=160)
+    trainer_person_id: str | None = None
+    local_time: dt.time | None = None
+    duration_minutes: int | None = Field(default=None, gt=0, le=24 * 60)
+
+    @model_validator(mode="after")
+    def _at_least_one(self) -> SessionEdit:
+        if (
+            self.title is None
+            and self.trainer_person_id is None
+            and self.local_time is None
+            and self.duration_minutes is None
+        ):
+            raise ValueError("at least one field must be provided to edit")
+        return self
+
+
+class SessionCancel(BaseModel):
+    reason: SessionCancellationReasonCode
+    note: str | None = Field(default=None, max_length=500)

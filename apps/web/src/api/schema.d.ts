@@ -461,6 +461,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/schedule/series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Series */
+        get: operations["listSessionSeries"];
+        put?: never;
+        /** Create Series */
+        post: operations["createSessionSeries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedule/series/{series_id}/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate Series Sessions */
+        post: operations["generateSeriesSessions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/schedule/sessions": {
         parameters: {
             query?: never;
@@ -479,6 +514,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/schedule/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit Session */
+        patch: operations["editSession"];
+        trace?: never;
+    };
     "/schedule/sessions/{session_id}/attendance": {
         parameters: {
             query?: never;
@@ -491,6 +543,40 @@ export interface paths {
         /** Save Attendance */
         put: operations["saveAttendance"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedule/sessions/{session_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Session */
+        post: operations["cancelSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedule/sessions/{session_id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reactivate Session */
+        post: operations["reactivateSession"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1061,6 +1147,57 @@ export interface components {
             session_id: string;
         };
         /**
+         * SeriesGenerateRequest
+         * @description Generate / top-up concrete sessions over a rolling horizon. Idempotent:
+         *     occurrences that already exist for the series are left untouched.
+         */
+        SeriesGenerateRequest: {
+            /** From Date */
+            from_date?: string | null;
+            /**
+             * Weeks
+             * @default 12
+             */
+            weeks: number;
+        };
+        /** SeriesGenerateResult */
+        SeriesGenerateResult: {
+            /** Created Count */
+            created_count: number;
+            /**
+             * Horizon End
+             * Format: date
+             */
+            horizon_end: string;
+            /**
+             * Horizon Start
+             * Format: date
+             */
+            horizon_start: string;
+            /** Series Id */
+            series_id: string;
+            /** Skipped Conflicts */
+            skipped_conflicts: components["schemas"]["SkippedOccurrence"][];
+            /** Skipped Existing */
+            skipped_existing: number;
+        };
+        /** SessionCancel */
+        SessionCancel: {
+            /** Note */
+            note?: string | null;
+            reason: components["schemas"]["SessionCancellationReasonCode"];
+        };
+        /**
+         * SessionCancellationReasonCode
+         * @enum {string}
+         */
+        SessionCancellationReasonCode: "WEATHER" | "TRAINER_UNAVAILABLE" | "HOLIDAY" | "LOW_ATTENDANCE" | "OTHER";
+        /**
+         * SessionChangeReasonCode
+         * @enum {string}
+         */
+        SessionChangeReasonCode: "TIME_CHANGE" | "LOCATION_CHANGE" | "TRAINER_CHANGE" | "OTHER";
+        /**
          * SessionDraft
          * @description The proposed shape of a session — used for both conflict preview and create.
          */
@@ -1081,12 +1218,110 @@ export interface components {
             title?: string | null;
         };
         /**
+         * SessionEdit
+         * @description Edit a generated session at the chosen scope. Any field left ``None`` is
+         *     unchanged. ``local_time``/``duration_minutes`` re-materialize UTC instants.
+         */
+        SessionEdit: {
+            /** Duration Minutes */
+            duration_minutes?: number | null;
+            /** Local Time */
+            local_time?: string | null;
+            /** @default OTHER */
+            reason: components["schemas"]["SessionChangeReasonCode"];
+            scope: components["schemas"]["SessionEditScope"];
+            /** Title */
+            title?: string | null;
+            /** Trainer Person Id */
+            trainer_person_id?: string | null;
+        };
+        /**
+         * SessionEditScope
+         * @description Calendar-style edit scope for a session that belongs to a series.
+         *
+         *     * ``SINGLE`` — change only this one occurrence; the series is untouched.
+         *     * ``THIS_AND_FUTURE`` — change the series template and every scheduled
+         *       occurrence from this one forward; past occurrences keep their old values.
+         *     * ``ALL_FUTURE`` — change the series template and every upcoming scheduled
+         *       occurrence (from now on), regardless of which occurrence was edited.
+         * @enum {string}
+         */
+        SessionEditScope: "SINGLE" | "THIS_AND_FUTURE" | "ALL_FUTURE";
+        /**
+         * SessionSeriesCreate
+         * @description A weekly recurrence rule: weekday(s) + local time + start date, bound to a
+         *     group and (optionally) a trainer.
+         */
+        SessionSeriesCreate: {
+            /** Duration Minutes */
+            duration_minutes: number;
+            /** @default WEEKLY */
+            frequency: components["schemas"]["SessionSeriesFrequency"];
+            /** Group Id */
+            group_id: string;
+            /**
+             * Local Time
+             * Format: time
+             */
+            local_time: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * Timezone
+             * @default Europe/Belgrade
+             */
+            timezone: string;
+            /** Title */
+            title: string;
+            /** Trainer Person Id */
+            trainer_person_id?: string | null;
+            /** Weekdays */
+            weekdays: number[];
+        };
+        /**
+         * SessionSeriesFrequency
+         * @enum {string}
+         */
+        SessionSeriesFrequency: "WEEKLY" | "BIWEEKLY" | "MONTHLY";
+        /** SessionSeriesSummary */
+        SessionSeriesSummary: {
+            /** Duration Minutes */
+            duration_minutes: number;
+            frequency: components["schemas"]["SessionSeriesFrequency"];
+            /** Group Id */
+            group_id: string;
+            /** Id */
+            id: string;
+            /**
+             * Local Time
+             * Format: time
+             */
+            local_time: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Timezone */
+            timezone: string;
+            /** Title */
+            title: string;
+            /** Trainer Person Id */
+            trainer_person_id: string | null;
+            /** Weekdays */
+            weekdays: number[];
+        };
+        /**
          * SessionStatus
          * @enum {string}
          */
         SessionStatus: "SCHEDULED" | "CANCELLED" | "COMPLETED";
         /** SessionSummary */
         SessionSummary: {
+            cancellation_reason?: components["schemas"]["SessionCancellationReasonCode"] | null;
             /**
              * Ends At
              * Format: date-time
@@ -1096,6 +1331,8 @@ export interface components {
             group_id: string;
             /** Id */
             id: string;
+            /** Series Id */
+            series_id?: string | null;
             /**
              * Starts At
              * Format: date-time
@@ -1104,6 +1341,18 @@ export interface components {
             status: components["schemas"]["SessionStatus"];
             /** Title */
             title: string | null;
+            /** Trainer Person Id */
+            trainer_person_id?: string | null;
+        };
+        /** SkippedOccurrence */
+        SkippedOccurrence: {
+            /** Reason */
+            reason: string;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
         };
         /**
          * TenantPublic
@@ -2027,6 +2276,94 @@ export interface operations {
             };
         };
     };
+    listSessionSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionSeriesSummary"][];
+                };
+            };
+        };
+    };
+    createSessionSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionSeriesCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionSeriesSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generateSeriesSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                series_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeriesGenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeriesGenerateResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listSchedule: {
         parameters: {
             query: {
@@ -2081,6 +2418,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SessionSummary"];
+                };
+            };
+            /** @description Time conflict with an existing session. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    editSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionSummary"][];
                 };
             };
             /** @description Time conflict with an existing session. */
@@ -2157,6 +2536,79 @@ export interface operations {
                 };
             };
             /** @description Attendance changed since it was loaded; reload. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancelSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionCancel"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reactivateSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionSummary"];
+                };
+            };
+            /** @description Time conflict with an existing session. */
             409: {
                 headers: {
                     [name: string]: unknown;
