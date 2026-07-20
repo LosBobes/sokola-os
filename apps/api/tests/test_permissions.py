@@ -191,6 +191,21 @@ def test_default_grant_preserves_parent_access(client: TestClient, db: Session) 
     assert _create_person(client, parent).status_code == 403
 
 
+def test_events_area_separates_staff_management_from_parent_surface(
+    client: TestClient, db: Session
+) -> None:
+    # EVENTS (staff event management) and PARENTS (parent-facing routes) are
+    # distinct areas: a PARENT must not reach the staff event-create route even
+    # though parents legitimately use the parent-facing event routes.
+    staff = bootstrap_actor(db, role=RoleCode.MANAGER)
+    parent = add_actor(
+        db, organization=staff.organization, role=RoleCode.PARENT, given="Roditelj"
+    )
+    event = {"title": "Zimski kamp", "starts_at": "2026-12-20T09:00:00+00:00"}
+    assert client.post("/events", headers=parent.headers, json=event).status_code == 403
+    assert client.post("/events", headers=staff.headers, json=event).status_code == 201
+
+
 def test_student_has_no_area_access(client: TestClient, db: Session) -> None:
     student = bootstrap_actor(db, role=RoleCode.STUDENT, given="Đak")
     assert _create_person(client, student).status_code == 403

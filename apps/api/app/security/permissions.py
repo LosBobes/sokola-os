@@ -18,9 +18,9 @@ preserved exactly:
     ATTENDANCE      | OWNER, MANAGER, ADMIN, TRAINER   (attendance _recorders)
     BILLING         | OWNER, MANAGER, ADMIN            (billing router _finance)
     PAYMENTS        | OWNER, MANAGER, ADMIN            (payments router _finance)
-    EVENTS          | OWNER, MANAGER, ADMIN + PARENT   (events _staff + _parent)
+    EVENTS          | OWNER, MANAGER, ADMIN            (events _staff)
     COMMUNICATIONS  | OWNER, MANAGER, ADMIN            (communications _staff)
-    PARENTS         | PARENT                           (parent router _parent)
+    PARENTS         | PARENT                           (parent router + events _parent)
 
 ORGANIZATION and ROLES have no ``require_roles`` guard today (the organization
 and identity routers gate on context alone), so including them in the
@@ -80,8 +80,9 @@ ROLE_DEFAULT_AREAS: dict[RoleCode, frozenset[PermissionArea]] = {
     RoleCode.ADMIN: _STAFF_AREAS,
     # TRAINER only ever passed the attendance recorder guard.
     RoleCode.TRAINER: frozenset({PermissionArea.ATTENDANCE}),
-    # PARENT reached the parent surface and the parent-facing event routes.
-    RoleCode.PARENT: frozenset({PermissionArea.PARENTS, PermissionArea.EVENTS}),
+    # PARENT reaches only the parent surface — including the parent-facing event
+    # routes, which are guarded on PARENTS (not EVENTS, which is staff-only).
+    RoleCode.PARENT: frozenset({PermissionArea.PARENTS}),
     # STUDENT held no require_roles guard on any product route.
     RoleCode.STUDENT: frozenset(),
 }

@@ -18,7 +18,9 @@ from app.security.permissions import PermissionArea, require_permission
 router = APIRouter(tags=["events"])
 
 _staff = require_permission(PermissionArea.EVENTS)
-_parent = require_permission(PermissionArea.EVENTS)
+# Parent-facing routes are the parent surface, not staff event management:
+# guard on PARENTS so staff cannot reach them and PARENT cannot reach _staff.
+_parent = require_permission(PermissionArea.PARENTS)
 StaffContext = Annotated[ContextDep, Depends(_staff)]
 ParentContext = Annotated[ContextDep, Depends(_parent)]
 
