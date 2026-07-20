@@ -5,9 +5,14 @@ from sqlalchemy.orm import Session
 
 from app.common.enums import RecordStatus
 from app.common.pagination import PageParams
+from app.domains.groups.enums import GroupMembershipStatus
 from app.domains.groups.models import Group, GroupMembership
 from app.domains.identity.models import Person
 from app.domains.organization.models import OrganizationMembership
+
+# Structure is a different domain; only its MODELS are imported (allowed by the
+# architecture gate). Its service/repository are never called from here.
+from app.domains.structure.models import Location, Program
 
 
 def get_org_group(db: Session, organization_id: str, group_id: str) -> Group | None:
@@ -58,7 +63,10 @@ def count_active_members(db: Session, group_id: str) -> int:
     return db.execute(
         select(func.count())
         .select_from(GroupMembership)
-        .where(GroupMembership.group_id == group_id, GroupMembership.ended_at.is_(None))
+        .where(
+            GroupMembership.group_id == group_id,
+            GroupMembership.status != GroupMembershipStatus.ENDED,
+        )
     ).scalar_one()
 
 
@@ -68,7 +76,7 @@ def get_active_membership(
     stmt = select(GroupMembership).where(
         GroupMembership.group_id == group_id,
         GroupMembership.person_id == person_id,
-        GroupMembership.ended_at.is_(None),
+        GroupMembership.status != GroupMembershipStatus.ENDED,
     )
     return db.execute(stmt).scalar_one_or_none()
 
@@ -79,7 +87,52 @@ def list_members_with_people(
     stmt = (
         select(GroupMembership, Person)
         .join(Person, Person.id == GroupMembership.person_id)
-        .where(GroupMembership.group_id == group_id, GroupMembership.ended_at.is_(None))
+        .where(
+            GroupMembership.group_id == group_id,
+            GroupMembership.status != GroupMembershipStatus.ENDED,
+        )
         .order_by(Person.display_name)
     )
     return [tuple(row) for row in db.execute(stmt).all()]
+
+
+def get_org_membership(
+    db: Session, organization_id: str, group_id: str, membership_id: str
+) -> tuple[GroupMembership, Person] | None:
+    """Loaded without a status filter — lifecycle transitions must be able to
+    find an already-ended membership too, in order to raise a clean conflict
+    rather than a not-found."""
+    stmt = (
+        select(GroupMembership, Person)
+        .join(Person, Person.id == GroupMembership.person_id)
+        .where(
+            GroupMembership.id == membership_id,
+            GroupMembership.group_id == group_id,
+            GroupMembership.organization_id == organization_id,
+        )
+    )
+    row = db.execute(stmt).first()
+    return (row[0], row[1]) if row is not None else None
+
+
+# ---------------------------------------------------------------------------
+# Structure links (program/location) — models only, per the architecture gate.
+# ---------------------------------------------------------------------------
+
+
+def get_org_program(db: Session, organization_id: str, program_id: str) -> Program | None:
+    stmt = select(Program).where(
+        Program.id == program_id,
+        Program.organization_id == organization_id,
+        Program.record_status == RecordStatus.ACTIVE,
+    )
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def get_org_location(db: Session, organization_id: str, location_id: str) -> Location | None:
+    stmt = select(Location).where(
+        Location.id == location_id,
+        Location.organization_id == organization_id,
+        Location.record_status == RecordStatus.ACTIVE,
+    )
+    return db.execute(stmt).scalar_one_or_none()
