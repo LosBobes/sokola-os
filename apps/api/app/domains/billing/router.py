@@ -14,12 +14,12 @@ from app.domains.billing.schemas import (
     ChargeResponse,
     PostBillingRunRequest,
 )
-from app.domains.identity.enums import RoleCode
-from app.security.deps import ContextDep, DbDep, require_roles
+from app.security.deps import ContextDep, DbDep
+from app.security.permissions import PermissionArea, require_permission
 
 router = APIRouter(tags=["billing"])
 
-_finance = require_roles(RoleCode.OWNER, RoleCode.MANAGER, RoleCode.ADMIN)
+_finance = require_permission(PermissionArea.BILLING)
 FinanceContext = Annotated[ContextDep, Depends(_finance)]
 
 

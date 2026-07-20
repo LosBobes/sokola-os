@@ -20,6 +20,7 @@ from app.domains.organization import models as _organization_models  # noqa: F40
 from app.domains.payments import models as _payments_models  # noqa: F401
 from app.domains.people import models as _people_models  # noqa: F401
 from app.domains.scheduling import models as _scheduling_models  # noqa: F401
+from app.domains.structure import models as _structure_models  # noqa: F401
 from app.platform.audit import models as _audit_models  # noqa: F401
 from app.platform.idempotency import models as _idempotency_models  # noqa: F401
 from app.platform.outbox import models as _outbox_models  # noqa: F401

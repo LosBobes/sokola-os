@@ -1,75 +1,201 @@
 /*
- * "Paper & crayon" theme. Lots of white, bright primaries (yellow / red / blue),
- * ink outlines, handwriting type. Product components consume only the semantic
- * roles below — never raw primitives, never hex in TSX.
+ * SOKOLA OS design system — professional dark-green + gold.
+ *
+ * Green is the primary interactive colour (actions, active state, focus).
+ * Gold is the brand mark + a sparing secondary accent (never large text on
+ * light surfaces — it fails contrast). Neutrals carry the page and cards.
+ *
+ * Discipline: product components consume only the SEMANTIC ROLE tokens in the
+ * second block below (--surface-*, --text-*, --action-*, --tone-*, …). They
+ * never read a primitive (--green-600) or a raw hex value directly. The role
+ * names are a stable contract; their VALUES change with the theme.
+ *
+ * Legacy role aliases (--c-*, --accent-blue, --radius-hand*, --shadow-sticker,
+ * --font-hand) are preserved by NAME for the shell/base stylesheets that still
+ * reference them; their values now point at the green/gold system so the whole
+ * app re-skins from one place.
  */
 :root {
-  /* --- primitives (never used directly by components) --- */
-  --c-paper: #fffdf5;
-  --c-paper-2: #fff8e6;
-  --c-ink: #20201c;
-  --c-ink-soft: #575143;
-  --c-yellow: #ffd23f;
-  --c-yellow-soft: #fff0b8;
-  --c-red: #ff5252;
-  --c-red-soft: #ffd9d6;
-  --c-blue: #3a86ff;
-  --c-blue-soft: #d5e6ff;
-  --c-green: #35c46b;
-  --c-green-soft: #cdf2da;
+  /* ============================================================= */
+  /* PRIMITIVES — raw ramps. Never referenced by components.        */
+  /* ============================================================= */
 
-  /* --- semantic roles --- */
-  --surface-page: var(--c-paper);
-  --surface-raised: #ffffff;
-  --surface-sunken: var(--c-paper-2);
-  --border-default: var(--c-ink);
-  --border-strong: var(--c-ink);
-  --text-primary: var(--c-ink);
-  --text-secondary: var(--c-ink-soft);
-  --text-on-action: var(--c-ink);
+  /* Dark-green ramp — surfaces, primary action, brand */
+  --green-50: #eef6f0;
+  --green-100: #d7ebdc;
+  --green-200: #aed6ba;
+  --green-300: #7bb992;
+  --green-400: #4c9968;
+  --green-500: #2f7d4d;
+  --green-600: #1f6b3f; /* primary action */
+  --green-700: #17532f; /* primary hover / links */
+  --green-800: #103b22;
+  --green-900: #0c2a19; /* deep green-black sidebar */
+  --green-950: #071b10;
 
-  --action-primary: var(--c-yellow);
-  --action-primary-hover: #ffdd6b;
-  --action-surface: var(--c-yellow-soft);
-  --accent-blue: var(--c-blue);
-  --accent-red: var(--c-red);
+  /* Gold ramp — logo mark + sparing accent */
+  --gold-100: #f7ecc7;
+  --gold-200: #eeda98;
+  --gold-300: #e3c65f;
+  --gold-400: #d4af37; /* brand gold */
+  --gold-500: #b8942a;
+  --gold-600: #937420;
 
-  --tone-success-fg: var(--c-ink);
-  --tone-success-bg: var(--c-blue-soft);
-  --tone-warning-fg: var(--c-ink);
-  --tone-warning-bg: var(--c-yellow-soft);
-  --tone-error-fg: var(--c-ink);
-  --tone-error-bg: var(--c-red-soft);
-  --tone-info-fg: var(--c-ink);
-  --tone-info-bg: var(--c-blue-soft);
+  /* Neutrals — page, cards, borders, text (faint green cast) */
+  --neutral-0: #ffffff;
+  --neutral-50: #f6f8f6;
+  --neutral-100: #eef1ee;
+  --neutral-200: #e1e6e1;
+  --neutral-300: #cdd4ce;
+  --neutral-400: #a7b0a9;
+  --neutral-500: #6c756e;
+  --neutral-600: #515a53;
+  --neutral-700: #3a423d;
+  --neutral-800: #232a26;
+  --neutral-900: #161d19;
 
-  --ink-border: 3px;
-  --focus-ring: 0 0 0 4px var(--c-blue);
+  /* Status hues (fg = accessible text on the matching soft bg) */
+  --success-100: #d7ecdd;
+  --success-700: #17603a;
+  --warning-100: #fbedca;
+  --warning-700: #8a5a12;
+  --error-100: #fadedb;
+  --error-500: #c0392b;
+  --error-700: #97271b;
+  --info-100: #d9e7f6;
+  --info-700: #245c8f;
 
-  /* spacing / type / radius */
+  /* ============================================================= */
+  /* SEMANTIC ROLES — the component-facing contract.               */
+  /* ============================================================= */
+
+  /* Surfaces */
+  --surface-page: var(--neutral-50); /* light neutral page background */
+  --surface-raised: var(--neutral-0); /* white raised card */
+  --surface-sunken: var(--neutral-100);
+  --surface-sidebar: var(--green-900); /* deep green-black nav (#21) */
+  --surface-sidebar-active: var(--green-700);
+
+  /* Borders */
+  --border-default: var(--neutral-200);
+  --border-strong: var(--neutral-300);
+
+  /* Text */
+  --text-primary: var(--neutral-900);
+  --text-secondary: var(--neutral-500);
+  --text-on-action: var(--neutral-0); /* on green buttons */
+  --text-on-sidebar: #e9f1ea;
+  --text-link: var(--green-700);
+
+  /* Actions — green */
+  --action-primary: var(--green-600);
+  --action-primary-hover: var(--green-700);
+  --action-primary-gradient: linear-gradient(180deg, var(--green-500), var(--green-700));
+  --action-surface: var(--green-50);
+
+  /* Accents */
+  --accent-gold: var(--gold-400);
+  --accent-gold-soft: var(--gold-100);
+  --accent-red: var(--error-500);
+
+  /* Status / badge tones */
+  --tone-success-fg: var(--success-700);
+  --tone-success-bg: var(--success-100);
+  --tone-warning-fg: var(--warning-700);
+  --tone-warning-bg: var(--warning-100);
+  --tone-error-fg: var(--error-700);
+  --tone-error-bg: var(--error-100);
+  --tone-info-fg: var(--info-700);
+  --tone-info-bg: var(--info-100);
+
+  /* Focus — green ring */
+  --focus-ring: 0 0 0 3px rgba(31, 107, 63, 0.4);
+
+  /* ---- Legacy role aliases (kept by NAME; values now green/gold) ---- */
+  --accent-blue: var(--green-700); /* interactive/links & brand text */
+  --c-paper: var(--surface-page);
+  --c-paper-2: var(--green-50);
+  --c-ink: var(--neutral-900);
+  --c-ink-soft: var(--neutral-500);
+  --c-yellow: var(--gold-400); /* brand mark / active nav */
+  --c-yellow-soft: var(--gold-100);
+  --c-red: var(--error-500);
+  --c-red-soft: var(--error-100);
+  --c-blue: var(--green-600);
+  --c-blue-soft: var(--green-100);
+  --c-green: var(--green-500);
+  --c-green-soft: var(--green-100);
+
+  /* ============================================================= */
+  /* Typography — modern sans, strong display weight               */
+  /* ============================================================= */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-hand: var(--font-sans); /* legacy alias: body font */
+  --font-display: var(--font-sans); /* legacy alias: titles (heavy weight) */
+  --font-weight-display: 800;
+
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+
+  /* Spacing */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
-  /* Uneven, hand-drawn corner radii. */
-  --radius-hand: 255px 15px 225px 15px / 15px 225px 15px 255px;
-  --radius-hand-2: 15px 225px 15px 255px / 225px 15px 255px 15px;
-  --radius-pill: 40px 20px 40px 20px / 20px 40px 20px 40px;
-  --font-hand: "Patrick Hand", "Comic Sans MS", system-ui, sans-serif;
-  --font-display: "Gaegu", "Patrick Hand", system-ui, sans-serif;
-  --text-sm: 0.95rem;
-  --text-base: 1.1rem;
-  --text-lg: 1.4rem;
-  --text-xl: 2rem;
-  --shadow-sticker: 4px 4px 0 var(--c-ink);
+
+  /* Radii — rounded, not hand-drawn */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --radius-hand: var(--radius-md); /* legacy alias */
+  --radius-hand-2: var(--radius-sm); /* legacy alias */
+
+  /* Borders & shadows — soft, professional */
+  --ink-border: 1px; /* legacy alias: hairline border width */
+  --shadow-sm: 0 1px 2px rgba(12, 42, 25, 0.08);
+  --shadow-md: 0 6px 16px rgba(12, 42, 25, 0.1);
+  --shadow-lg: 0 12px 32px rgba(12, 42, 25, 0.14);
+  --shadow-sticker: var(--shadow-md); /* legacy alias: card/button shadow */
+
   --target-min: 44px;
-  --duration: 140ms;
+  --duration: 160ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
     --duration: 0ms;
+  }
+}
+
+/* Optional dark theme parity — deep green-black content surfaces. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-page: var(--green-950);
+    --surface-raised: var(--green-900);
+    --surface-sunken: var(--green-800);
+    --border-default: rgba(233, 241, 234, 0.12);
+    --border-strong: rgba(233, 241, 234, 0.22);
+    --text-primary: #e9f1ea;
+    --text-secondary: #9db3a4;
+    --text-link: var(--gold-300);
+    --action-primary: var(--green-500);
+    --action-primary-hover: var(--green-400);
+    --focus-ring: 0 0 0 3px rgba(76, 153, 104, 0.5);
+
+    --accent-blue: var(--gold-300);
+    --c-paper: var(--surface-page);
+    --c-paper-2: var(--green-800);
+    --c-ink: #e9f1ea;
+    --c-ink-soft: #9db3a4;
+    --c-blue-soft: rgba(76, 153, 104, 0.22);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
   }
 }

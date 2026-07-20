@@ -6,7 +6,6 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Query, status
 
 from app.common.http import IdempotencyKey
-from app.domains.identity.enums import RoleCode
 from app.domains.scheduling import service
 from app.domains.scheduling.schemas import (
     ConflictCheckResponse,
@@ -19,11 +18,12 @@ from app.domains.scheduling.schemas import (
     SessionSeriesSummary,
     SessionSummary,
 )
-from app.security.deps import ContextDep, DbDep, require_roles
+from app.security.deps import ContextDep, DbDep
+from app.security.permissions import PermissionArea, require_permission
 
 router = APIRouter(tags=["schedule"])
 
-_staff = require_roles(RoleCode.OWNER, RoleCode.MANAGER, RoleCode.ADMIN)
+_staff = require_permission(PermissionArea.SCHEDULING)
 StaffContext = Annotated[ContextDep, Depends(_staff)]
 
 _CONFLICT_RESPONSE: dict[int | str, dict[str, Any]] = {
