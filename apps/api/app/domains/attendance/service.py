@@ -15,6 +15,7 @@ from app.domains.attendance.schemas import (
     SaveAttendanceRequest,
     SaveAttendanceResponse,
 )
+from app.domains.progress.models import ProgressNote
 from app.platform.audit.service import record_audit
 from app.security.context import RequestContext
 
@@ -66,6 +67,10 @@ def save_attendance(
     if unknown:
         raise BadRequestError("Neka od navedenih osoba nisu na spisku ove grupe.")
 
+    unknown_notes = {n.person_id for n in req.progress_notes} - roster_ids
+    if unknown_notes:
+        raise BadRequestError("Neka od navedenih osoba nisu na spisku ove grupe.")
+
     existing = repository.records_by_person(db, session_id)
     tally: Counter[AttendanceStatus] = Counter()
     for person_id in roster_ids:
@@ -89,6 +94,24 @@ def save_attendance(
             record.status = status
             record.override_reason = reason
 
+    # PRD 06 M2: notes are optional and additive to the save — a trainer may
+    # jot progress notes for any roster member without a separate round trip.
+    # Anchored to this session's group and to the session itself, so a note
+    # written here is indistinguishable in provenance from one written via the
+    # standalone progress endpoint, plus a session_id back-reference.
+    for note_input in req.progress_notes:
+        db.add(
+            ProgressNote(
+                organization_id=context.organization_id,
+                person_id=note_input.person_id,
+                group_id=session.group_id,
+                author_person_id=context.person_id,
+                session_id=session_id,
+                note=note_input.note,
+                level=note_input.level,
+            )
+        )
+
     session.attendance_version += 1
     record_audit(
         db,
@@ -108,4 +131,5 @@ def save_attendance(
         absent=tally[AttendanceStatus.ABSENT],
         excused=tally[AttendanceStatus.EXCUSED],
         late=tally[AttendanceStatus.LATE],
+        progress_notes_saved=len(req.progress_notes),
     )

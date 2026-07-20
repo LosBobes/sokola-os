@@ -3,11 +3,12 @@ separate session) observe it."""
 
 from __future__ import annotations
 
+import datetime as dt
 from dataclasses import dataclass
 
 from app.domains.identity.enums import AuthAccountStatus, AuthIdentifierType, RoleCode
 from app.domains.identity.models import AuthAccount, AuthIdentifier, Person, RoleAssignment
-from app.domains.organization.enums import OrganizationType
+from app.domains.organization.enums import MembershipStatus, OrganizationType
 from app.domains.organization.models import Organization, OrganizationMembership
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
 from app.domains.people.models import GuardianOrganizationAccess, GuardianRelationship
@@ -49,9 +50,22 @@ def assign_role(
     return assignment
 
 
-def add_membership(db: Session, *, person: Person, organization: Organization) -> None:
-    db.add(OrganizationMembership(organization_id=organization.id, person_id=person.id))
+def add_membership(
+    db: Session,
+    *,
+    person: Person,
+    organization: Organization,
+    status: MembershipStatus = MembershipStatus.ACTIVE,
+    created_at: dt.datetime | None = None,
+) -> OrganizationMembership:
+    membership = OrganizationMembership(
+        organization_id=organization.id, person_id=person.id, status=status
+    )
+    if created_at is not None:
+        membership.created_at = created_at
+    db.add(membership)
     db.commit()
+    return membership
 
 
 @dataclass

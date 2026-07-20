@@ -1,0 +1,23 @@
+# SOKOLA vhost for the shared Hetzner host.
+#
+# This is NOT wired into any live Caddy instance. It is a reviewable snippet
+# for a human to append to the server's real /etc/caddy/Caddyfile:
+#
+#   cat ops/hetzner/Caddyfile >> /etc/caddy/Caddyfile
+#   caddy validate --config /etc/caddy/Caddyfile
+#   systemctl reload caddy
+#
+# Do NOT overwrite the server's Caddyfile — appending keeps every other
+# service's block untouched. Caddy automatically obtains and renews a Let's
+# Encrypt TLS certificate for the domain below once DNS points at the host.
+#
+# TODO(human): replace sokola.example.com with the real domain before
+# appending this to the server, and confirm port 3003 is actually free on
+# the box (see the add-hetzner-service skill's PORT_REGISTRY.md — 3003 was
+# the next free slot as of this PR, but the live Caddyfile on the server is
+# the source of truth; re-check with:
+#   ssh <user>@<host> "grep -oE 'localhost:[0-9]+' /etc/caddy/Caddyfile | sort -u"
+
+sokola.example.com {
+    reverse_proxy localhost:3003
+}
