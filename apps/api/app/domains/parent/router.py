@@ -11,16 +11,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.common.enums import RecordStatus
-from app.domains.identity.enums import RoleCode
 from app.domains.identity.models import Person
 from app.domains.people.enums import GuardianAccessStatus
 from app.domains.people.models import GuardianOrganizationAccess
 from app.security.context import RequestContext
-from app.security.deps import ContextDep, DbDep, require_roles
+from app.security.deps import ContextDep, DbDep
+from app.security.permissions import PermissionArea, require_permission
 
 router = APIRouter(tags=["parent"])
 
-_parent = require_roles(RoleCode.PARENT)
+_parent = require_permission(PermissionArea.PARENTS)
 ParentContext = Annotated[ContextDep, Depends(_parent)]
 
 

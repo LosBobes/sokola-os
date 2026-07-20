@@ -23,3 +23,7 @@ class RequestContext:
     scope_type: RoleScopeType
     # Branch/group scoping, when the role is narrower than the whole org.
     scope_ref_id: str | None = None
+    # Per-assignment area restriction. ``None`` means the role's full default
+    # areas; a tuple restricts this assignment to those area codes (a narrowing,
+    # never an escalation). Interpreted by ``app.security.permissions``.
+    granted_areas: tuple[str, ...] | None = None
