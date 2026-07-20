@@ -28,17 +28,19 @@ interface Destination {
  * destinations that role sees. Mapping is derived from RoleHome.tsx routing:
  * managers get the full operational surface, trainers a slim on-the-floor set,
  * parents/students the family view. Manager also lists Događaji/Izveštaji/Više
- * from the design; Izveštaji/Više have no route yet, so they fall through the
- * router's `*` redirect to home until their screens land (separate tickets).
+ * from the design; Izveštaji has no route yet, so it falls through the
+ * router's `*` redirect to home until its screen lands (separate ticket, M2).
+ * Više routes to routes/More.tsx (#18, M1) — the account-actions catch-all,
+ * since the primary nav already surfaces every other destination directly.
  */
 const NAV: Record<RoleCode, Destination[]> = {
   OWNER: managerNav(),
   MANAGER: managerNav(),
   ADMIN: managerNav(),
   // T01 (#27): trainer bottom tab bar is Danas/Prisustvo/Raspored/Grupe/Više.
-  // Prisustvo/Grupe/Više have no dedicated screens yet (separate tickets), so —
-  // same as manager's Izveštaji/Više above — they fall through the router's
-  // `*` redirect to home until those land.
+  // Bare /prisustvo has no dedicated screen yet (separate ticket, M2) so it
+  // falls through the router's `*` redirect to home; Više routes to
+  // routes/More.tsx like the manager nav above.
   TRAINER: [
     { to: "/", label: "Danas", hint: "Termini i prisustvo", icon: "danas" },
     { to: "/prisustvo", label: "Prisustvo", hint: "Evidencija", icon: "prisustvo" },
@@ -49,6 +51,8 @@ const NAV: Record<RoleCode, Destination[]> = {
   PARENT: [
     { to: "/", label: "Početna", hint: "Šta je sledeće", icon: "danas" },
     { to: "/dogadjaji", label: "Događaji", hint: "Prijave", icon: "dogadjaji" },
+    { to: "/roditelj/finansije", label: "Finansije", hint: "Zaduženja i uplate", icon: "finansije" },
+    { to: "/obavestenja", label: "Obaveštenja", hint: "Poruke škole", icon: "komunikacija" },
   ],
   STUDENT: [{ to: "/", label: "Početna", hint: "", icon: "danas" }],
 };
@@ -66,7 +70,7 @@ function managerNav(): Destination[] {
   ];
 }
 
-const ROLE_LABEL: Record<RoleCode, string> = {
+export const ROLE_LABEL: Record<RoleCode, string> = {
   OWNER: "Vlasnik",
   MANAGER: "Menadžer",
   ADMIN: "Administrator",

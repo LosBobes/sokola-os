@@ -21,12 +21,19 @@ preserved exactly:
     EVENTS          | OWNER, MANAGER, ADMIN            (events _staff)
     COMMUNICATIONS  | OWNER, MANAGER, ADMIN            (communications _staff)
     PARENTS         | PARENT                           (parent router + events _parent)
+    DOCUMENTS       | OWNER, MANAGER, ADMIN            (documents _staff — new area, no
+                    |                                    require_roles precedent to audit)
 
 ORGANIZATION and ROLES have no ``require_roles`` guard today (the organization
 and identity routers gate on context alone), so including them in the
 administrative roles' defaults is behaviour-neutral: no route consults them yet.
 They are granted to OWNER/MANAGER/ADMIN so that a future area guard and the
 "restrict this assignment" UI have a coherent, non-empty administrative set.
+
+IMPORT (PRD 11, added with the CSV bulk-import feature) has no legacy
+``require_roles`` guard to audit — it is granted to OWNER/MANAGER/ADMIN
+directly, matching PEOPLE/GROUPS since importing people/groups is exactly the
+same administrative surface those areas already gate.
 """
 
 from __future__ import annotations
@@ -55,10 +62,14 @@ class PermissionArea(enum.StrEnum):
     COMMUNICATIONS = "COMMUNICATIONS"
     ORGANIZATION = "ORGANIZATION"
     ROLES = "ROLES"  # role / invitation administration
+    PRIVACY = "PRIVACY"  # consent, DSAR, and retention-period administration
+    DOCUMENTS = "DOCUMENTS"
+    IMPORT = "IMPORT"  # bulk CSV import of people/groups (PRD 11)
 
 
-# Everything a staff role administers by default. ORGANIZATION/ROLES are
-# behaviour-neutral today (no guard consults them) — see module docstring.
+# Everything a staff role administers by default. ORGANIZATION/ROLES/PRIVACY are
+# behaviour-neutral today except where their own domain's routes now guard on
+# them (PRIVACY does) — see module docstring.
 _STAFF_AREAS: frozenset[PermissionArea] = frozenset(
     {
         PermissionArea.PEOPLE,
@@ -71,6 +82,9 @@ _STAFF_AREAS: frozenset[PermissionArea] = frozenset(
         PermissionArea.COMMUNICATIONS,
         PermissionArea.ORGANIZATION,
         PermissionArea.ROLES,
+        PermissionArea.PRIVACY,
+        PermissionArea.DOCUMENTS,
+        PermissionArea.IMPORT,
     }
 )
 

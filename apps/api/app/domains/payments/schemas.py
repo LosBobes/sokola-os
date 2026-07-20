@@ -3,7 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from app.domains.billing.enums import ChargeStatus
-from app.domains.payments.enums import PaymentMethod, PaymentRecordStatus
+from app.domains.payments.enums import PaymentMethod, PaymentRecordStatus, PaymentVoidReasonCode
 
 
 class RecordPaymentRequest(BaseModel):
@@ -22,3 +22,7 @@ class PaymentResponse(BaseModel):
     charge_status: ChargeStatus
     charge_amount_due_minor: int
     charge_amount_paid_minor: int
+
+
+class VoidPaymentRequest(BaseModel):
+    reason: PaymentVoidReasonCode

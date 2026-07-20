@@ -11,9 +11,11 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.common.enums import RecordStatus
-from app.common.errors import BadRequestError, NotFoundError
+from app.common.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.domains.groups.models import Group
 from app.domains.identity.enums import InvitationType, RoleCode, RoleScopeType
+from app.domains.organization.enums import OrganizationLifecycleStatus
+from app.domains.organization.models import Organization
 from app.domains.structure.models import Location
 from app.security.permissions import ROLE_DEFAULT_AREAS, effective_areas, parse_granted_areas
 
@@ -119,4 +121,29 @@ def validate_granted_areas(
         )
 
 
-__all__ = ["role_code_for_invitation", "validate_granted_areas", "validate_scope"]
+def ensure_invitation_allowed_during_onboarding(
+    organization: Organization, role_code: RoleCode
+) -> None:
+    """§13/M2 (guided onboarding) — while a school is ``IN_PREPARATION``
+    ("u pripremi"), the only invitation the owner may send is a co-owner
+    invite (STAFF/OWNER). Every other invitation — another staff role, a
+    parent, a student — is blocked until the school ``activate``-s out of
+    onboarding, so a school-in-progress never accidentally onboards real
+    members before its structure exists.
+    """
+    if (
+        organization.lifecycle_status is OrganizationLifecycleStatus.IN_PREPARATION
+        and role_code is not RoleCode.OWNER
+    ):
+        raise ForbiddenError(
+            "Škola je u pripremi — dok se podešavanje ne završi, moguće je "
+            "pozvati samo dodatnog vlasnika."
+        )
+
+
+__all__ = [
+    "ensure_invitation_allowed_during_onboarding",
+    "role_code_for_invitation",
+    "validate_granted_areas",
+    "validate_scope",
+]
