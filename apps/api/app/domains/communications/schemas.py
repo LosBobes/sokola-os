@@ -1,8 +1,14 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, model_validator
+import datetime as dt
 
-from app.domains.communications.enums import AnnouncementStatus, AnnouncementTargetType
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.domains.communications.enums import (
+    AnnouncementStatus,
+    AnnouncementTargetType,
+    NotificationDeliveryStatus,
+)
 
 
 class AnnouncementDraft(BaseModel):
@@ -34,3 +40,17 @@ class AnnouncementResponse(BaseModel):
     title: str
     status: AnnouncementStatus
     recipient_count: int
+
+
+class NotificationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    event_type: str
+    entity_type: str | None
+    entity_id: str | None
+    title: str
+    body: str
+    delivery_status: NotificationDeliveryStatus
+    created_at: dt.datetime
+    read_at: dt.datetime | None

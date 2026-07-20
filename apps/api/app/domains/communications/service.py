@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.common.enums import AuditDataClass
 from app.common.errors import ConflictError, NotFoundError
+from app.common.pagination import Page, PageParams
 from app.domains.communications import repository
 from app.domains.communications.enums import AnnouncementStatus, AnnouncementTargetType
 from app.domains.communications.models import Announcement, AnnouncementRecipient
@@ -15,6 +16,7 @@ from app.domains.communications.schemas import (
     AnnouncementDraft,
     AnnouncementPreviewResponse,
     AnnouncementResponse,
+    NotificationResponse,
     PublishAnnouncementRequest,
 )
 from app.platform.audit.service import record_audit
@@ -123,3 +125,28 @@ def publish(
         idempotency.complete(db, guard, status=201, body=result.model_dump(mode="json"))
     db.commit()
     return result
+
+
+def list_inbox(
+    db: Session, context: RequestContext, params: PageParams
+) -> Page[NotificationResponse]:
+    """M3. A person's own in-app inbox — scoped to the caller alone, never to
+    another person, even within the same organization."""
+    items, total = repository.list_inbox(db, context.organization_id, context.person_id, params)
+    return Page.build([NotificationResponse.model_validate(n) for n in items], total, params)
+
+
+def mark_notification_read(
+    db: Session, context: RequestContext, notification_id: str
+) -> NotificationResponse:
+    """M3. Marking read is idempotent — reading an already-read notification is
+    a no-op, not an error."""
+    notification = repository.get_inbox_notification(
+        db, context.organization_id, context.person_id, notification_id
+    )
+    if notification is None:
+        raise NotFoundError("Obaveštenje nije pronađeno.")
+    if notification.read_at is None:
+        notification.read_at = dt.datetime.now(tz=dt.UTC)
+        db.commit()
+    return NotificationResponse.model_validate(notification)
