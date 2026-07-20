@@ -1,0 +1,60 @@
+/*
+ * Finansije (Money) page — M05. Page-specific layout glue only; reusable
+ * primitives (Card, StatTile, FilterBar, StatusBadge, table.data) live in
+ * components/ui.css / styles/base.css. Consumes semantic role tokens
+ * exclusively (see styles/design-tokens.css) — never a raw hex or a
+ * --green-/--gold-/--neutral- primitive ramp value.
+ */
+
+.money-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.money-form-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 2fr 1fr auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+@media (max-width: 860px) {
+  .money-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* --- Charges table: right-align money columns, colour the remaining debt */
+.money-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.money-amount--debt {
+  color: var(--tone-error-fg);
+  font-weight: 700;
+}
+.money-amount--clear {
+  color: var(--tone-success-fg);
+  font-weight: 700;
+}
+
+.money-cell-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.money-person {
+  display: flex;
+  flex-direction: column;
+}
+.money-person__name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.money-person__meta {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
