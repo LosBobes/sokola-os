@@ -75,6 +75,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/billing/debts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Debts */
+        get: operations["listDebts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/debts/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Debt Summary */
+        get: operations["getDebtSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/billing/runs": {
         parameters: {
             query?: never;
@@ -173,6 +207,23 @@ export interface paths {
         get: operations["listCharges"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/charges/{charge_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Charge */
+        post: operations["cancelCharge"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1078,6 +1129,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/payments/{payment_id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Void Payment */
+        post: operations["voidPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people": {
         parameters: {
             query?: never;
@@ -1845,7 +1913,7 @@ export interface components {
         /** BillingPreviewRequest */
         BillingPreviewRequest: {
             /** Amount Minor */
-            amount_minor: number;
+            amount_minor?: number | null;
             /** Description */
             description: string;
             /** Group Id */
@@ -1896,6 +1964,12 @@ export interface components {
             /** @default STAFF_ONLY */
             visibility: components["schemas"]["DocumentVisibility"];
         };
+        /** CancelChargeRequest */
+        CancelChargeRequest: {
+            /** Note */
+            note?: string | null;
+            reason: components["schemas"]["ChargeCancellationReasonCode"];
+        };
         /** CategoryResponse */
         CategoryResponse: {
             /** Id */
@@ -1904,18 +1978,26 @@ export interface components {
             name: string;
             status: components["schemas"]["RecordStatus"];
         };
+        /**
+         * ChargeCancellationReasonCode
+         * @enum {string}
+         */
+        ChargeCancellationReasonCode: "WAIVED" | "ERROR" | "DUPLICATE" | "OTHER";
         /** ChargeResponse */
         ChargeResponse: {
             /** Amount Due Minor */
             amount_due_minor: number;
             /** Amount Paid Minor */
             amount_paid_minor: number;
+            cancellation_reason?: components["schemas"]["ChargeCancellationReasonCode"] | null;
             /** Currency */
             currency: string;
             /** Description */
             description: string;
             /** Id */
             id: string;
+            /** Note */
+            note?: string | null;
             /** Person Id */
             person_id: string;
             status: components["schemas"]["ChargeStatus"];
@@ -2138,6 +2220,18 @@ export interface components {
          * @enum {string}
          */
         DataCategory: "PERSONAL_PROFILE" | "ATTENDANCE_RECORDS" | "BILLING_RECORDS" | "DOCUMENTS" | "COMMUNICATIONS" | "MEDIA";
+        /**
+         * DebtSummaryResponse
+         * @description Org-wide roll-up of :class:`PersonDebtItem` — the "dugovanja" total.
+         */
+        DebtSummaryResponse: {
+            /** Currency */
+            currency: string;
+            /** People With Debt */
+            people_with_debt: number;
+            /** Total Outstanding Minor */
+            total_outstanding_minor: number;
+        };
         /**
          * DecideDsarRequest
          * @description Staff's decision note. Required — a fulfilment/rejection is always
@@ -2837,6 +2931,17 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** Page[PersonDebtItem] */
+        Page_PersonDebtItem_: {
+            /** Items */
+            items: components["schemas"]["PersonDebtItem"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
         /** Page[PersonSummary] */
         Page_PersonSummary_: {
             /** Items */
@@ -2921,6 +3026,28 @@ export interface components {
             status: components["schemas"]["PaymentRecordStatus"];
         };
         /**
+         * PaymentVoidReasonCode
+         * @enum {string}
+         */
+        PaymentVoidReasonCode: "ERROR" | "REFUNDED" | "DUPLICATE" | "OTHER";
+        /**
+         * PersonDebtItem
+         * @description One person's aggregated outstanding balance (open + partially-paid
+         *     charges only; cancelled charges never contribute).
+         */
+        PersonDebtItem: {
+            /** Currency */
+            currency: string;
+            /** Display Name */
+            display_name: string;
+            /** Open Charge Count */
+            open_charge_count: number;
+            /** Outstanding Minor */
+            outstanding_minor: number;
+            /** Person Id */
+            person_id: string;
+        };
+        /**
          * PersonIdentityStatus
          * @enum {string}
          */
@@ -2957,7 +3084,7 @@ export interface components {
         /** PostBillingRunRequest */
         PostBillingRunRequest: {
             /** Amount Minor */
-            amount_minor: number;
+            amount_minor?: number | null;
             /** Description */
             description: string;
             /** Group Id */
@@ -3513,6 +3640,10 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /** VoidPaymentRequest */
+        VoidPaymentRequest: {
+            reason: components["schemas"]["PaymentVoidReasonCode"];
+        };
         /** WithdrawConsentRequest */
         WithdrawConsentRequest: {
             /** Note */
@@ -3602,6 +3733,58 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    listDebts: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_PersonDebtItem_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getDebtSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DebtSummaryResponse"];
+                };
             };
         };
     };
@@ -3863,6 +4046,50 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Page_ChargeResponse_"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancelCharge: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                charge_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelChargeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChargeResponse"];
+                };
+            };
+            /** @description Charge already PAID or already CANCELLED. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -5912,6 +6139,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChildSummary"][];
+                };
+            };
+        };
+    };
+    voidPayment: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                payment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidPaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentResponse"];
+                };
+            };
+            /** @description Payment already voided. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

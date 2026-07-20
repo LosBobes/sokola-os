@@ -356,9 +356,16 @@
       "BillingPreviewRequest": {
         "properties": {
           "amount_minor": {
-            "exclusiveMinimum": 0.0,
-            "title": "Amount Minor",
-            "type": "integer"
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Minor"
           },
           "description": {
             "maxLength": 200,
@@ -379,7 +386,6 @@
         },
         "required": [
           "group_id",
-          "amount_minor",
           "description",
           "period_label"
         ],
@@ -512,6 +518,30 @@
         "title": "Body_uploadDocument",
         "type": "object"
       },
+      "CancelChargeRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ChargeCancellationReasonCode"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "CancelChargeRequest",
+        "type": "object"
+      },
       "CategoryResponse": {
         "properties": {
           "id": {
@@ -534,6 +564,16 @@
         "title": "CategoryResponse",
         "type": "object"
       },
+      "ChargeCancellationReasonCode": {
+        "enum": [
+          "WAIVED",
+          "ERROR",
+          "DUPLICATE",
+          "OTHER"
+        ],
+        "title": "ChargeCancellationReasonCode",
+        "type": "string"
+      },
       "ChargeResponse": {
         "properties": {
           "amount_due_minor": {
@@ -543,6 +583,16 @@
           "amount_paid_minor": {
             "title": "Amount Paid Minor",
             "type": "integer"
+          },
+          "cancellation_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChargeCancellationReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "currency": {
             "title": "Currency",
@@ -555,6 +605,17 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
           },
           "person_id": {
             "title": "Person Id",
@@ -1280,6 +1341,30 @@
         ],
         "title": "DataCategory",
         "type": "string"
+      },
+      "DebtSummaryResponse": {
+        "description": "Org-wide roll-up of :class:`PersonDebtItem` \u2014 the \"dugovanja\" total.",
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "people_with_debt": {
+            "title": "People With Debt",
+            "type": "integer"
+          },
+          "total_outstanding_minor": {
+            "title": "Total Outstanding Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "currency",
+          "total_outstanding_minor",
+          "people_with_debt"
+        ],
+        "title": "DebtSummaryResponse",
+        "type": "object"
       },
       "DecideDsarRequest": {
         "description": "Staff's decision note. Required \u2014 a fulfilment/rejection is always\nattested with a reason (v1 has no automated action to point to instead).",
@@ -3145,6 +3230,37 @@
         "title": "Page[NotificationResponse]",
         "type": "object"
       },
+      "Page_PersonDebtItem_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PersonDebtItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[PersonDebtItem]",
+        "type": "object"
+      },
       "Page_PersonSummary_": {
         "properties": {
           "items": {
@@ -3368,6 +3484,50 @@
         "title": "PaymentResponse",
         "type": "object"
       },
+      "PaymentVoidReasonCode": {
+        "enum": [
+          "ERROR",
+          "REFUNDED",
+          "DUPLICATE",
+          "OTHER"
+        ],
+        "title": "PaymentVoidReasonCode",
+        "type": "string"
+      },
+      "PersonDebtItem": {
+        "description": "One person's aggregated outstanding balance (open + partially-paid\ncharges only; cancelled charges never contribute).",
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "open_charge_count": {
+            "title": "Open Charge Count",
+            "type": "integer"
+          },
+          "outstanding_minor": {
+            "title": "Outstanding Minor",
+            "type": "integer"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person_id",
+          "display_name",
+          "currency",
+          "outstanding_minor",
+          "open_charge_count"
+        ],
+        "title": "PersonDebtItem",
+        "type": "object"
+      },
       "PersonIdentityStatus": {
         "enum": [
           "PROVISIONAL",
@@ -3446,9 +3606,16 @@
       "PostBillingRunRequest": {
         "properties": {
           "amount_minor": {
-            "exclusiveMinimum": 0.0,
-            "title": "Amount Minor",
-            "type": "integer"
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Minor"
           },
           "description": {
             "maxLength": 200,
@@ -3473,7 +3640,6 @@
         },
         "required": [
           "group_id",
-          "amount_minor",
           "description",
           "period_label",
           "preview_hash"
@@ -4981,6 +5147,18 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VoidPaymentRequest": {
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/PaymentVoidReasonCode"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "VoidPaymentRequest",
+        "type": "object"
+      },
       "WithdrawConsentRequest": {
         "properties": {
           "note": {
@@ -5078,6 +5256,83 @@
         "summary": "Logout",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/billing/debts": {
+      "get": {
+        "operationId": "listDebts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PersonDebtItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Debts",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/debts/summary": {
+      "get": {
+        "operationId": "getDebtSummary",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebtSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Debt Summary",
+        "tags": [
+          "billing"
         ]
       }
     },
@@ -5480,6 +5735,77 @@
           }
         },
         "summary": "List Charges",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/charges/{charge_id}/cancel": {
+      "post": {
+        "operationId": "cancelCharge",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "charge_id",
+            "required": true,
+            "schema": {
+              "title": "Charge Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelChargeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChargeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Charge already PAID or already CANCELLED."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Charge",
         "tags": [
           "billing"
         ]
@@ -8262,6 +8588,77 @@
         "summary": "List My Children",
         "tags": [
           "parent"
+        ]
+      }
+    },
+    "/payments/{payment_id}/void": {
+      "post": {
+        "operationId": "voidPayment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidPaymentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Payment already voided."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Void Payment",
+        "tags": [
+          "payments"
         ]
       }
     },
