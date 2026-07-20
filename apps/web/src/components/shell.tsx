@@ -51,6 +51,7 @@ const NAV: Record<RoleCode, Destination[]> = {
   PARENT: [
     { to: "/", label: "Početna", hint: "Šta je sledeće", icon: "danas" },
     { to: "/dogadjaji", label: "Događaji", hint: "Prijave", icon: "dogadjaji" },
+    { to: "/obavestenja", label: "Obaveštenja", hint: "Poruke škole", icon: "komunikacija" },
   ],
   STUDENT: [{ to: "/", label: "Početna", hint: "", icon: "danas" }],
 };

@@ -12,6 +12,7 @@ import { MoneyPage } from "./routes/manager/Money";
 import { CommunicationsPage } from "./routes/manager/Communications";
 import { EventsPage } from "./routes/parent/Events";
 import { MorePage } from "./routes/More";
+import { ParentNotificationsPage } from "./routes/parent/Notifications";
 
 export function App() {
   const { me, activeContext, loading } = useSession();
@@ -34,6 +35,7 @@ export function App() {
         <Route path="/finansije" element={<MoneyPage />} />
         <Route path="/komunikacija" element={<CommunicationsPage />} />
         <Route path="/dogadjaji" element={<EventsPage />} />
+        <Route path="/obavestenja" element={<ParentNotificationsPage />} />
         <Route path="/vise" element={<MorePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
