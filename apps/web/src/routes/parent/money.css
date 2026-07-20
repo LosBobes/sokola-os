@@ -1,0 +1,188 @@
+/*
+ * Parent · Finansije (P03) — brand row, child selector, balance hero, and
+ * obligation rows. Consumes only semantic role tokens from
+ * styles/design-tokens.css, same discipline as home.css/shell.css.
+ */
+
+/* --- Top brand row -------------------------------------------------- */
+.money-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.money-topbar__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+.money-topbar__title {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+}
+.money-topbar__org {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Child selector --------------------------------------------------- */
+.money-childpicker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-raised);
+  border: var(--ink-border) solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+.money-childpicker__current {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.money-childpicker__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-gold-soft);
+  color: var(--tone-warning-fg);
+  font-weight: 700;
+  flex: none;
+}
+.money-childpicker__name {
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.money-childpicker__pop {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: var(--space-4);
+  z-index: 20;
+  min-width: 200px;
+  max-width: calc(100% - var(--space-4) * 2);
+  background: var(--surface-raised);
+  border: var(--ink-border) solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.money-childpicker__item {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.money-childpicker__item:hover {
+  background: var(--action-surface);
+}
+.money-childpicker__item.is-active {
+  background: var(--action-surface);
+  color: var(--action-primary-hover);
+  font-weight: 600;
+}
+
+/* --- Balance hero ------------------------------------------------------*/
+.money-hero {
+  background: var(--action-primary-gradient);
+  color: var(--text-on-action);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-lg);
+  margin-bottom: var(--space-5);
+}
+.money-hero__eyebrow {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text-on-action) 78%, transparent);
+}
+.money-hero__amount {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-display);
+  font-size: var(--text-xl);
+  margin: var(--space-1) 0 var(--space-4);
+}
+.money-hero__stats {
+  display: flex;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+}
+.money-hero__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.money-hero__stat-label {
+  font-size: var(--text-sm);
+  color: color-mix(in srgb, var(--text-on-action) 82%, transparent);
+}
+.money-hero__stat-value {
+  font-weight: 700;
+  font-size: var(--text-lg);
+}
+
+/* --- Tabs ---------------------------------------------------------------*/
+.money-tabs {
+  margin-bottom: var(--space-4);
+}
+
+/* --- Obligation rows ---------------------------------------------------*/
+.money-oblig-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.money-oblig-row {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-raised);
+  border: var(--ink-border) solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+.money-oblig-row__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.money-oblig-row__title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.money-oblig-row__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+.money-oblig-row__field-label {
+  color: var(--text-secondary);
+  display: block;
+}
+.money-oblig-row__field-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
