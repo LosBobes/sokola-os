@@ -244,6 +244,37 @@
         "title": "AttendanceOverrideReasonCode",
         "type": "string"
       },
+      "AttendanceProgressNoteInput": {
+        "description": "A progress note (PRD 06 M2) attached to this attendance save. Optional \u2014\na trainer taking attendance may jot a note about a roster member without\nleaving the sheet; equivalent to a standalone POST to\n``/people/{person_id}/progress-notes`` scoped to this session's group.",
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person_id",
+          "note"
+        ],
+        "title": "AttendanceProgressNoteInput",
+        "type": "object"
+      },
       "AttendanceSheet": {
         "description": "The roster to display. Everyone defaults to PRESENT; the trainer edits only\nexceptions. ``attendance_version`` must be echoed back on save.",
         "properties": {
@@ -1116,6 +1147,36 @@
           "name"
         ],
         "title": "CreateProgramRequest",
+        "type": "object"
+      },
+      "CreateProgressNoteRequest": {
+        "properties": {
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "group_id",
+          "note"
+        ],
+        "title": "CreateProgressNoteRequest",
         "type": "object"
       },
       "CreateRetentionPeriodRequest": {
@@ -3042,6 +3103,79 @@
         "title": "ProgramResponse",
         "type": "object"
       },
+      "ProgressLevel": {
+        "description": "A coarse, honest read on where a student is \u2014 not a graded score. Optional:\nmany notes are just prose with no level attached.",
+        "enum": [
+          "NOVICE",
+          "DEVELOPING",
+          "PROFICIENT",
+          "ADVANCED"
+        ],
+        "title": "ProgressLevel",
+        "type": "string"
+      },
+      "ProgressNoteResponse": {
+        "properties": {
+          "author_person_id": {
+            "title": "Author Person Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "required": [
+          "id",
+          "person_id",
+          "group_id",
+          "author_person_id",
+          "session_id",
+          "note",
+          "level",
+          "created_at"
+        ],
+        "title": "ProgressNoteResponse",
+        "type": "object"
+      },
       "PublishAnnouncementRequest": {
         "properties": {
           "body": {
@@ -3483,6 +3617,13 @@
             },
             "title": "Exceptions",
             "type": "array"
+          },
+          "progress_notes": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceProgressNoteInput"
+            },
+            "title": "Progress Notes",
+            "type": "array"
           }
         },
         "required": [
@@ -3511,6 +3652,11 @@
           },
           "present": {
             "title": "Present",
+            "type": "integer"
+          },
+          "progress_notes_saved": {
+            "default": 0,
+            "title": "Progress Notes Saved",
             "type": "integer"
           },
           "session_id": {
@@ -8059,6 +8205,118 @@
         "summary": "Suspend Membership",
         "tags": [
           "people"
+        ]
+      }
+    },
+    "/people/{person_id}/progress-notes": {
+      "get": {
+        "operationId": "listProgressNotes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProgressNoteResponse"
+                  },
+                  "title": "Response Listprogressnotes",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Progress Notes",
+        "tags": [
+          "progress"
+        ]
+      },
+      "post": {
+        "operationId": "createProgressNote",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProgressNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressNoteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Progress Note",
+        "tags": [
+          "progress"
         ]
       }
     },

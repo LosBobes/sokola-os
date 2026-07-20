@@ -1178,6 +1178,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{person_id}/progress-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Progress Notes */
+        get: operations["listProgressNotes"];
+        put?: never;
+        /** Create Progress Note */
+        post: operations["createProgressNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/programs": {
         parameters: {
             query?: never;
@@ -1670,6 +1688,20 @@ export interface components {
          */
         AttendanceOverrideReasonCode: "LATE_ARRIVAL" | "EARLY_LEAVE" | "EXCUSED_ABSENCE" | "OTHER";
         /**
+         * AttendanceProgressNoteInput
+         * @description A progress note (PRD 06 M2) attached to this attendance save. Optional —
+         *     a trainer taking attendance may jot a note about a roster member without
+         *     leaving the sheet; equivalent to a standalone POST to
+         *     ``/people/{person_id}/progress-notes`` scoped to this session's group.
+         */
+        AttendanceProgressNoteInput: {
+            level?: components["schemas"]["ProgressLevel"] | null;
+            /** Note */
+            note: string;
+            /** Person Id */
+            person_id: string;
+        };
+        /**
          * AttendanceSheet
          * @description The roster to display. Everyone defaults to PRESENT; the trainer edits only
          *     exceptions. ``attendance_version`` must be echoed back on save.
@@ -1958,6 +1990,14 @@ export interface components {
             internal_code?: string | null;
             /** Name */
             name: string;
+        };
+        /** CreateProgressNoteRequest */
+        CreateProgressNoteRequest: {
+            /** Group Id */
+            group_id: string;
+            level?: components["schemas"]["ProgressLevel"] | null;
+            /** Note */
+            note: string;
         };
         /** CreateRetentionPeriodRequest */
         CreateRetentionPeriodRequest: {
@@ -2668,6 +2708,34 @@ export interface components {
             name: string;
             status: components["schemas"]["RecordStatus"];
         };
+        /**
+         * ProgressLevel
+         * @description A coarse, honest read on where a student is — not a graded score. Optional:
+         *     many notes are just prose with no level attached.
+         * @enum {string}
+         */
+        ProgressLevel: "NOVICE" | "DEVELOPING" | "PROFICIENT" | "ADVANCED";
+        /** ProgressNoteResponse */
+        ProgressNoteResponse: {
+            /** Author Person Id */
+            author_person_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Group Id */
+            group_id: string;
+            /** Id */
+            id: string;
+            level: components["schemas"]["ProgressLevel"] | null;
+            /** Note */
+            note: string;
+            /** Person Id */
+            person_id: string;
+            /** Session Id */
+            session_id: string | null;
+        };
         /** PublishAnnouncementRequest */
         PublishAnnouncementRequest: {
             /** Body */
@@ -2823,6 +2891,8 @@ export interface components {
             attendance_version: number;
             /** Exceptions */
             exceptions?: components["schemas"]["AttendanceException"][];
+            /** Progress Notes */
+            progress_notes?: components["schemas"]["AttendanceProgressNoteInput"][];
         };
         /** SaveAttendanceResponse */
         SaveAttendanceResponse: {
@@ -2836,6 +2906,11 @@ export interface components {
             late: number;
             /** Present */
             present: number;
+            /**
+             * Progress Notes Saved
+             * @default 0
+             */
+            progress_notes_saved: number;
             /** Session Id */
             session_id: string;
         };
@@ -5818,6 +5893,74 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listProgressNotes: {
+        parameters: {
+            query?: {
+                group_id?: string | null;
+            };
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressNoteResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createProgressNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProgressNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressNoteResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
