@@ -1,7 +1,7 @@
 """data import staging tables
 
 Revision ID: 0cfcd81ee3fa
-Revises: 83eee9b8c108
+Revises: d6b76b77e632
 Create Date: 2026-07-20 21:29:51.554838
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 revision: str = '0cfcd81ee3fa'
-down_revision: str | None = '83eee9b8c108'
+down_revision: str | None = 'd6b76b77e632'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
