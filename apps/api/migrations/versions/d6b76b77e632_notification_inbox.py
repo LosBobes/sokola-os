@@ -1,7 +1,7 @@
 """notification inbox
 
 Revision ID: d6b76b77e632
-Revises: 83eee9b8c108
+Revises: 4c3e8bf7e13a
 Create Date: 2026-07-20 21:30:47.770645
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 revision: str = 'd6b76b77e632'
-down_revision: str | None = '83eee9b8c108'
+down_revision: str | None = '4c3e8bf7e13a'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
