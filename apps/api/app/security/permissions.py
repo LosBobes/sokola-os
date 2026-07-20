@@ -27,6 +27,10 @@ and identity routers gate on context alone), so including them in the
 administrative roles' defaults is behaviour-neutral: no route consults them yet.
 They are granted to OWNER/MANAGER/ADMIN so that a future area guard and the
 "restrict this assignment" UI have a coherent, non-empty administrative set.
+
+REPORTS (PRD 13) is new, staff-only: the reporting domain reads across billing,
+payments, attendance and membership, so its guard is granted the same
+OWNER/MANAGER/ADMIN set as the other administrative areas.
 """
 
 from __future__ import annotations
@@ -55,6 +59,7 @@ class PermissionArea(enum.StrEnum):
     COMMUNICATIONS = "COMMUNICATIONS"
     ORGANIZATION = "ORGANIZATION"
     ROLES = "ROLES"  # role / invitation administration
+    REPORTS = "REPORTS"  # read-only cross-domain reporting (PRD 13)
 
 
 # Everything a staff role administers by default. ORGANIZATION/ROLES are
@@ -71,6 +76,7 @@ _STAFF_AREAS: frozenset[PermissionArea] = frozenset(
         PermissionArea.COMMUNICATIONS,
         PermissionArea.ORGANIZATION,
         PermissionArea.ROLES,
+        PermissionArea.REPORTS,
     }
 )
 

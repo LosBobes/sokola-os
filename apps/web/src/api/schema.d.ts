@@ -999,6 +999,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reports/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Attendance Report */
+        get: operations["getAttendanceReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/financial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Financial Report */
+        get: operations["getFinancialReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/membership-trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Membership Trend Report */
+        get: operations["getMembershipTrendReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Overview */
+        get: operations["getOverviewReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/roles": {
         parameters: {
             query?: never;
@@ -1364,6 +1432,19 @@ export interface components {
             /** @default ORGANIZATION */
             scope_type: components["schemas"]["RoleScopeType"];
         };
+        /** AttendanceByGroup */
+        AttendanceByGroup: {
+            /** Attendance Rate */
+            attendance_rate: number;
+            /** Group Id */
+            group_id: string;
+            /** Group Name */
+            group_name: string;
+            /** Present Count */
+            present_count: number;
+            /** Recorded Count */
+            recorded_count: number;
+        };
         /** AttendanceEntry */
         AttendanceEntry: {
             /** Display Name */
@@ -1384,6 +1465,39 @@ export interface components {
          * @enum {string}
          */
         AttendanceOverrideReasonCode: "LATE_ARRIVAL" | "EARLY_LEAVE" | "EXCUSED_ABSENCE" | "OTHER";
+        /**
+         * AttendanceReport
+         * @description Attendance rate over a date range, scoped by each session's own
+         *     ``starts_at`` (not by when the attendance row was written).
+         */
+        AttendanceReport: {
+            /** Absent Count */
+            absent_count: number;
+            /** Attendance Rate */
+            attendance_rate: number;
+            /** By Group */
+            by_group: components["schemas"]["AttendanceByGroup"][];
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            /** Excused Count */
+            excused_count: number;
+            /** Group Id */
+            group_id: string | null;
+            /** Late Count */
+            late_count: number;
+            /** Present Count */
+            present_count: number;
+            /** Recorded Count */
+            recorded_count: number;
+        };
         /**
          * AttendanceSheet
          * @description The roster to display. Everyone defaults to PRESENT; the trainer edits only
@@ -1708,6 +1822,34 @@ export interface components {
          */
         EventType: "TRAINING_CAMP" | "COMPETITION" | "WORKSHOP" | "SOCIAL" | "OTHER";
         /**
+         * FinancialReport
+         * @description Billed vs. collected over an explicit date range, plus a breakdown of
+         *     all currently-outstanding debt (not time-scoped — debt is a point-in-time
+         *     balance, not something that happened "in" the range).
+         */
+        FinancialReport: {
+            /** Billed Total Minor */
+            billed_total_minor: number;
+            /** Collected Total Minor */
+            collected_total_minor: number;
+            /** Currency */
+            currency: string;
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            /** Outstanding By Status */
+            outstanding_by_status: components["schemas"]["OutstandingByStatus"][];
+            /** Outstanding Debt Total Minor */
+            outstanding_debt_total_minor: number;
+        };
+        /**
          * GroupCapacityMode
          * @enum {string}
          */
@@ -1910,6 +2052,55 @@ export interface components {
             /** Reason */
             reason?: string | null;
         };
+        /** MembershipTrendByGroup */
+        MembershipTrendByGroup: {
+            /** Active Member Count */
+            active_member_count: number;
+            /** Group Id */
+            group_id: string;
+            /** Group Name */
+            group_name: string;
+        };
+        /** MembershipTrendPoint */
+        MembershipTrendPoint: {
+            /** Active Member Count */
+            active_member_count: number;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+        };
+        /**
+         * MembershipTrendReport
+         * @description Monthly-bucketed active-membership growth. Membership rows carry only a
+         *     current ``status`` (no historical end date), so each bucket counts
+         *     currently-active memberships that had already joined by the bucket's end —
+         *     a join-cohort growth curve, not a historical point-in-time snapshot.
+         */
+        MembershipTrendReport: {
+            /** By Group */
+            by_group: components["schemas"]["MembershipTrendByGroup"][];
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            /** Group Id */
+            group_id: string | null;
+            /** Trend */
+            trend: components["schemas"]["MembershipTrendPoint"][];
+        };
         /** MergeDecisionRequest */
         MergeDecisionRequest: {
             /**
@@ -1949,6 +2140,50 @@ export interface components {
          * @enum {string}
          */
         OrganizationType: "SCHOOL" | "SPORTS_CLUB" | "DANCE_SCHOOL" | "COURSE_PROVIDER" | "EVENT_ORGANIZER" | "BUSINESS" | "OTHER";
+        /** OutstandingByStatus */
+        OutstandingByStatus: {
+            /** Charge Count */
+            charge_count: number;
+            /** Outstanding Minor */
+            outstanding_minor: number;
+            /** Status */
+            status: string;
+        };
+        /**
+         * OverviewReport
+         * @description Business dashboard: a snapshot of the organization's health right now,
+         *     plus this-calendar-month billing and a recent attendance window.
+         */
+        OverviewReport: {
+            /** Active Member Count */
+            active_member_count: number;
+            /** Attendance Present Count */
+            attendance_present_count: number;
+            /** Attendance Rate */
+            attendance_rate: number;
+            /** Attendance Recorded Count */
+            attendance_recorded_count: number;
+            /** Attendance Window Days */
+            attendance_window_days: number;
+            /** Billed Total Minor */
+            billed_total_minor: number;
+            /** Collected Total Minor */
+            collected_total_minor: number;
+            /** Currency */
+            currency: string;
+            /** Outstanding Debt Total Minor */
+            outstanding_debt_total_minor: number;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+        };
         /** Page[CategoryResponse] */
         Page_CategoryResponse_: {
             /** Items */
@@ -4867,6 +5102,124 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getAttendanceReport: {
+        parameters: {
+            query: {
+                date_from: string;
+                date_to: string;
+                group_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getFinancialReport: {
+        parameters: {
+            query: {
+                date_from: string;
+                date_to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getMembershipTrendReport: {
+        parameters: {
+            query: {
+                date_from: string;
+                date_to: string;
+                group_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembershipTrendReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getOverviewReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverviewReport"];
                 };
             };
         };
