@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.domains.organization.enums import OrganizationType
+from app.domains.organization.enums import OrganizationLifecycleStatus, OrganizationType
 
 
 class CreateOrganizationRequest(BaseModel):
@@ -19,6 +19,7 @@ class OrganizationResponse(BaseModel):
     slug: str | None
     type: OrganizationType
     timezone: str
+    lifecycle_status: OrganizationLifecycleStatus
 
 
 class TenantPublic(BaseModel):

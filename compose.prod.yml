@@ -1,0 +1,94 @@
+# Production topology for SOKOLA on the shared Hetzner host.
+# Sibling of compose.m0.yml (local dev topology) — same service shape
+# (db + api + worker), plus the `web` tier built as a static SPA behind
+# nginx. See ops/hetzner/deployment-hetzner.md for the full deploy runbook
+# and the add-hetzner-service skill for the shared-host coexistence pattern.
+#
+# Coexistence rules (this server already hosts other apps — do not disturb
+# them):
+#   - Only the `web` tier is published, and ONLY on 127.0.0.1:3003, so
+#     nothing here is reachable from the internet except through the host's
+#     single Caddy instance, which reverse-proxies the public domain to that
+#     loopback port (see ops/hetzner/Caddyfile).
+#   - This stack is deployed to its own directory (/opt/sokola) on the
+#     server, so the Compose project name is "sokola": containers are
+#     sokola-*, volumes are sokola_*. No collisions with other services on
+#     the box.
+#   - `db` is SOKOLA's own Postgres, private to this stack — not shared with
+#     other apps, and (unlike compose.m0.yml, which publishes 55432 for local
+#     convenience) not published to the host at all.
+#   - Images are built ON THE SERVER from source (`up --build`), same as
+#     compose.m0.yml.
+#
+# Run from the repo root:
+#   docker compose -f compose.prod.yml --env-file ops/hetzner/.env up --build -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sokola
+      POSTGRES_PASSWORD: "${SOKOLA_DB_PASSWORD:?set SOKOLA_DB_PASSWORD in .env}"
+      POSTGRES_DB: sokola
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sokola"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    # Internal only: never published to the host or the internet.
+    expose:
+      - "5432"
+    volumes:
+      - sokola_pg:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./apps/api
+    restart: unless-stopped
+    environment:
+      SOKOLA_ENVIRONMENT: production
+      SOKOLA_DATABASE_URL: "postgresql+psycopg://sokola:${SOKOLA_DB_PASSWORD:?set SOKOLA_DB_PASSWORD in .env}@db:5432/sokola"
+      SOKOLA_ALLOW_INSECURE_DEV_AUTH: "false"
+      SOKOLA_SESSION_SECRET: "${SOKOLA_SESSION_SECRET:?set SOKOLA_SESSION_SECRET in .env, e.g. openssl rand -hex 32}"
+      SOKOLA_GOOGLE_CLIENT_ID: "${SOKOLA_GOOGLE_CLIENT_ID:-}"
+      SOKOLA_GOOGLE_CLIENT_SECRET: "${SOKOLA_GOOGLE_CLIENT_SECRET:-}"
+      SOKOLA_OIDC_REDIRECT_URL: "${SOKOLA_OIDC_REDIRECT_URL:-https://sokola.example.com/api/auth/google/callback}"
+      SOKOLA_WEB_POST_LOGIN_URL: "${SOKOLA_WEB_POST_LOGIN_URL:-https://sokola.example.com/}"
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Internal only: the web container proxies /api/ to this service over the
+    # Compose network; the host Caddy never talks to it directly.
+    expose:
+      - "8000"
+
+  worker:
+    build:
+      context: ./apps/api
+    restart: unless-stopped
+    environment:
+      SOKOLA_ENVIRONMENT: production
+      SOKOLA_DATABASE_URL: "postgresql+psycopg://sokola:${SOKOLA_DB_PASSWORD:?set SOKOLA_DB_PASSWORD in .env}@db:5432/sokola"
+    command: python -m app.worker
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./apps/web
+    restart: unless-stopped
+    depends_on:
+      - api
+    # Loopback only. SOKOLA owns port 3003 on this host — see
+    # ops/hetzner/Caddyfile and the add-hetzner-service skill's port
+    # registry (references/PORT_REGISTRY.md).
+    ports:
+      - "127.0.0.1:3003:80"
+
+volumes:
+  sokola_pg:

@@ -10,6 +10,7 @@ from app.common.errors import ConflictError, ForbiddenError, NotFoundError
 from app.common.slug import slugify
 from app.domains.identity.enums import RoleAssignmentStatus, RoleCode, RoleScopeType
 from app.domains.identity.models import RoleAssignment
+from app.domains.organization.enums import OrganizationLifecycleStatus
 from app.domains.organization.models import Organization, OrganizationMembership
 from app.domains.organization.schemas import (
     CreateOrganizationRequest,
@@ -36,9 +37,15 @@ def create_organization(
     db: Session, principal: Principal, req: CreateOrganizationRequest
 ) -> OrganizationResponse:
     """Bootstrap a new tenant. The creating person becomes its OWNER and first
-    member, all in one transaction."""
+    member, all in one transaction. The school starts ``IN_PREPARATION``
+    ("u pripremi") — guided onboarding (app.domains.onboarding) walks it through
+    structure setup and an optional co-owner invite before it may ``activate``."""
     org = Organization(
-        name=req.name, slug=_unique_slug(db, req.name), type=req.type, timezone=req.timezone
+        name=req.name,
+        slug=_unique_slug(db, req.name),
+        type=req.type,
+        timezone=req.timezone,
+        lifecycle_status=OrganizationLifecycleStatus.IN_PREPARATION,
     )
     db.add(org)
     db.flush()

@@ -35,6 +35,7 @@ describe("Manager: finance and communications", () => {
 
     // --- Journey 7: publish an announcement (preview snapshot → publish) ---
     cy.get("[data-cy='nav-/komunikacija']").click();
+    cy.get("[data-cy=ann-new]").click();
     cy.get("[data-cy=ann-group]").select(groupName);
     cy.get("[data-cy=ann-title]").type("Trening otkazan");
     cy.get("[data-cy=ann-body]").type("Sutrašnji trening je otkazan.");
