@@ -673,6 +673,33 @@
         "title": "CreateLocationRequest",
         "type": "object"
       },
+      "CreateMergeReviewRequest": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "source_person_id": {
+            "minLength": 1,
+            "title": "Source Person Id",
+            "type": "string"
+          },
+          "target_person_id": {
+            "minLength": 1,
+            "title": "Target Person Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_person_id",
+          "target_person_id",
+          "reason"
+        ],
+        "title": "CreateMergeReviewRequest",
+        "type": "object"
+      },
       "CreateOrganizationRequest": {
         "properties": {
           "name": {
@@ -838,6 +865,50 @@
         "title": "DevIdentityResponse",
         "type": "object"
       },
+      "DuplicateCandidate": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person_id",
+          "display_name"
+        ],
+        "title": "DuplicateCandidate",
+        "type": "object"
+      },
+      "DuplicateCluster": {
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/DuplicateCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "family_name": {
+            "title": "Family Name",
+            "type": "string"
+          },
+          "given_name": {
+            "title": "Given Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "given_name",
+          "family_name",
+          "candidates"
+        ],
+        "title": "DuplicateCluster",
+        "type": "object"
+      },
       "EventCapacityMode": {
         "enum": [
           "UNLIMITED",
@@ -992,6 +1063,55 @@
         "title": "GroupResponse",
         "type": "object"
       },
+      "GuardianAccessStatus": {
+        "enum": [
+          "ACTIVE",
+          "SUSPENDED",
+          "REVOKED"
+        ],
+        "title": "GuardianAccessStatus",
+        "type": "string"
+      },
+      "GuardianContactResponse": {
+        "properties": {
+          "access_status": {
+            "$ref": "#/components/schemas/GuardianAccessStatus"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "guardian_person_id": {
+            "title": "Guardian Person Id",
+            "type": "string"
+          },
+          "is_primary_contact": {
+            "title": "Is Primary Contact",
+            "type": "boolean"
+          },
+          "relationship_type": {
+            "$ref": "#/components/schemas/GuardianRelationshipType"
+          }
+        },
+        "required": [
+          "guardian_person_id",
+          "display_name",
+          "relationship_type",
+          "access_status",
+          "is_primary_contact"
+        ],
+        "title": "GuardianContactResponse",
+        "type": "object"
+      },
+      "GuardianRelationshipType": {
+        "enum": [
+          "PARENT",
+          "LEGAL_GUARDIAN",
+          "OTHER"
+        ],
+        "title": "GuardianRelationshipType",
+        "type": "string"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1098,6 +1218,136 @@
           "contexts"
         ],
         "title": "MeResponse",
+        "type": "object"
+      },
+      "MembershipResponse": {
+        "properties": {
+          "admin_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admin Note"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "local_member_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Member Code"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MembershipStatus"
+          }
+        },
+        "required": [
+          "id",
+          "person_id",
+          "status",
+          "local_member_code",
+          "admin_note"
+        ],
+        "title": "MembershipResponse",
+        "type": "object"
+      },
+      "MembershipStatus": {
+        "enum": [
+          "ACTIVE",
+          "SUSPENDED",
+          "ENDED"
+        ],
+        "title": "MembershipStatus",
+        "type": "string"
+      },
+      "MembershipTransitionRequest": {
+        "description": "Optional operator note explaining an end/suspend/resume.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "MembershipTransitionRequest",
+        "type": "object"
+      },
+      "MergeDecisionRequest": {
+        "properties": {
+          "decision": {
+            "enum": [
+              "MERGE",
+              "DISMISS"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ],
+        "title": "MergeDecisionRequest",
+        "type": "object"
+      },
+      "MergeReviewResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "source_person_id": {
+            "title": "Source Person Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PersonMergeStatus"
+          },
+          "target_person_id": {
+            "title": "Target Person Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source_person_id",
+          "target_person_id",
+          "status",
+          "reason"
+        ],
+        "title": "MergeReviewResponse",
         "type": "object"
       },
       "OrganizationResponse": {
@@ -1448,6 +1698,16 @@
         "title": "PersonIdentityStatus",
         "type": "string"
       },
+      "PersonMergeStatus": {
+        "description": "Lifecycle of a duplicate-review case (\u00a713\u201315).\n\nA case is FLAGGED at intake, then a reviewer either MERGED it (folding the\nsource into the target) or DISMISSED it (the two are genuinely distinct).",
+        "enum": [
+          "FLAGGED",
+          "MERGED",
+          "DISMISSED"
+        ],
+        "title": "PersonMergeStatus",
+        "type": "string"
+      },
       "PersonResponse": {
         "properties": {
           "display_name": {
@@ -1731,6 +1991,24 @@
         ],
         "title": "RegistrationStatus",
         "type": "string"
+      },
+      "RevokeGuardianAccessRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "RevokeGuardianAccessRequest",
+        "type": "object"
       },
       "RoleCode": {
         "enum": [
@@ -2429,6 +2707,37 @@
           }
         },
         "title": "UpdateLocationRequest",
+        "type": "object"
+      },
+      "UpdateMemberDataRequest": {
+        "description": "School-local member data. Only fields present in the request body are\nchanged; omit a field to leave it untouched, send ``null`` to clear it.",
+        "properties": {
+          "admin_note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admin Note"
+          },
+          "local_member_code": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Member Code"
+          }
+        },
+        "title": "UpdateMemberDataRequest",
         "type": "object"
       },
       "UpdateProgramRequest": {
@@ -4144,6 +4453,147 @@
         ]
       }
     },
+    "/people/duplicates": {
+      "get": {
+        "operationId": "listDuplicatePeople",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DuplicateCluster"
+                  },
+                  "title": "Response Listduplicatepeople",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Duplicate People",
+        "tags": [
+          "people"
+        ]
+      }
+    },
+    "/people/merge-reviews": {
+      "get": {
+        "operationId": "listMergeReviews",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MergeReviewResponse"
+                  },
+                  "title": "Response Listmergereviews",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Merge Reviews",
+        "tags": [
+          "people"
+        ]
+      },
+      "post": {
+        "operationId": "createMergeReview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMergeReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MergeReviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Merge Review",
+        "tags": [
+          "people"
+        ]
+      }
+    },
+    "/people/merge-reviews/{review_id}/decision": {
+      "post": {
+        "operationId": "decideMergeReview",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "review_id",
+            "required": true,
+            "schema": {
+              "title": "Review Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MergeReviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide Merge Review",
+        "tags": [
+          "people"
+        ]
+      }
+    },
     "/people/{person_id}": {
       "get": {
         "operationId": "getPerson",
@@ -4181,6 +4631,424 @@
           }
         },
         "summary": "Get Person",
+        "tags": [
+          "people"
+        ]
+      }
+    },
+    "/people/{person_id}/guardians": {
+      "get": {
+        "operationId": "listGuardians",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GuardianContactResponse"
+                  },
+                  "title": "Response Listguardians",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Guardians",
+        "tags": [
+          "people"
+        ]
+      }
+    },
+    "/people/{person_id}/guardians/{guardian_person_id}/primary": {
+      "post": {
+        "operationId": "setPrimaryContact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "guardian_person_id",
+            "required": true,
+            "schema": {
+              "title": "Guardian Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuardianContactResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Primary Contact",
+        "tags": [
+          "people"
+        ]
+      }
+    },
+    "/people/{person_id}/guardians/{guardian_person_id}/revoke": {
+      "post": {
+        "operationId": "revokeGuardianAccess",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "guardian_person_id",
+            "required": true,
+            "schema": {
+              "title": "Guardian Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeGuardianAccessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuardianContactResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Guardian Access",
+        "tags": [
+          "people"
+        ]
+      }
+    },
+    "/people/{person_id}/membership": {
+      "get": {
+        "operationId": "getMembership",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Membership",
+        "tags": [
+          "people"
+        ]
+      },
+      "patch": {
+        "operationId": "updateMemberData",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemberDataRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Local member code already used in this org."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Member Data",
+        "tags": [
+          "people"
+        ]
+      }
+    },
+    "/people/{person_id}/membership/end": {
+      "post": {
+        "operationId": "endMembership",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MembershipTransitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Already ended, or last owner of the school."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "End Membership",
+        "tags": [
+          "people"
+        ]
+      }
+    },
+    "/people/{person_id}/membership/resume": {
+      "post": {
+        "operationId": "resumeMembership",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MembershipTransitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Invalid transition for the current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resume Membership",
+        "tags": [
+          "people"
+        ]
+      }
+    },
+    "/people/{person_id}/membership/suspend": {
+      "post": {
+        "operationId": "suspendMembership",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MembershipTransitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Invalid transition, or last owner of the school."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Suspend Membership",
         "tags": [
           "people"
         ]

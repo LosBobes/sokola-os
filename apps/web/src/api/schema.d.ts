@@ -533,6 +533,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/duplicates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Duplicate People */
+        get: operations["listDuplicatePeople"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/merge-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Merge Reviews */
+        get: operations["listMergeReviews"];
+        put?: never;
+        /** Create Merge Review */
+        post: operations["createMergeReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/merge-reviews/{review_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Merge Review */
+        post: operations["decideMergeReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{person_id}": {
         parameters: {
             query?: never;
@@ -544,6 +596,126 @@ export interface paths {
         get: operations["getPerson"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{person_id}/guardians": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Guardians */
+        get: operations["listGuardians"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{person_id}/guardians/{guardian_person_id}/primary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Primary Contact */
+        post: operations["setPrimaryContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{person_id}/guardians/{guardian_person_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Guardian Access */
+        post: operations["revokeGuardianAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{person_id}/membership": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Membership */
+        get: operations["getMembership"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Member Data */
+        patch: operations["updateMemberData"];
+        trace?: never;
+    };
+    "/people/{person_id}/membership/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End Membership */
+        post: operations["endMembership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{person_id}/membership/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Membership */
+        post: operations["resumeMembership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{person_id}/membership/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suspend Membership */
+        post: operations["suspendMembership"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1061,6 +1233,15 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** CreateMergeReviewRequest */
+        CreateMergeReviewRequest: {
+            /** Reason */
+            reason: string;
+            /** Source Person Id */
+            source_person_id: string;
+            /** Target Person Id */
+            target_person_id: string;
+        };
         /** CreateOrganizationRequest */
         CreateOrganizationRequest: {
             /** Name */
@@ -1113,6 +1294,22 @@ export interface components {
             display_name: string;
             /** Person Id */
             person_id: string;
+        };
+        /** DuplicateCandidate */
+        DuplicateCandidate: {
+            /** Display Name */
+            display_name: string;
+            /** Person Id */
+            person_id: string;
+        };
+        /** DuplicateCluster */
+        DuplicateCluster: {
+            /** Candidates */
+            candidates: components["schemas"]["DuplicateCandidate"][];
+            /** Family Name */
+            family_name: string;
+            /** Given Name */
+            given_name: string;
         };
         /**
          * EventCapacityMode
@@ -1176,6 +1373,27 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * GuardianAccessStatus
+         * @enum {string}
+         */
+        GuardianAccessStatus: "ACTIVE" | "SUSPENDED" | "REVOKED";
+        /** GuardianContactResponse */
+        GuardianContactResponse: {
+            access_status: components["schemas"]["GuardianAccessStatus"];
+            /** Display Name */
+            display_name: string;
+            /** Guardian Person Id */
+            guardian_person_id: string;
+            /** Is Primary Contact */
+            is_primary_contact: boolean;
+            relationship_type: components["schemas"]["GuardianRelationshipType"];
+        };
+        /**
+         * GuardianRelationshipType
+         * @enum {string}
+         */
+        GuardianRelationshipType: "PARENT" | "LEGAL_GUARDIAN" | "OTHER";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1212,6 +1430,53 @@ export interface components {
             identity_status: components["schemas"]["PersonIdentityStatus"];
             /** Person Id */
             person_id: string;
+        };
+        /** MembershipResponse */
+        MembershipResponse: {
+            /** Admin Note */
+            admin_note: string | null;
+            /** Id */
+            id: string;
+            /** Local Member Code */
+            local_member_code: string | null;
+            /** Person Id */
+            person_id: string;
+            status: components["schemas"]["MembershipStatus"];
+        };
+        /**
+         * MembershipStatus
+         * @enum {string}
+         */
+        MembershipStatus: "ACTIVE" | "SUSPENDED" | "ENDED";
+        /**
+         * MembershipTransitionRequest
+         * @description Optional operator note explaining an end/suspend/resume.
+         */
+        MembershipTransitionRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** MergeDecisionRequest */
+        MergeDecisionRequest: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "MERGE" | "DISMISS";
+            /** Reason */
+            reason: string;
+        };
+        /** MergeReviewResponse */
+        MergeReviewResponse: {
+            /** Id */
+            id: string;
+            /** Reason */
+            reason: string;
+            /** Source Person Id */
+            source_person_id: string;
+            status: components["schemas"]["PersonMergeStatus"];
+            /** Target Person Id */
+            target_person_id: string;
         };
         /** OrganizationResponse */
         OrganizationResponse: {
@@ -1340,6 +1605,15 @@ export interface components {
          * @enum {string}
          */
         PersonIdentityStatus: "PROVISIONAL" | "CLAIMED" | "VERIFIED" | "MERGED" | "ARCHIVED";
+        /**
+         * PersonMergeStatus
+         * @description Lifecycle of a duplicate-review case (§13–15).
+         *
+         *     A case is FLAGGED at intake, then a reviewer either MERGED it (folding the
+         *     source into the target) or DISMISSED it (the two are genuinely distinct).
+         * @enum {string}
+         */
+        PersonMergeStatus: "FLAGGED" | "MERGED" | "DISMISSED";
         /** PersonResponse */
         PersonResponse: {
             /** Display Name */
@@ -1445,6 +1719,11 @@ export interface components {
          * @enum {string}
          */
         RegistrationStatus: "REGISTERED" | "CANCELLED";
+        /** RevokeGuardianAccessRequest */
+        RevokeGuardianAccessRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
         /**
          * RoleCode
          * @enum {string}
@@ -1725,6 +2004,17 @@ export interface components {
             internal_code?: string | null;
             /** Name */
             name?: string | null;
+        };
+        /**
+         * UpdateMemberDataRequest
+         * @description School-local member data. Only fields present in the request body are
+         *     changed; omit a field to leave it untouched, send ``null`` to clear it.
+         */
+        UpdateMemberDataRequest: {
+            /** Admin Note */
+            admin_note?: string | null;
+            /** Local Member Code */
+            local_member_code?: string | null;
         };
         /** UpdateProgramRequest */
         UpdateProgramRequest: {
@@ -2913,6 +3203,114 @@ export interface operations {
             };
         };
     };
+    listDuplicatePeople: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicateCluster"][];
+                };
+            };
+        };
+    };
+    listMergeReviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergeReviewResponse"][];
+                };
+            };
+        };
+    };
+    createMergeReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMergeReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergeReviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decideMergeReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergeReviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getPerson: {
         parameters: {
             query?: never;
@@ -2932,6 +3330,304 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PersonResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listGuardians: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianContactResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    setPrimaryContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+                guardian_person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianContactResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revokeGuardianAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+                guardian_person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeGuardianAccessRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianContactResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getMembership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembershipResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateMemberData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMemberDataRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembershipResponse"];
+                };
+            };
+            /** @description Local member code already used in this org. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    endMembership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MembershipTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembershipResponse"];
+                };
+            };
+            /** @description Already ended, or last owner of the school. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resumeMembership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MembershipTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembershipResponse"];
+                };
+            };
+            /** @description Invalid transition for the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suspendMembership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MembershipTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembershipResponse"];
+                };
+            };
+            /** @description Invalid transition, or last owner of the school. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

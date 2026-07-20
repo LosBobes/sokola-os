@@ -18,6 +18,18 @@ class PersonIdentityStatus(enum.StrEnum):
     ARCHIVED = "ARCHIVED"
 
 
+class PersonMergeStatus(enum.StrEnum):
+    """Lifecycle of a duplicate-review case (§13–15).
+
+    A case is FLAGGED at intake, then a reviewer either MERGED it (folding the
+    source into the target) or DISMISSED it (the two are genuinely distinct).
+    """
+
+    FLAGGED = "FLAGGED"
+    MERGED = "MERGED"
+    DISMISSED = "DISMISSED"
+
+
 class RoleCode(enum.StrEnum):
     OWNER = "OWNER"
     MANAGER = "MANAGER"
