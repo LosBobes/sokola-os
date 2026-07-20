@@ -1,0 +1,353 @@
+/*
+ * Shared UI primitives — styles for apps/web/src/components/ui.tsx.
+ *
+ * Consumes only the SEMANTIC ROLE tokens defined in styles/design-tokens.css
+ * (--surface-, --text-, --action-, --tone-, --accent-, etc). Never a raw hex
+ * value or a --green-, --gold- or --neutral- primitive ramp value.
+ *
+ * base.css already defines the foundational .btn / .card / .badge / .notice /
+ * table.data / .field rules that existing routes depend on — this file only
+ * ADDS new primitive-specific rules and never redefines those selectors.
+ */
+
+/* --- Buttons: additional variants ------------------------------------ */
+.btn--on-dark {
+  background: transparent;
+  border-color: rgba(233, 241, 234, 0.35);
+  color: var(--text-on-sidebar);
+  box-shadow: none;
+}
+.btn--on-dark:hover {
+  background: rgba(233, 241, 234, 0.1);
+  box-shadow: none;
+}
+
+.btn--icon {
+  min-width: var(--target-min);
+  padding: var(--space-2);
+}
+
+.btn--sm {
+  min-height: 34px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+/* --- Cards: section header -------------------------------------------- */
+.card--interactive {
+  cursor: pointer;
+  transition:
+    box-shadow var(--duration),
+    transform var(--duration),
+    border-color var(--duration);
+}
+.card--interactive:hover {
+  box-shadow: var(--shadow-md);
+}
+.card--interactive.is-active {
+  border-color: var(--action-primary);
+  box-shadow: var(--shadow-md);
+}
+.card--flat {
+  box-shadow: none;
+}
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.section-header__text {
+  min-width: 0;
+}
+.section-header__eyebrow {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+.section-header__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-display);
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+}
+.section-header__subtitle {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.section-header__action {
+  flex: none;
+  display: flex;
+  gap: var(--space-2);
+}
+.card > .section-header:last-child {
+  margin-bottom: 0;
+}
+
+/* --- Badges: neutral tone (base.css defines success/warning/error/info) */
+.badge--neutral {
+  color: var(--text-secondary);
+  background: var(--surface-sunken);
+}
+
+/* --- Stat tiles --------------------------------------------------------*/
+.stat-tile {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  background: var(--surface-raised);
+  border: var(--ink-border) solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4) var(--space-5);
+}
+.stat-tile__icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--action-surface);
+  color: var(--action-primary-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stat-tile__body {
+  min-width: 0;
+}
+.stat-tile__label {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.stat-tile__value {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-display);
+  font-size: var(--text-xl);
+  color: var(--text-primary);
+  line-height: 1.15;
+  margin-top: 2px;
+}
+.stat-tile__delta {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.stat-tile__delta--up {
+  color: var(--tone-success-fg);
+}
+.stat-tile__delta--down {
+  color: var(--tone-error-fg);
+}
+
+/* --- Tables: scroll container ------------------------------------------*/
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+}
+.table-wrap table.data {
+  min-width: 100%;
+}
+table.data tbody tr:hover {
+  background: var(--surface-sunken);
+}
+
+/* --- Split pane (list + detail) ----------------------------------------*/
+.split-pane {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+.split-pane__list.card,
+.split-pane__detail.card {
+  margin-bottom: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.split-pane__list-body {
+  max-height: 640px;
+  overflow-y: auto;
+}
+.split-pane__detail-body {
+  padding: var(--space-5);
+}
+.split-pane__row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: var(--ink-border) solid var(--border-default);
+  border-left: 3px solid transparent;
+  padding: var(--space-3) var(--space-4);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  min-height: var(--target-min);
+}
+.split-pane__row:hover {
+  background: var(--surface-sunken);
+}
+.split-pane__row--active {
+  background: var(--action-surface);
+  border-left-color: var(--action-primary);
+}
+
+@media (max-width: 920px) {
+  .split-pane {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Filter chips / segmented controls ----------------------------------*/
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 40px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: var(--ink-border) solid var(--border-default);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  transition:
+    background var(--duration),
+    border-color var(--duration),
+    color var(--duration);
+}
+.filter-chip:hover {
+  border-color: var(--border-strong);
+}
+.filter-chip--active {
+  background: var(--action-surface);
+  border-color: var(--action-primary);
+  color: var(--action-primary-hover);
+}
+.filter-chip__caret {
+  opacity: 0.6;
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-pill);
+  border: var(--ink-border) solid var(--border-default);
+}
+.segmented__option {
+  min-height: 34px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  transition:
+    background var(--duration),
+    color var(--duration),
+    box-shadow var(--duration);
+}
+.segmented__option--active {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- Capacity bars -------------------------------------------------------*/
+.capacity-bar__label {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+.capacity-bar__track {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+.capacity-bar__fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--action-primary-gradient);
+  transition: width var(--duration);
+}
+.capacity-bar__fill--warning {
+  background: var(--tone-warning-fg);
+}
+.capacity-bar__fill--error {
+  background: var(--tone-error-fg);
+}
+
+/* --- Loading state ---------------------------------------------------- */
+.loading-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding: var(--space-3) 0;
+}
+.loading-state__spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--action-primary);
+  animation: ui-spin 700ms linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-state__spinner {
+    animation: none;
+  }
+}
+@keyframes ui-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Empty state -------------------------------------------------------*/
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  color: var(--text-secondary);
+}
+.empty-state__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
