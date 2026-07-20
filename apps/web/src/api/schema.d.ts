@@ -230,6 +230,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Documents */
+        get: operations["listDocuments"];
+        put?: never;
+        /** Upload Document */
+        post: operations["uploadDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Document */
+        get: operations["getDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acknowledge Document */
+        post: operations["acknowledgeDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Document Content */
+        get: operations["downloadDocumentContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/events": {
         parameters: {
             query?: never;
@@ -1455,6 +1524,18 @@ export interface components {
             /** Total Minor */
             total_minor: number;
         };
+        /** Body_uploadDocument */
+        Body_uploadDocument: {
+            /** @default GENERAL */
+            document_type: components["schemas"]["DocumentType"];
+            /** File */
+            file: string;
+            retention_period?: components["schemas"]["RetentionPeriod"] | null;
+            /** Subject Person Id */
+            subject_person_id?: string | null;
+            /** @default STAFF_ONLY */
+            visibility: components["schemas"]["DocumentVisibility"];
+        };
         /** CategoryResponse */
         CategoryResponse: {
             /** Id */
@@ -1647,6 +1728,57 @@ export interface components {
             /** Person Id */
             person_id: string;
         };
+        /** DocumentResponse */
+        DocumentResponse: {
+            /** Acknowledged At */
+            acknowledged_at: string | null;
+            /** Acknowledged By Person Id */
+            acknowledged_by_person_id: string | null;
+            /** Content Type */
+            content_type: string;
+            document_type: components["schemas"]["DocumentType"];
+            /** Filename */
+            filename: string;
+            /** Id */
+            id: string;
+            /** Organization Id */
+            organization_id: string;
+            /** Owner Person Id */
+            owner_person_id: string;
+            retention_period: components["schemas"]["RetentionPeriod"] | null;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Subject Person Id */
+            subject_person_id: string | null;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
+            visibility: components["schemas"]["DocumentVisibility"];
+        };
+        /**
+         * DocumentType
+         * @description GENERAL is any uploaded file (photo, form, certificate, ...). CONTRACT is
+         *     a subtype that carries an acknowledgement (electronic "I have read/agree")
+         *     state — see ``acknowledged_at``/``acknowledged_by_person_id`` on the model.
+         * @enum {string}
+         */
+        DocumentType: "GENERAL" | "CONTRACT";
+        /**
+         * DocumentVisibility
+         * @description Who — beyond staff, who can always reach anything in their own tenant via
+         *     the DOCUMENTS permission — may see this document.
+         *
+         *     STAFF_ONLY: no one outside staff (e.g. internal admin paperwork).
+         *     SUBJECT: the person named in ``subject_person_id`` may see it, and — when
+         *     that subject is a child — so may any guardian with active
+         *     ``GuardianOrganizationAccess`` to that child in this organization. This
+         *     mirrors how the events domain already resolves "which children can this
+         *     parent act for" (see ``app.domains.events.repository.guardian_children``).
+         * @enum {string}
+         */
+        DocumentVisibility: "STAFF_ONLY" | "SUBJECT";
         /** DuplicateCandidate */
         DuplicateCandidate: {
             /** Display Name */
@@ -1971,6 +2103,17 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** Page[DocumentResponse] */
+        Page_DocumentResponse_: {
+            /** Items */
+            items: components["schemas"]["DocumentResponse"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
         /** Page[GroupResponse] */
         Page_GroupResponse_: {
             /** Items */
@@ -2195,6 +2338,14 @@ export interface components {
          * @enum {string}
          */
         RegistrationStatus: "REGISTERED" | "CANCELLED";
+        /**
+         * RetentionPeriod
+         * @description A declared retention policy label recorded at upload time. Nothing in this
+         *     increment enforces expiry/deletion against it — it is metadata for a future
+         *     retention job, not a guarantee.
+         * @enum {string}
+         */
+        RetentionPeriod: "ONE_YEAR" | "THREE_YEARS" | "FIVE_YEARS" | "TEN_YEARS" | "INDEFINITE";
         /** RevokeGuardianAccessRequest */
         RevokeGuardianAccessRequest: {
             /** Reason */
@@ -3063,6 +3214,181 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnouncementPreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listDocuments: {
+        parameters: {
+            query?: {
+                document_type?: components["schemas"]["DocumentType"] | null;
+                subject_person_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_DocumentResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    uploadDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_uploadDocument"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponse"];
+                };
+            };
+            /** @description Unsupported format, empty, or oversized file. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    acknowledgeDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponse"];
+                };
+            };
+            /** @description Document is not a contract. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    downloadDocumentContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/octet-stream": unknown;
                 };
             };
             /** @description Validation Error */
