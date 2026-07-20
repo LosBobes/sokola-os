@@ -4852,6 +4852,60 @@
         "title": "UpdateCategoryRequest",
         "type": "object"
       },
+      "UpdateEventRequest": {
+        "description": "Partial update \u2014 only fields present in the request body are changed.\n``capacity`` may be sent as ``null`` to clear it (pair with switching\n``capacity_mode`` to UNLIMITED); omit a field entirely to leave it untouched.\nOnly permitted while the event is still upcoming (published/draft and not yet\nstarted).",
+        "properties": {
+          "capacity": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity"
+          },
+          "capacity_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventCapacityMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "UpdateEventRequest",
+        "type": "object"
+      },
       "UpdateGrantedAreasRequest": {
         "description": "``null`` clears the restriction back to the role's full default areas.",
         "properties": {
@@ -6871,6 +6925,106 @@
           }
         },
         "summary": "Create Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/events/{event_id}": {
+      "patch": {
+        "operationId": "updateEvent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Event is cancelled, completed, or already past."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/events/{event_id}/cancel": {
+      "post": {
+        "operationId": "cancelEvent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Event is already cancelled or completed."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Event",
         "tags": [
           "events"
         ]

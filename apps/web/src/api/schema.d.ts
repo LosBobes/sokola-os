@@ -527,6 +527,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/events/{event_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Event */
+        patch: operations["updateEvent"];
+        trace?: never;
+    };
+    "/events/{event_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Event */
+        post: operations["cancelEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/events/{event_id}/registrations": {
         parameters: {
             query?: never;
@@ -3561,6 +3595,23 @@ export interface components {
             name?: string | null;
         };
         /**
+         * UpdateEventRequest
+         * @description Partial update — only fields present in the request body are changed.
+         *     ``capacity`` may be sent as ``null`` to clear it (pair with switching
+         *     ``capacity_mode`` to UNLIMITED); omit a field entirely to leave it untouched.
+         *     Only permitted while the event is still upcoming (published/draft and not yet
+         *     started).
+         */
+        UpdateEventRequest: {
+            /** Capacity */
+            capacity?: number | null;
+            capacity_mode?: components["schemas"]["EventCapacityMode"] | null;
+            /** Starts At */
+            starts_at?: string | null;
+            /** Title */
+            title?: string | null;
+        };
+        /**
          * UpdateGrantedAreasRequest
          * @description ``null`` clears the restriction back to the role's full default areas.
          */
@@ -4834,6 +4885,86 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["EventResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEventRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventResponse"];
+                };
+            };
+            /** @description Event is cancelled, completed, or already past. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancelEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventResponse"];
+                };
+            };
+            /** @description Event is already cancelled or completed. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

@@ -84,6 +84,16 @@ def count_active_registrations(db: Session, event_id: str) -> int:
     ).scalar_one()
 
 
+def list_active_registrations(db: Session, event_id: str) -> list[EventRegistration]:
+    """Every REGISTERED registration for an event — used to cascade-cancel them
+    when the whole event is cancelled."""
+    stmt = select(EventRegistration).where(
+        EventRegistration.event_id == event_id,
+        EventRegistration.status == RegistrationStatus.REGISTERED,
+    )
+    return list(db.execute(stmt).scalars().all())
+
+
 def get_registration(
     db: Session, organization_id: str, event_id: str, registration_id: str
 ) -> EventRegistration | None:
@@ -95,5 +105,5 @@ def get_registration(
     return db.execute(stmt).scalar_one_or_none()
 
 
-def _now() -> dt.datetime:
+def now() -> dt.datetime:
     return dt.datetime.now(tz=dt.UTC)
