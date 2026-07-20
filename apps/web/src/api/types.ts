@@ -79,6 +79,18 @@ export interface GroupMember {
 
 export type SessionStatus = "SCHEDULED" | "CANCELLED" | "COMPLETED";
 
+export type SessionCancellationReasonCode =
+  | "WEATHER"
+  | "TRAINER_UNAVAILABLE"
+  | "HOLIDAY"
+  | "LOW_ATTENDANCE"
+  | "OTHER";
+
+export type SessionChangeReasonCode = "TIME_CHANGE" | "LOCATION_CHANGE" | "TRAINER_CHANGE" | "OTHER";
+
+/** Calendar-style edit scope for a session that belongs to a series. */
+export type SessionEditScope = "SINGLE" | "THIS_AND_FUTURE" | "ALL_FUTURE";
+
 export interface SessionSummary {
   id: string;
   group_id: string;
@@ -86,6 +98,25 @@ export interface SessionSummary {
   starts_at: string;
   ends_at: string;
   status: SessionStatus;
+  trainer_person_id?: string | null;
+  series_id?: string | null;
+  cancellation_reason?: SessionCancellationReasonCode | null;
+}
+
+/** PATCH /schedule/sessions/{id} body. Any field left undefined is unchanged. */
+export interface SessionEdit {
+  local_time?: string | null;
+  duration_minutes?: number | null;
+  title?: string | null;
+  trainer_person_id?: string | null;
+  reason: SessionChangeReasonCode;
+  scope: SessionEditScope;
+}
+
+/** POST /schedule/sessions/{id}/cancel body. */
+export interface SessionCancel {
+  reason: SessionCancellationReasonCode;
+  note?: string | null;
 }
 
 export interface ConflictCheck {

@@ -121,6 +121,7 @@ export const api = {
   post: <T>(path: string, body?: unknown, idempotencyKey?: string) =>
     apiRequest<T>("POST", path, { body, idempotencyKey, mutation: true }),
   put: <T>(path: string, body?: unknown) => apiRequest<T>("PUT", path, { body, mutation: true }),
+  patch: <T>(path: string, body?: unknown) => apiRequest<T>("PATCH", path, { body, mutation: true }),
 };
 
 /** A fresh idempotency key for a deliberate mutation attempt. */

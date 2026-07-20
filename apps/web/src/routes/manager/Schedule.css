@@ -1,0 +1,278 @@
+/*
+ * M04 Raspored — schedule week grid.
+ *
+ * Consumes only the SEMANTIC ROLE tokens from styles/design-tokens.css, same
+ * discipline as components/ui.css. Session blocks cycle through the small set
+ * of tone tokens (primary green / gold / info / warning) rather than
+ * inventing a new categorical palette.
+ */
+
+.schedule-subtitle {
+  margin: calc(-1 * var(--space-3)) 0 var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* --- Nav row: date range + Danas + Dan/Nedelja/Spisak ------------------ */
+.schedule-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.schedule-nav__range {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.schedule-nav__label {
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 160px;
+  text-align: center;
+}
+.schedule-nav__label--muted {
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 0;
+  text-align: left;
+}
+
+/* --- Filter dropdown menu (FilterChip trigger + popover) --------------- */
+.filter-menu {
+  position: relative;
+}
+.filter-menu__pop {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  min-width: 200px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: var(--space-2);
+  border: var(--ink-border) solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+  z-index: 30;
+}
+.filter-menu__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+.filter-menu__item:hover {
+  background: var(--surface-sunken);
+}
+.filter-menu__item--active {
+  background: var(--action-surface);
+  color: var(--action-primary-hover);
+}
+
+/* --- Week/day calendar grid --------------------------------------------- */
+.schedule-scroll {
+  overflow-x: auto;
+  border: var(--ink-border) solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-4);
+}
+.schedule-grid {
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+  width: max-content;
+}
+.schedule-grid__header,
+.schedule-grid__body {
+  display: flex;
+}
+.schedule-grid__header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface-raised);
+  border-bottom: var(--ink-border) solid var(--border-default);
+}
+.schedule-grid__gutter {
+  flex: 0 0 56px;
+}
+.schedule-grid__daylabel {
+  flex: 1 0 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-3) var(--space-2);
+  border-left: var(--ink-border) solid var(--border-default);
+}
+.schedule-grid__weekday {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+.schedule-grid__daynum {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-display);
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.schedule-grid__daylabel--today .schedule-grid__daynum {
+  background: var(--action-primary);
+  color: var(--text-on-action);
+}
+.schedule-grid__daylabel--today .schedule-grid__weekday {
+  color: var(--action-primary-hover);
+}
+
+.schedule-grid__body {
+  position: relative;
+}
+.schedule-grid__body .schedule-grid__gutter {
+  position: relative;
+}
+.schedule-grid__hourlabel {
+  position: relative;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-align: right;
+  padding-right: var(--space-2);
+  transform: translateY(-0.6em);
+}
+.schedule-grid__daycol {
+  flex: 1 0 140px;
+  position: relative;
+  border-left: var(--ink-border) solid var(--border-default);
+}
+.schedule-grid__daycol--today {
+  background: var(--action-surface);
+}
+.schedule-grid__hourrow {
+  border-bottom: var(--ink-border) solid var(--border-default);
+}
+.schedule-grid__blocks {
+  position: absolute;
+  inset: 0;
+}
+
+.session-block {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  border: none;
+  border-left: 3px solid var(--action-primary);
+  background: var(--action-surface);
+  text-align: left;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    box-shadow var(--duration),
+    transform var(--duration);
+}
+.session-block:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.session-block__title {
+  font-weight: 700;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.session-block__time {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.session-block--gold {
+  border-left-color: var(--accent-gold);
+  background: var(--accent-gold-soft);
+}
+.session-block--info {
+  border-left-color: var(--tone-info-fg);
+  background: var(--tone-info-bg);
+}
+.session-block--warning {
+  border-left-color: var(--tone-warning-fg);
+  background: var(--tone-warning-bg);
+}
+.session-block--cancelled {
+  opacity: 0.6;
+  border-left-style: dashed;
+}
+.session-block--cancelled .session-block__title {
+  text-decoration: line-through;
+}
+
+/* --- Session detail dialog ---------------------------------------------- */
+.session-dialog {
+  max-width: 460px;
+  width: 100%;
+}
+.session-dialog__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.session-dialog__meta {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.session-dialog__facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-4) 0;
+}
+.session-dialog__facts dt {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+.session-dialog__facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+.session-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .schedule-nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .schedule-nav__range {
+    justify-content: center;
+  }
+}
