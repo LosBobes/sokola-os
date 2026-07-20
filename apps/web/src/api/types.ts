@@ -48,10 +48,12 @@ export interface Page<T> {
   offset: number;
 }
 
+export type PersonIdentityStatus = "PROVISIONAL" | "CLAIMED" | "VERIFIED" | "MERGED" | "ARCHIVED";
+
 export interface PersonSummary {
   id: string;
   display_name: string;
-  identity_status: string;
+  identity_status: PersonIdentityStatus;
 }
 
 export interface Person {
@@ -59,7 +61,7 @@ export interface Person {
   given_name: string;
   family_name: string;
   display_name: string;
-  identity_status: string;
+  identity_status: PersonIdentityStatus;
 }
 
 export type PersonResponse = Person;
@@ -75,6 +77,31 @@ export interface GroupMember {
   membership_id: string;
   person_id: string;
   display_name: string;
+}
+
+/* --- Membership (increment #6, merged to main) ------------------------ */
+
+export type MembershipStatus = "ACTIVE" | "SUSPENDED" | "ENDED";
+
+export interface MembershipResponse {
+  id: string;
+  person_id: string;
+  status: MembershipStatus;
+  local_member_code: string | null;
+  admin_note: string | null;
+}
+
+/* --- Guardians ---------------------------------------------------------- */
+
+export type GuardianRelationshipType = "PARENT" | "LEGAL_GUARDIAN" | "OTHER";
+export type GuardianAccessStatus = "ACTIVE" | "SUSPENDED" | "REVOKED";
+
+export interface GuardianContactResponse {
+  guardian_person_id: string;
+  display_name: string;
+  relationship_type: GuardianRelationshipType;
+  is_primary_contact: boolean;
+  access_status: GuardianAccessStatus;
 }
 
 export type SessionStatus = "SCHEDULED" | "CANCELLED" | "COMPLETED";
