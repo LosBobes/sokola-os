@@ -27,6 +27,7 @@ from app.domains.parent.router import router as parent_router
 from app.domains.payments.router import router as payments_router
 from app.domains.people.router import router as people_router
 from app.domains.scheduling.router import router as scheduling_router
+from app.domains.structure.router import router as structure_router
 from app.security.csrf import CsrfMiddleware
 
 API_TITLE = "SOKOLA OS P0 API"
@@ -73,6 +74,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(internal_router)
     app.include_router(identity_router)
     app.include_router(organization_router)
+    app.include_router(structure_router)
     app.include_router(people_router)
     app.include_router(groups_router)
     app.include_router(scheduling_router)
