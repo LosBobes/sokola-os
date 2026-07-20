@@ -1,6 +1,32 @@
 {
   "components": {
     "schemas": {
+      "AcceptInvitationRequest": {
+        "properties": {
+          "token": {
+            "minLength": 1,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "AcceptInvitationRequest",
+        "type": "object"
+      },
+      "AcceptInvitationResponse": {
+        "properties": {
+          "context": {
+            "$ref": "#/components/schemas/ContextSummary"
+          }
+        },
+        "required": [
+          "context"
+        ],
+        "title": "AcceptInvitationResponse",
+        "type": "object"
+      },
       "AddGroupMemberRequest": {
         "properties": {
           "person_id": {
@@ -110,6 +136,54 @@
         ],
         "title": "AnnouncementTargetType",
         "type": "string"
+      },
+      "AssignRoleRequest": {
+        "properties": {
+          "granted_areas": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted Areas"
+          },
+          "person_id": {
+            "minLength": 1,
+            "title": "Person Id",
+            "type": "string"
+          },
+          "role_code": {
+            "$ref": "#/components/schemas/RoleCode"
+          },
+          "scope_ref_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Ref Id"
+          },
+          "scope_type": {
+            "$ref": "#/components/schemas/RoleScopeType",
+            "default": "ORGANIZATION"
+          }
+        },
+        "required": [
+          "person_id",
+          "role_code"
+        ],
+        "title": "AssignRoleRequest",
+        "type": "object"
       },
       "AttendanceEntry": {
         "properties": {
@@ -664,6 +738,77 @@
           "name"
         ],
         "title": "CreateGroupRequest",
+        "type": "object"
+      },
+      "CreateInvitationRequest": {
+        "properties": {
+          "granted_areas": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted Areas"
+          },
+          "role_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoleCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scope_ref_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Ref Id"
+          },
+          "scope_type": {
+            "$ref": "#/components/schemas/RoleScopeType",
+            "default": "ORGANIZATION"
+          },
+          "target_child_person_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Child Person Id"
+          },
+          "target_email": {
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "Target Email",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/InvitationType"
+          }
+        },
+        "required": [
+          "type",
+          "target_email"
+        ],
+        "title": "CreateInvitationRequest",
         "type": "object"
       },
       "CreateLocationRequest": {
@@ -1297,6 +1442,190 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "InvitationCreatedResponse": {
+        "description": "Send/reissue response. ``token`` is shown exactly once \u2014 only its hash is\never persisted (see ``invite_tokens.py``).",
+        "properties": {
+          "invitation": {
+            "$ref": "#/components/schemas/InvitationResponse"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invitation",
+          "token"
+        ],
+        "title": "InvitationCreatedResponse",
+        "type": "object"
+      },
+      "InvitationResponse": {
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "granted_areas": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted Areas"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "invited_by_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invited By Person Id"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person Id"
+          },
+          "reissued_from_invitation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reissued From Invitation Id"
+          },
+          "role_code": {
+            "$ref": "#/components/schemas/RoleCode"
+          },
+          "scope_ref_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Ref Id"
+          },
+          "scope_type": {
+            "$ref": "#/components/schemas/RoleScopeType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/InvitationStatus"
+          },
+          "target_child_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Child Person Id"
+          },
+          "target_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Email"
+          },
+          "type": {
+            "$ref": "#/components/schemas/InvitationType"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "type",
+          "status",
+          "target_email",
+          "person_id",
+          "role_code",
+          "scope_type",
+          "scope_ref_id",
+          "granted_areas",
+          "target_child_person_id",
+          "invited_by_person_id",
+          "reissued_from_invitation_id",
+          "expires_at",
+          "accepted_at",
+          "created_at"
+        ],
+        "title": "InvitationResponse",
+        "type": "object"
+      },
+      "InvitationStatus": {
+        "enum": [
+          "PENDING",
+          "ACCEPTED",
+          "EXPIRED",
+          "REVOKED",
+          "REISSUED"
+        ],
+        "title": "InvitationStatus",
+        "type": "string"
+      },
+      "InvitationType": {
+        "enum": [
+          "STAFF",
+          "PARENT",
+          "STUDENT"
+        ],
+        "title": "InvitationType",
+        "type": "string"
+      },
       "LivenessResponse": {
         "properties": {
           "status": {
@@ -1667,6 +1996,37 @@
         "title": "Page[GroupResponse]",
         "type": "object"
       },
+      "Page_InvitationResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InvitationResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[InvitationResponse]",
+        "type": "object"
+      },
       "Page_LocationResponse_": {
         "properties": {
           "items": {
@@ -1758,6 +2118,37 @@
           "offset"
         ],
         "title": "Page[ProgramResponse]",
+        "type": "object"
+      },
+      "Page_RoleAssignmentResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RoleAssignmentResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[RoleAssignmentResponse]",
         "type": "object"
       },
       "Page_RoomResponse_": {
@@ -2182,6 +2573,100 @@
         "title": "RevokeGuardianAccessRequest",
         "type": "object"
       },
+      "RevokeInvitationRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "RevokeInvitationRequest",
+        "type": "object"
+      },
+      "RoleAssignmentResponse": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "granted_areas": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted Areas"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          },
+          "role_code": {
+            "$ref": "#/components/schemas/RoleCode"
+          },
+          "scope_ref_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Ref Id"
+          },
+          "scope_type": {
+            "$ref": "#/components/schemas/RoleScopeType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RoleAssignmentStatus"
+          }
+        },
+        "required": [
+          "id",
+          "person_id",
+          "display_name",
+          "organization_id",
+          "role_code",
+          "scope_type",
+          "scope_ref_id",
+          "granted_areas",
+          "status"
+        ],
+        "title": "RoleAssignmentResponse",
+        "type": "object"
+      },
+      "RoleAssignmentStatus": {
+        "enum": [
+          "ACTIVE",
+          "SUSPENDED",
+          "REVOKED"
+        ],
+        "title": "RoleAssignmentStatus",
+        "type": "string"
+      },
       "RoleCode": {
         "enum": [
           "OWNER",
@@ -2202,6 +2687,24 @@
         ],
         "title": "RoleScopeType",
         "type": "string"
+      },
+      "RoleTransitionRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "RoleTransitionRequest",
+        "type": "object"
       },
       "RoomResponse": {
         "properties": {
@@ -2832,6 +3335,55 @@
         "title": "TenantPublic",
         "type": "object"
       },
+      "TransferOwnershipRequest": {
+        "properties": {
+          "new_owner_person_id": {
+            "minLength": 1,
+            "title": "New Owner Person Id",
+            "type": "string"
+          },
+          "revoke_from_person_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoke From Person Id"
+          }
+        },
+        "required": [
+          "new_owner_person_id"
+        ],
+        "title": "TransferOwnershipRequest",
+        "type": "object"
+      },
+      "TransferOwnershipResponse": {
+        "properties": {
+          "new_owner": {
+            "$ref": "#/components/schemas/RoleAssignmentResponse"
+          },
+          "revoked_owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoleAssignmentResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "new_owner",
+          "revoked_owner"
+        ],
+        "title": "TransferOwnershipResponse",
+        "type": "object"
+      },
       "UpdateCategoryRequest": {
         "properties": {
           "name": {
@@ -2849,6 +3401,27 @@
           }
         },
         "title": "UpdateCategoryRequest",
+        "type": "object"
+      },
+      "UpdateGrantedAreasRequest": {
+        "description": "``null`` clears the restriction back to the role's full default areas.",
+        "properties": {
+          "granted_areas": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted Areas"
+          }
+        },
+        "title": "UpdateGrantedAreasRequest",
         "type": "object"
       },
       "UpdateGroupRequest": {
@@ -4530,6 +5103,292 @@
         ]
       }
     },
+    "/invitations": {
+      "get": {
+        "operationId": "listInvitations",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_InvitationResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Invitations",
+        "tags": [
+          "me"
+        ]
+      },
+      "post": {
+        "description": "Send an invitation. The raw token is returned exactly once \u2014 only its\nhash is ever persisted.",
+        "operationId": "sendInvitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationCreatedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send Invitation",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/invitations/accept": {
+      "post": {
+        "description": "Accept an invitation as the already-authenticated caller \u2014 the same path\nfor a brand-new sign-up and an existing person (\u00a721/\u00a722); no active context\nis required since acceptance is exactly how one is obtained.",
+        "operationId": "acceptInvitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptInvitationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Invitation bound to a different account (\u00a723)."
+          },
+          "409": {
+            "description": "Invitation expired/revoked/already used."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept Invitation",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/invitations/{invitation_id}": {
+      "get": {
+        "operationId": "getInvitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": {
+              "title": "Invitation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Invitation",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/invitations/{invitation_id}/reissue": {
+      "post": {
+        "operationId": "reissueInvitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": {
+              "title": "Invitation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationCreatedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Only a PENDING/EXPIRED invitation may be reissued."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reissue Invitation",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/invitations/{invitation_id}/revoke": {
+      "post": {
+        "operationId": "revokeInvitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": {
+              "title": "Invitation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Only a PENDING invitation may be revoked."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Invitation",
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/locations": {
       "get": {
         "operationId": "listLocations",
@@ -4864,6 +5723,83 @@
           }
         },
         "summary": "Get Current Organization",
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/organizations/current/deactivate": {
+      "post": {
+        "description": "\u00a731 \u2014 deactivate the caller's active school. Locks out every future\ncontext resolution against it; see ``reactivateOrganization``.",
+        "operationId": "deactivateOrganization",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Already deactivated."
+          }
+        },
+        "summary": "Deactivate Organization",
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/organizations/{organization_id}/reactivate": {
+      "post": {
+        "description": "\u00a731 \u2014 a deactivated school cannot be reached through the normal\ncontext-selection path (a deactivated org is rejected at context\nresolution), so this authenticates on the principal alone and checks\nownership of the named school directly.",
+        "operationId": "reactivateOrganization",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Caller is not an active owner of this school."
+          },
+          "404": {
+            "description": "School not found."
+          },
+          "409": {
+            "description": "Already active."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reactivate Organization",
         "tags": [
           "organizations"
         ]
@@ -5819,6 +6755,310 @@
         "summary": "Deactivate Program",
         "tags": [
           "structure"
+        ]
+      }
+    },
+    "/roles": {
+      "get": {
+        "operationId": "listRoleAssignments",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RoleAssignmentResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Role Assignments",
+        "tags": [
+          "me"
+        ]
+      },
+      "post": {
+        "operationId": "assignRole",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Person already holds this exact role/scope."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Assign Role",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/roles/ownership/transfer": {
+      "post": {
+        "operationId": "transferOwnership",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferOwnershipRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferOwnershipResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Already an owner, or would leave the school ownerless."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Transfer Ownership",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/roles/{assignment_id}/granted-areas": {
+      "patch": {
+        "operationId": "updateGrantedAreas",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGrantedAreasRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Granted Areas",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/roles/{assignment_id}/revoke": {
+      "post": {
+        "operationId": "revokeRoleAssignment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleTransitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Already revoked, or the school's last active owner."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Role Assignment",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/roles/{assignment_id}/suspend": {
+      "post": {
+        "operationId": "suspendRoleAssignment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleTransitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Not active, or the school's last active owner."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Suspend Role Assignment",
+        "tags": [
+          "me"
         ]
       }
     },
