@@ -1,7 +1,7 @@
 """documents domain: uploads, visibility, contract acknowledgement
 
 Revision ID: 0ab285bfbb27
-Revises: 83eee9b8c108
+Revises: 543ddc2dd944
 Create Date: 2026-07-20 21:27:23.359010
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 revision: str = '0ab285bfbb27'
-down_revision: str | None = '83eee9b8c108'
+down_revision: str | None = '543ddc2dd944'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
