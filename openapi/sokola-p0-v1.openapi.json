@@ -185,6 +185,39 @@
         "title": "AssignRoleRequest",
         "type": "object"
       },
+      "AttendanceByGroup": {
+        "properties": {
+          "attendance_rate": {
+            "title": "Attendance Rate",
+            "type": "number"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "group_name": {
+            "title": "Group Name",
+            "type": "string"
+          },
+          "present_count": {
+            "title": "Present Count",
+            "type": "integer"
+          },
+          "recorded_count": {
+            "title": "Recorded Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "group_id",
+          "group_name",
+          "recorded_count",
+          "present_count",
+          "attendance_rate"
+        ],
+        "title": "AttendanceByGroup",
+        "type": "object"
+      },
       "AttendanceEntry": {
         "properties": {
           "display_name": {
@@ -273,6 +306,77 @@
           "note"
         ],
         "title": "AttendanceProgressNoteInput",
+        "type": "object"
+      },
+      "AttendanceReport": {
+        "description": "Attendance rate over a date range, scoped by each session's own\n``starts_at`` (not by when the attendance row was written).",
+        "properties": {
+          "absent_count": {
+            "title": "Absent Count",
+            "type": "integer"
+          },
+          "attendance_rate": {
+            "title": "Attendance Rate",
+            "type": "number"
+          },
+          "by_group": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceByGroup"
+            },
+            "title": "By Group",
+            "type": "array"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "excused_count": {
+            "title": "Excused Count",
+            "type": "integer"
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Id"
+          },
+          "late_count": {
+            "title": "Late Count",
+            "type": "integer"
+          },
+          "present_count": {
+            "title": "Present Count",
+            "type": "integer"
+          },
+          "recorded_count": {
+            "title": "Recorded Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to",
+          "group_id",
+          "recorded_count",
+          "present_count",
+          "absent_count",
+          "excused_count",
+          "late_count",
+          "attendance_rate",
+          "by_group"
+        ],
+        "title": "AttendanceReport",
         "type": "object"
       },
       "AttendanceSheet": {
@@ -1763,6 +1867,55 @@
         "title": "EventType",
         "type": "string"
       },
+      "FinancialReport": {
+        "description": "Billed vs. collected over an explicit date range, plus a breakdown of\nall currently-outstanding debt (not time-scoped \u2014 debt is a point-in-time\nbalance, not something that happened \"in\" the range).",
+        "properties": {
+          "billed_total_minor": {
+            "title": "Billed Total Minor",
+            "type": "integer"
+          },
+          "collected_total_minor": {
+            "title": "Collected Total Minor",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "outstanding_by_status": {
+            "items": {
+              "$ref": "#/components/schemas/OutstandingByStatus"
+            },
+            "title": "Outstanding By Status",
+            "type": "array"
+          },
+          "outstanding_debt_total_minor": {
+            "title": "Outstanding Debt Total Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to",
+          "currency",
+          "billed_total_minor",
+          "collected_total_minor",
+          "outstanding_debt_total_minor",
+          "outstanding_by_status"
+        ],
+        "title": "FinancialReport",
+        "type": "object"
+      },
       "GroupCapacityMode": {
         "enum": [
           "UNLIMITED",
@@ -2620,6 +2773,103 @@
         "title": "MembershipTransitionRequest",
         "type": "object"
       },
+      "MembershipTrendByGroup": {
+        "properties": {
+          "active_member_count": {
+            "title": "Active Member Count",
+            "type": "integer"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "group_name": {
+            "title": "Group Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "group_id",
+          "group_name",
+          "active_member_count"
+        ],
+        "title": "MembershipTrendByGroup",
+        "type": "object"
+      },
+      "MembershipTrendPoint": {
+        "properties": {
+          "active_member_count": {
+            "title": "Active Member Count",
+            "type": "integer"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end",
+          "active_member_count"
+        ],
+        "title": "MembershipTrendPoint",
+        "type": "object"
+      },
+      "MembershipTrendReport": {
+        "description": "Monthly-bucketed active-membership growth. Membership rows carry only a\ncurrent ``status`` (no historical end date), so each bucket counts\ncurrently-active memberships that had already joined by the bucket's end \u2014\na join-cohort growth curve, not a historical point-in-time snapshot.",
+        "properties": {
+          "by_group": {
+            "items": {
+              "$ref": "#/components/schemas/MembershipTrendByGroup"
+            },
+            "title": "By Group",
+            "type": "array"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Id"
+          },
+          "trend": {
+            "items": {
+              "$ref": "#/components/schemas/MembershipTrendPoint"
+            },
+            "title": "Trend",
+            "type": "array"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to",
+          "group_id",
+          "trend",
+          "by_group"
+        ],
+        "title": "MembershipTrendReport",
+        "type": "object"
+      },
       "MergeDecisionRequest": {
         "properties": {
           "decision": {
@@ -2919,6 +3169,95 @@
         ],
         "title": "OrganizationType",
         "type": "string"
+      },
+      "OutstandingByStatus": {
+        "properties": {
+          "charge_count": {
+            "title": "Charge Count",
+            "type": "integer"
+          },
+          "outstanding_minor": {
+            "title": "Outstanding Minor",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "charge_count",
+          "outstanding_minor"
+        ],
+        "title": "OutstandingByStatus",
+        "type": "object"
+      },
+      "OverviewReport": {
+        "description": "Business dashboard: a snapshot of the organization's health right now,\nplus this-calendar-month billing and a recent attendance window.",
+        "properties": {
+          "active_member_count": {
+            "title": "Active Member Count",
+            "type": "integer"
+          },
+          "attendance_present_count": {
+            "title": "Attendance Present Count",
+            "type": "integer"
+          },
+          "attendance_rate": {
+            "title": "Attendance Rate",
+            "type": "number"
+          },
+          "attendance_recorded_count": {
+            "title": "Attendance Recorded Count",
+            "type": "integer"
+          },
+          "attendance_window_days": {
+            "title": "Attendance Window Days",
+            "type": "integer"
+          },
+          "billed_total_minor": {
+            "title": "Billed Total Minor",
+            "type": "integer"
+          },
+          "collected_total_minor": {
+            "title": "Collected Total Minor",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "outstanding_debt_total_minor": {
+            "title": "Outstanding Debt Total Minor",
+            "type": "integer"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end",
+          "currency",
+          "active_member_count",
+          "billed_total_minor",
+          "collected_total_minor",
+          "outstanding_debt_total_minor",
+          "attendance_window_days",
+          "attendance_recorded_count",
+          "attendance_present_count",
+          "attendance_rate"
+        ],
+        "title": "OverviewReport",
+        "type": "object"
       },
       "Page_CategoryResponse_": {
         "properties": {
@@ -9914,6 +10253,218 @@
         "summary": "Deactivate Program",
         "tags": [
           "structure"
+        ]
+      }
+    },
+    "/reports/attendance": {
+      "get": {
+        "operationId": "getAttendanceReport",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Attendance Report",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/financial": {
+      "get": {
+        "operationId": "getFinancialReport",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Financial Report",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/membership-trend": {
+      "get": {
+        "operationId": "getMembershipTrendReport",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipTrendReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Membership Trend Report",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/overview": {
+      "get": {
+        "operationId": "getOverviewReport",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Overview",
+        "tags": [
+          "reports"
         ]
       }
     },

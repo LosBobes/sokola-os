@@ -30,6 +30,10 @@ administrative roles' defaults is behaviour-neutral: no route consults them yet.
 They are granted to OWNER/MANAGER/ADMIN so that a future area guard and the
 "restrict this assignment" UI have a coherent, non-empty administrative set.
 
+REPORTS (PRD 13) is new, staff-only: the reporting domain reads across billing,
+payments, attendance and membership, so its guard is granted the same
+OWNER/MANAGER/ADMIN set as the other administrative areas.
+
 IMPORT (PRD 11, added with the CSV bulk-import feature) has no legacy
 ``require_roles`` guard to audit — it is granted to OWNER/MANAGER/ADMIN
 directly, matching PEOPLE/GROUPS since importing people/groups is exactly the
@@ -65,6 +69,7 @@ class PermissionArea(enum.StrEnum):
     PRIVACY = "PRIVACY"  # consent, DSAR, and retention-period administration
     DOCUMENTS = "DOCUMENTS"
     IMPORT = "IMPORT"  # bulk CSV import of people/groups (PRD 11)
+    REPORTS = "REPORTS"  # read-only cross-domain reporting (PRD 13)
 
 
 # Everything a staff role administers by default. ORGANIZATION/ROLES/PRIVACY are
@@ -85,6 +90,7 @@ _STAFF_AREAS: frozenset[PermissionArea] = frozenset(
         PermissionArea.PRIVACY,
         PermissionArea.DOCUMENTS,
         PermissionArea.IMPORT,
+        PermissionArea.REPORTS,
     }
 )
 
