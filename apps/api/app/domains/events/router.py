@@ -11,6 +11,7 @@ from app.domains.events.schemas import (
     EventResponse,
     RegisterChildrenRequest,
     RegistrationResponse,
+    UpdateEventRequest,
 )
 from app.security.deps import ContextDep, DbDep
 from app.security.permissions import PermissionArea, require_permission
@@ -38,6 +39,28 @@ def create_event(body: CreateEventRequest, db: DbDep, context: StaffContext) -> 
 @router.get("/events", response_model=list[EventResponse], operation_id="listEvents")
 def list_events(db: DbDep, context: ContextDep) -> list[EventResponse]:
     return service.list_events(db, context)
+
+
+@router.patch(
+    "/events/{event_id}",
+    response_model=EventResponse,
+    operation_id="updateEvent",
+    responses={409: {"description": "Event is cancelled, completed, or already past."}},
+)
+def update_event(
+    event_id: str, body: UpdateEventRequest, db: DbDep, context: StaffContext
+) -> EventResponse:
+    return service.update_event(db, context, event_id, body)
+
+
+@router.post(
+    "/events/{event_id}/cancel",
+    response_model=EventResponse,
+    operation_id="cancelEvent",
+    responses={409: {"description": "Event is already cancelled or completed."}},
+)
+def cancel_event(event_id: str, db: DbDep, context: StaffContext) -> EventResponse:
+    return service.cancel_event(db, context, event_id)
 
 
 @router.post(

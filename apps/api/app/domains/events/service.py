@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.common.enums import AuditDataClass
-from app.common.errors import ConflictError, ForbiddenError, NotFoundError
+from app.common.errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from app.domains.events import repository
 from app.domains.events.enums import (
     CancellationReasonCode,
@@ -16,6 +16,7 @@ from app.domains.events.schemas import (
     CreateEventRequest,
     EventResponse,
     RegistrationResponse,
+    UpdateEventRequest,
 )
 from app.platform.audit.service import record_audit
 from app.platform.idempotency import service as idempotency
@@ -44,6 +45,114 @@ def list_events(db: Session, context: RequestContext) -> list[EventResponse]:
         EventResponse.model_validate(e)
         for e in repository.list_published(db, context.organization_id)
     ]
+
+
+def _require_editable(event: Event) -> None:
+    """An event may only be edited while it is still upcoming: not cancelled, not
+    completed, and not already started."""
+    if event.status is EventStatus.CANCELLED:
+        raise ConflictError("Otkazan događaj se ne može izmeniti.")
+    if event.status is EventStatus.COMPLETED:
+        raise ConflictError("Završen događaj se ne može izmeniti.")
+    if event.starts_at <= repository.now():
+        raise ConflictError("Prošli događaj se ne može izmeniti.")
+
+
+def update_event(
+    db: Session, context: RequestContext, event_id: str, req: UpdateEventRequest
+) -> EventResponse:
+    """M1. Edit an event's title, start time, or capacity while it is still
+    upcoming. Refused once the event has started, finished, or been cancelled."""
+    event = repository.get_event(db, context.organization_id, event_id, for_update=True)
+    if event is None:
+        raise NotFoundError("Događaj nije pronađen.")
+    _require_editable(event)
+
+    fields = req.model_fields_set
+    if "title" in fields:
+        if req.title is None:
+            raise BadRequestError("Naziv događaja je obavezan.")
+        event.title = req.title
+    if "starts_at" in fields:
+        if req.starts_at is None:
+            raise BadRequestError("Datum i vreme početka su obavezni.")
+        if req.starts_at <= repository.now():
+            raise ConflictError("Novi termin događaja mora biti u budućnosti.")
+        event.starts_at = req.starts_at
+    if "capacity_mode" in fields:
+        if req.capacity_mode is None:
+            raise BadRequestError("Režim kapaciteta je obavezan.")
+        event.capacity_mode = req.capacity_mode
+    if "capacity" in fields:
+        event.capacity = req.capacity
+
+    if event.capacity_mode is EventCapacityMode.LIMITED:
+        if event.capacity is None:
+            raise BadRequestError("Ograničen kapacitet zahteva definisan broj mesta.")
+        active = repository.count_active_registrations(db, event.id)
+        if event.capacity < active:
+            raise ConflictError(
+                "Novi kapacitet je manji od broja aktivnih prijava.",
+                details={"code": "CAPACITY_BELOW_REGISTERED"},
+            )
+
+    record_audit(
+        db,
+        data_class=AuditDataClass.OPERATIONAL,
+        action="event.updated",
+        entity_type="event",
+        entity_id=event.id,
+        summary=f"Izmenjen događaj „{event.title}“.",
+        organization_id=context.organization_id,
+        actor_person_id=context.person_id,
+    )
+    db.commit()
+    return EventResponse.model_validate(event)
+
+
+def cancel_event(db: Session, context: RequestContext, event_id: str) -> EventResponse:
+    """M1. Cancel the whole event — distinct from cancelling a single
+    registration. Cascades: every active (REGISTERED) registration is cancelled
+    too, atomically in the same transaction as the event's own status change."""
+    event = repository.get_event(db, context.organization_id, event_id, for_update=True)
+    if event is None:
+        raise NotFoundError("Događaj nije pronađen.")
+    if event.status is EventStatus.CANCELLED:
+        raise ConflictError("Događaj je već otkazan.")
+    if event.status is EventStatus.COMPLETED:
+        raise ConflictError("Završen događaj se ne može otkazati.")
+
+    event.status = EventStatus.CANCELLED
+
+    active = repository.list_active_registrations(db, event.id)
+    for registration in active:
+        registration.status = RegistrationStatus.CANCELLED
+        registration.cancellation_reason = CancellationReasonCode.ORGANIZER
+    db.flush()
+
+    record_audit(
+        db,
+        data_class=AuditDataClass.RELATIONSHIP,
+        action="event.cancelled",
+        entity_type="event",
+        entity_id=event.id,
+        summary=f"Otkazan događaj „{event.title}“ ({len(active)} prijava otkazano).",
+        organization_id=context.organization_id,
+        actor_person_id=context.person_id,
+        context={"cancelled_registrations": len(active)},
+    )
+    enqueue(
+        db,
+        event_type="event.cancelled",
+        payload={
+            "event_id": event.id,
+            "organization_id": context.organization_id,
+            "cancelled_registrations": len(active),
+        },
+        organization_id=context.organization_id,
+    )
+    db.commit()
+    return EventResponse.model_validate(event)
 
 
 def register_children(
