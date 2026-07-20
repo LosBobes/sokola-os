@@ -26,3 +26,6 @@ apps/web/cypress/videos/
 
 # Archive (kept, but not part of the build)
 SOKOLA_COMPLETE_MASTER_ARCHIVE_*/
+
+# Claude Code local settings (personal)
+.claude/settings.local.json
