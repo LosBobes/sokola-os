@@ -7,8 +7,10 @@ from sqlalchemy.orm import Session as DbSession
 
 from app.common.enums import RecordStatus
 from app.domains.groups.models import Group
+from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
+from app.domains.identity.models import RoleAssignment
 from app.domains.scheduling.enums import SessionStatus
-from app.domains.scheduling.models import Session
+from app.domains.scheduling.models import Session, SessionSeries
 
 
 def get_org_group(db: DbSession, organization_id: str, group_id: str) -> Group | None:
@@ -18,6 +20,18 @@ def get_org_group(db: DbSession, organization_id: str, group_id: str) -> Group |
         Group.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).scalar_one_or_none()
+
+
+def is_org_trainer(db: DbSession, organization_id: str, person_id: str) -> bool:
+    """A trainer is a person holding an ACTIVE TRAINER role in this organization.
+    Used to keep series/trainer assignment tenant-scoped."""
+    stmt = select(RoleAssignment.id).where(
+        RoleAssignment.person_id == person_id,
+        RoleAssignment.organization_id == organization_id,
+        RoleAssignment.role_code == RoleCode.TRAINER,
+        RoleAssignment.status == RoleAssignmentStatus.ACTIVE,
+    )
+    return db.execute(stmt).first() is not None
 
 
 def find_conflicts(
@@ -66,3 +80,56 @@ def list_sessions_in_range(
         .order_by(Session.starts_at)
     )
     return list(db.execute(stmt).scalars().all())
+
+
+# --- Recurring series -------------------------------------------------------
+
+
+def get_org_series(
+    db: DbSession, organization_id: str, series_id: str
+) -> SessionSeries | None:
+    stmt = select(SessionSeries).where(
+        SessionSeries.id == series_id,
+        SessionSeries.organization_id == organization_id,
+        SessionSeries.record_status == RecordStatus.ACTIVE,
+    )
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def list_series(db: DbSession, organization_id: str) -> list[SessionSeries]:
+    stmt = (
+        select(SessionSeries)
+        .where(
+            SessionSeries.organization_id == organization_id,
+            SessionSeries.record_status == RecordStatus.ACTIVE,
+        )
+        .order_by(SessionSeries.created_at)
+    )
+    return list(db.execute(stmt).scalars().all())
+
+
+def existing_series_start_times(db: DbSession, series_id: str) -> set[dt.datetime]:
+    """Every start instant already materialized for a series (any status). The
+    natural key ``(series_id, starts_at)`` makes generation idempotent."""
+    stmt = select(Session.starts_at).where(Session.series_id == series_id)
+    return set(db.execute(stmt).scalars().all())
+
+
+def list_series_sessions(
+    db: DbSession,
+    organization_id: str,
+    series_id: str,
+    *,
+    status: SessionStatus | None = None,
+    starts_from: dt.datetime | None = None,
+) -> list[Session]:
+    stmt = select(Session).where(
+        Session.organization_id == organization_id,
+        Session.series_id == series_id,
+        Session.record_status == RecordStatus.ACTIVE,
+    )
+    if status is not None:
+        stmt = stmt.where(Session.status == status)
+    if starts_from is not None:
+        stmt = stmt.where(Session.starts_at >= starts_from)
+    return list(db.execute(stmt.order_by(Session.starts_at)).scalars().all())
