@@ -5,14 +5,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 
 from app.common.http import IdempotencyKey
-from app.domains.identity.enums import RoleCode
 from app.domains.payments import service
 from app.domains.payments.schemas import PaymentResponse, RecordPaymentRequest
-from app.security.deps import ContextDep, DbDep, require_roles
+from app.security.deps import ContextDep, DbDep
+from app.security.permissions import PermissionArea, require_permission
 
 router = APIRouter(tags=["payments"])
 
-_finance = require_roles(RoleCode.OWNER, RoleCode.MANAGER, RoleCode.ADMIN)
+_finance = require_permission(PermissionArea.PAYMENTS)
 FinanceContext = Annotated[ContextDep, Depends(_finance)]
 
 
