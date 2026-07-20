@@ -34,7 +34,7 @@ export function App() {
         <Route path="/finansije" element={<MoneyPage />} />
         <Route path="/komunikacija" element={<CommunicationsPage />} />
         <Route path="/dogadjaji" element={<EventsPage />} />
-        <Route path="/roditelj/obavestenja" element={<ParentNotificationsPage />} />
+        <Route path="/obavestenja" element={<ParentNotificationsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ProductShell>
