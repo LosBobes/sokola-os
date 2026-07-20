@@ -455,6 +455,20 @@
         "title": "BillingRunResponse",
         "type": "object"
       },
+      "Body_createImportUpload": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_createImportUpload",
+        "type": "object"
+      },
       "Body_uploadDocument": {
         "properties": {
           "document_type": {
@@ -1905,6 +1919,269 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "ImportBatchResponse": {
+        "properties": {
+          "committed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Committed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_person_id": {
+            "title": "Created By Person Id",
+            "type": "string"
+          },
+          "created_rows": {
+            "title": "Created Rows",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "invalid_rows": {
+            "title": "Invalid Rows",
+            "type": "integer"
+          },
+          "previewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previewed At"
+          },
+          "skipped_rows": {
+            "title": "Skipped Rows",
+            "type": "integer"
+          },
+          "source_filename": {
+            "title": "Source Filename",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ImportBatchStatus"
+          },
+          "total_rows": {
+            "title": "Total Rows",
+            "type": "integer"
+          },
+          "valid_rows": {
+            "title": "Valid Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "source_filename",
+          "created_by_person_id",
+          "total_rows",
+          "valid_rows",
+          "invalid_rows",
+          "created_rows",
+          "skipped_rows",
+          "created_at",
+          "previewed_at",
+          "committed_at"
+        ],
+        "title": "ImportBatchResponse",
+        "type": "object"
+      },
+      "ImportBatchStatus": {
+        "description": "Lifecycle of one uploaded CSV file.\n\n``PENDING`` -> rows are staged, not yet validated. ``PREVIEWED`` -> every\nrow has been checked (dry-run) and the batch may be committed. ``COMMITTED``\nis terminal: a batch can be committed at most once (\u00a7 import v1 \u2014 no\nrollback, see service module docstring).",
+        "enum": [
+          "PENDING",
+          "PREVIEWED",
+          "COMMITTED"
+        ],
+        "title": "ImportBatchStatus",
+        "type": "string"
+      },
+      "ImportCommitResponse": {
+        "properties": {
+          "batch": {
+            "$ref": "#/components/schemas/ImportBatchResponse"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ImportRowCommitResult"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "batch",
+          "rows"
+        ],
+        "title": "ImportCommitResponse",
+        "type": "object"
+      },
+      "ImportPreviewResponse": {
+        "properties": {
+          "batch": {
+            "$ref": "#/components/schemas/ImportBatchResponse"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ImportRowPreviewResult"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "batch",
+          "rows"
+        ],
+        "title": "ImportPreviewResponse",
+        "type": "object"
+      },
+      "ImportRowCommitResult": {
+        "properties": {
+          "family_name": {
+            "title": "Family Name",
+            "type": "string"
+          },
+          "given_name": {
+            "title": "Given Name",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "CREATED",
+              "SKIPPED"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "row_number": {
+            "title": "Row Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row_number",
+          "given_name",
+          "family_name",
+          "outcome",
+          "reason",
+          "person_id"
+        ],
+        "title": "ImportRowCommitResult",
+        "type": "object"
+      },
+      "ImportRowPreviewResult": {
+        "description": "One row's dry-run outcome. ``valid`` and ``duplicate_person_ids`` are\nindependent \u2014 a row can be valid AND look like an existing person; the\ncaller decides whether that's acceptable (v1 never blocks on it).",
+        "properties": {
+          "duplicate_person_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Duplicate Person Ids",
+            "type": "array"
+          },
+          "family_name": {
+            "title": "Family Name",
+            "type": "string"
+          },
+          "given_name": {
+            "title": "Given Name",
+            "type": "string"
+          },
+          "group_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Name"
+          },
+          "local_member_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Member Code"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "row_number": {
+            "title": "Row Number",
+            "type": "integer"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "row_number",
+          "given_name",
+          "family_name",
+          "group_name",
+          "local_member_code",
+          "valid",
+          "reason",
+          "duplicate_person_ids"
+        ],
+        "title": "ImportRowPreviewResult",
+        "type": "object"
+      },
       "InvitationCreatedResponse": {
         "description": "Send/reissue response. ``token`` is shown exactly once \u2014 only its hash is\never persisted (see ``invite_tokens.py``).",
         "properties": {
@@ -2742,6 +3019,37 @@
           "offset"
         ],
         "title": "Page[GroupResponse]",
+        "type": "object"
+      },
+      "Page_ImportBatchResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ImportBatchResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[ImportBatchResponse]",
         "type": "object"
       },
       "Page_InvitationResponse_": {
@@ -6909,6 +7217,236 @@
         "summary": "Readiness",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/import/uploads": {
+      "get": {
+        "operationId": "listImportUploads",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ImportBatchResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Import Uploads",
+        "tags": [
+          "import"
+        ]
+      },
+      "post": {
+        "operationId": "createImportUpload",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_createImportUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportBatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "CSV missing a required column."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Import Upload",
+        "tags": [
+          "import"
+        ]
+      }
+    },
+    "/import/uploads/{batch_id}": {
+      "get": {
+        "operationId": "getImportUpload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportBatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Import Upload",
+        "tags": [
+          "import"
+        ]
+      }
+    },
+    "/import/uploads/{batch_id}/commit": {
+      "post": {
+        "operationId": "commitImportUpload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportCommitResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Not yet previewed, or already committed."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Commit Import Upload",
+        "tags": [
+          "import"
+        ]
+      }
+    },
+    "/import/uploads/{batch_id}/preview": {
+      "post": {
+        "operationId": "previewImportUpload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Import already committed."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Import Upload",
+        "tags": [
+          "import"
         ]
       }
     },
