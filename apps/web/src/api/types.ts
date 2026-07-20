@@ -30,6 +30,11 @@ export interface Organization {
   timezone: string;
 }
 
+export interface LocationSummary {
+  id: string;
+  name: string;
+}
+
 export interface TenantPublic {
   organization_id: string;
   name: string;
@@ -48,10 +53,12 @@ export interface Page<T> {
   offset: number;
 }
 
+export type PersonIdentityStatus = "PROVISIONAL" | "CLAIMED" | "VERIFIED" | "MERGED" | "ARCHIVED";
+
 export interface PersonSummary {
   id: string;
   display_name: string;
-  identity_status: string;
+  identity_status: PersonIdentityStatus;
 }
 
 export interface Person {
@@ -59,7 +66,7 @@ export interface Person {
   given_name: string;
   family_name: string;
   display_name: string;
-  identity_status: string;
+  identity_status: PersonIdentityStatus;
 }
 
 export type PersonResponse = Person;
@@ -77,6 +84,31 @@ export interface GroupMember {
   display_name: string;
 }
 
+/* --- Membership (increment #6, merged to main) ------------------------ */
+
+export type MembershipStatus = "ACTIVE" | "SUSPENDED" | "ENDED";
+
+export interface MembershipResponse {
+  id: string;
+  person_id: string;
+  status: MembershipStatus;
+  local_member_code: string | null;
+  admin_note: string | null;
+}
+
+/* --- Guardians ---------------------------------------------------------- */
+
+export type GuardianRelationshipType = "PARENT" | "LEGAL_GUARDIAN" | "OTHER";
+export type GuardianAccessStatus = "ACTIVE" | "SUSPENDED" | "REVOKED";
+
+export interface GuardianContactResponse {
+  guardian_person_id: string;
+  display_name: string;
+  relationship_type: GuardianRelationshipType;
+  is_primary_contact: boolean;
+  access_status: GuardianAccessStatus;
+}
+
 export type SessionStatus = "SCHEDULED" | "CANCELLED" | "COMPLETED";
 
 export interface SessionSummary {
@@ -86,6 +118,7 @@ export interface SessionSummary {
   starts_at: string;
   ends_at: string;
   status: SessionStatus;
+  trainer_person_id?: string | null;
 }
 
 export interface ConflictCheck {

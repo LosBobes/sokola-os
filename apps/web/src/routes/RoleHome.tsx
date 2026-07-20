@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { useSession } from "../auth/session";
 import { PageHeader } from "../components/shell";
+import { ManagerHome } from "./manager/ManagerHome";
+import { TrainerHome } from "./trainer/TrainerHome";
 
 /** Each role lands on its own home with one dominant next action. */
 export function RoleHome() {
@@ -22,20 +24,11 @@ export function RoleHome() {
     );
   }
 
-  if (role === "TRAINER") {
-    return (
-      <div>
-        <PageHeader title="Danas" />
-        <div className="card">
-          <p>Vaši termini i prisustvo.</p>
-          <Link className="btn btn--primary" to="/raspored" data-cy="home-schedule">
-            Otvori raspored
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  if (role === "TRAINER") return <TrainerHome />;
 
+  if (role === "OWNER" || role === "MANAGER" || role === "ADMIN") return <ManagerHome />;
+
+  // STUDENT (and any other role without a dedicated home yet).
   return (
     <div>
       <PageHeader title={`Danas — ${org}`} />
