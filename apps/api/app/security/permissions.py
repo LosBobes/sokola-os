@@ -55,10 +55,12 @@ class PermissionArea(enum.StrEnum):
     COMMUNICATIONS = "COMMUNICATIONS"
     ORGANIZATION = "ORGANIZATION"
     ROLES = "ROLES"  # role / invitation administration
+    PRIVACY = "PRIVACY"  # consent, DSAR, and retention-period administration
 
 
-# Everything a staff role administers by default. ORGANIZATION/ROLES are
-# behaviour-neutral today (no guard consults them) — see module docstring.
+# Everything a staff role administers by default. ORGANIZATION/ROLES/PRIVACY are
+# behaviour-neutral today except where their own domain's routes now guard on
+# them (PRIVACY does) — see module docstring.
 _STAFF_AREAS: frozenset[PermissionArea] = frozenset(
     {
         PermissionArea.PEOPLE,
@@ -71,6 +73,7 @@ _STAFF_AREAS: frozenset[PermissionArea] = frozenset(
         PermissionArea.COMMUNICATIONS,
         PermissionArea.ORGANIZATION,
         PermissionArea.ROLES,
+        PermissionArea.PRIVACY,
     }
 )
 

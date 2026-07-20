@@ -26,6 +26,7 @@ from app.domains.organization.router import router as organization_router
 from app.domains.parent.router import router as parent_router
 from app.domains.payments.router import router as payments_router
 from app.domains.people.router import router as people_router
+from app.domains.privacy.router import router as privacy_router
 from app.domains.scheduling.router import router as scheduling_router
 from app.domains.structure.router import router as structure_router
 from app.security.csrf import CsrfMiddleware
@@ -84,6 +85,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(events_router)
     app.include_router(communications_router)
     app.include_router(parent_router)
+    app.include_router(privacy_router)
 
     return app
 
