@@ -10,13 +10,13 @@ from app.domains.attendance.schemas import (
     SaveAttendanceRequest,
     SaveAttendanceResponse,
 )
-from app.domains.identity.enums import RoleCode
-from app.security.deps import ContextDep, DbDep, require_roles
+from app.security.deps import ContextDep, DbDep
+from app.security.permissions import PermissionArea, require_permission
 
 router = APIRouter(tags=["attendance"])
 
 # Trainers record attendance, as do managing staff.
-_recorders = require_roles(RoleCode.OWNER, RoleCode.MANAGER, RoleCode.ADMIN, RoleCode.TRAINER)
+_recorders = require_permission(PermissionArea.ATTENDANCE)
 RecorderContext = Annotated[ContextDep, Depends(_recorders)]
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, RecordStatusMixin, TimestampMixin
@@ -99,6 +100,12 @@ class RoleAssignment(Base, TimestampMixin, RecordStatusMixin):
     scope_ref_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[RoleAssignmentStatus] = mapped_column(
         enum_type(RoleAssignmentStatus), nullable=False, default=RoleAssignmentStatus.ACTIVE
+    )
+    # Per-assignment area restriction (see app.security.permissions). NULL = the
+    # role's full default areas; a list narrows this assignment to those area
+    # codes only (e.g. an ADMIN invited "for finances only"). Never an escalation.
+    granted_areas: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String(40)), nullable=True
     )
 
 

@@ -12,13 +12,13 @@ from app.domains.events.schemas import (
     RegisterChildrenRequest,
     RegistrationResponse,
 )
-from app.domains.identity.enums import RoleCode
-from app.security.deps import ContextDep, DbDep, require_roles
+from app.security.deps import ContextDep, DbDep
+from app.security.permissions import PermissionArea, require_permission
 
 router = APIRouter(tags=["events"])
 
-_staff = require_roles(RoleCode.OWNER, RoleCode.MANAGER, RoleCode.ADMIN)
-_parent = require_roles(RoleCode.PARENT)
+_staff = require_permission(PermissionArea.EVENTS)
+_parent = require_permission(PermissionArea.EVENTS)
 StaffContext = Annotated[ContextDep, Depends(_staff)]
 ParentContext = Annotated[ContextDep, Depends(_parent)]
 
