@@ -11,6 +11,7 @@ import { AttendancePage } from "./routes/manager/Attendance";
 import { MoneyPage } from "./routes/manager/Money";
 import { CommunicationsPage } from "./routes/manager/Communications";
 import { DocumentsPage } from "./routes/manager/Documents";
+import { ReportsPage } from "./routes/manager/Reports";
 import { EventsPage } from "./routes/parent/Events";
 import { ParentMoneyPage } from "./routes/parent/Money";
 import { MorePage } from "./routes/More";
@@ -41,6 +42,7 @@ export function App() {
         <Route path="/roditelj/finansije" element={<ParentMoneyPage />} />
         <Route path="/obavestenja" element={<ParentNotificationsPage />} />
         <Route path="/vise" element={<MorePage />} />
+        <Route path="/izvestaji" element={<ReportsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ProductShell>

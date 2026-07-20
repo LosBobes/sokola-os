@@ -275,13 +275,21 @@ function UserMenu({ name, role }: { name: string; role: string }) {
   );
 }
 
-/** Announces route changes politely and moves focus to main content. */
+/** Announces route changes politely and moves focus to main content.
+ *  `preventScroll` avoids a real bug this surfaced on taller pages (M12
+ *  Izveštaji is the first to be taller than one viewport): the default
+ *  focus() scroll-into-view aligns a too-tall <main> to the viewport top,
+ *  which pushes it *behind* the sticky topbar (`.topbar` reserves ~69px
+ *  in flow but stays pinned on top) — hiding the page's own <h1> on load.
+ *  Shorter existing pages never hit this because they already fit within
+ *  one viewport, so no scroll was ever triggered. Focus still moves to
+ *  main for screen readers; only the (incorrect) visual scroll is dropped. */
 function RouteAnnouncer({ mainRef }: { mainRef: React.RefObject<HTMLElement | null> }) {
   const location = useLocation();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (ref.current) ref.current.textContent = `Stranica: ${location.pathname}`;
-    mainRef.current?.focus();
+    mainRef.current?.focus({ preventScroll: true });
   }, [location.pathname, mainRef]);
   return <div ref={ref} aria-live="polite" className="visually-hidden" />;
 }
