@@ -6,7 +6,11 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.common.base import Base, RecordStatusMixin, TimestampMixin
 from app.common.columns import enum_type
 from app.common.ids import new_id
-from app.domains.organization.enums import MembershipStatus, OrganizationType
+from app.domains.organization.enums import (
+    MembershipStatus,
+    OrganizationLifecycleStatus,
+    OrganizationType,
+)
 
 
 class Organization(Base, TimestampMixin, RecordStatusMixin):
@@ -24,6 +28,15 @@ class Organization(Base, TimestampMixin, RecordStatusMixin):
     )
     # IANA timezone; recurring schedules are interpreted against this.
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="Europe/Belgrade")
+    # Guided-onboarding state (§24/§25) — see OrganizationLifecycleStatus. Defaults
+    # to ACTIVE so every row created outside the real signup path (fixtures,
+    # legacy data) behaves normally; only ``create_organization`` opts a fresh
+    # school into IN_PREPARATION.
+    lifecycle_status: Mapped[OrganizationLifecycleStatus] = mapped_column(
+        enum_type(OrganizationLifecycleStatus),
+        nullable=False,
+        default=OrganizationLifecycleStatus.ACTIVE,
+    )
 
 
 class OrganizationMembership(Base, TimestampMixin, RecordStatusMixin):

@@ -185,6 +185,39 @@
         "title": "AssignRoleRequest",
         "type": "object"
       },
+      "AttendanceByGroup": {
+        "properties": {
+          "attendance_rate": {
+            "title": "Attendance Rate",
+            "type": "number"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "group_name": {
+            "title": "Group Name",
+            "type": "string"
+          },
+          "present_count": {
+            "title": "Present Count",
+            "type": "integer"
+          },
+          "recorded_count": {
+            "title": "Recorded Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "group_id",
+          "group_name",
+          "recorded_count",
+          "present_count",
+          "attendance_rate"
+        ],
+        "title": "AttendanceByGroup",
+        "type": "object"
+      },
       "AttendanceEntry": {
         "properties": {
           "display_name": {
@@ -243,6 +276,108 @@
         ],
         "title": "AttendanceOverrideReasonCode",
         "type": "string"
+      },
+      "AttendanceProgressNoteInput": {
+        "description": "A progress note (PRD 06 M2) attached to this attendance save. Optional \u2014\na trainer taking attendance may jot a note about a roster member without\nleaving the sheet; equivalent to a standalone POST to\n``/people/{person_id}/progress-notes`` scoped to this session's group.",
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person_id",
+          "note"
+        ],
+        "title": "AttendanceProgressNoteInput",
+        "type": "object"
+      },
+      "AttendanceReport": {
+        "description": "Attendance rate over a date range, scoped by each session's own\n``starts_at`` (not by when the attendance row was written).",
+        "properties": {
+          "absent_count": {
+            "title": "Absent Count",
+            "type": "integer"
+          },
+          "attendance_rate": {
+            "title": "Attendance Rate",
+            "type": "number"
+          },
+          "by_group": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceByGroup"
+            },
+            "title": "By Group",
+            "type": "array"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "excused_count": {
+            "title": "Excused Count",
+            "type": "integer"
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Id"
+          },
+          "late_count": {
+            "title": "Late Count",
+            "type": "integer"
+          },
+          "present_count": {
+            "title": "Present Count",
+            "type": "integer"
+          },
+          "recorded_count": {
+            "title": "Recorded Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to",
+          "group_id",
+          "recorded_count",
+          "present_count",
+          "absent_count",
+          "excused_count",
+          "late_count",
+          "attendance_rate",
+          "by_group"
+        ],
+        "title": "AttendanceReport",
+        "type": "object"
       },
       "AttendanceSheet": {
         "description": "The roster to display. Everyone defaults to PRESENT; the trainer edits only\nexceptions. ``attendance_version`` must be echoed back on save.",
@@ -325,9 +460,16 @@
       "BillingPreviewRequest": {
         "properties": {
           "amount_minor": {
-            "exclusiveMinimum": 0.0,
-            "title": "Amount Minor",
-            "type": "integer"
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Minor"
           },
           "description": {
             "maxLength": 200,
@@ -348,7 +490,6 @@
         },
         "required": [
           "group_id",
-          "amount_minor",
           "description",
           "period_label"
         ],
@@ -424,6 +565,87 @@
         "title": "BillingRunResponse",
         "type": "object"
       },
+      "Body_createImportUpload": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_createImportUpload",
+        "type": "object"
+      },
+      "Body_uploadDocument": {
+        "properties": {
+          "document_type": {
+            "$ref": "#/components/schemas/DocumentType",
+            "default": "GENERAL"
+          },
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "retention_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetentionPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subject_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Person Id"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/DocumentVisibility",
+            "default": "STAFF_ONLY"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_uploadDocument",
+        "type": "object"
+      },
+      "CancelChargeRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ChargeCancellationReasonCode"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "CancelChargeRequest",
+        "type": "object"
+      },
       "CategoryResponse": {
         "properties": {
           "id": {
@@ -446,6 +668,16 @@
         "title": "CategoryResponse",
         "type": "object"
       },
+      "ChargeCancellationReasonCode": {
+        "enum": [
+          "WAIVED",
+          "ERROR",
+          "DUPLICATE",
+          "OTHER"
+        ],
+        "title": "ChargeCancellationReasonCode",
+        "type": "string"
+      },
       "ChargeResponse": {
         "properties": {
           "amount_due_minor": {
@@ -455,6 +687,16 @@
           "amount_paid_minor": {
             "title": "Amount Paid Minor",
             "type": "integer"
+          },
+          "cancellation_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChargeCancellationReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "currency": {
             "title": "Currency",
@@ -467,6 +709,17 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
           },
           "person_id": {
             "title": "Person Id",
@@ -536,6 +789,70 @@
         ],
         "title": "ConflictCheckResponse",
         "type": "object"
+      },
+      "ConsentResponse": {
+        "properties": {
+          "granted_at": {
+            "format": "date-time",
+            "title": "Granted At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ConsentScope"
+          }
+        },
+        "required": [
+          "id",
+          "person_id",
+          "scope",
+          "granted_at",
+          "revoked_at",
+          "note"
+        ],
+        "title": "ConsentResponse",
+        "type": "object"
+      },
+      "ConsentScope": {
+        "description": "What a consent covers \u2014 a closed vocabulary of processing purposes a\nperson may grant or withdraw, independent of any one domain's own\nfeature set.",
+        "enum": [
+          "DATA_PROCESSING",
+          "MARKETING_COMMUNICATIONS",
+          "PHOTO_VIDEO",
+          "THIRD_PARTY_SHARING"
+        ],
+        "title": "ConsentScope",
+        "type": "string"
       },
       "ContextSummary": {
         "description": "One selectable acting context = an active role in one organization.",
@@ -616,6 +933,36 @@
           "family_name"
         ],
         "title": "CreateDevIdentityRequest",
+        "type": "object"
+      },
+      "CreateDsarRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "person_id": {
+            "minLength": 1,
+            "title": "Person Id",
+            "type": "string"
+          },
+          "request_type": {
+            "$ref": "#/components/schemas/DsarRequestType"
+          }
+        },
+        "required": [
+          "person_id",
+          "request_type"
+        ],
+        "title": "CreateDsarRequest",
         "type": "object"
       },
       "CreateEventRequest": {
@@ -981,6 +1328,66 @@
         "title": "CreateProgramRequest",
         "type": "object"
       },
+      "CreateProgressNoteRequest": {
+        "properties": {
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "group_id",
+          "note"
+        ],
+        "title": "CreateProgressNoteRequest",
+        "type": "object"
+      },
+      "CreateRetentionPeriodRequest": {
+        "properties": {
+          "data_category": {
+            "$ref": "#/components/schemas/DataCategory"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "retention_period_days": {
+            "exclusiveMinimum": 0.0,
+            "title": "Retention Period Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data_category",
+          "retention_period_days"
+        ],
+        "title": "CreateRetentionPeriodRequest",
+        "type": "object"
+      },
       "CreateRoomRequest": {
         "properties": {
           "capacity": {
@@ -1026,6 +1433,59 @@
         "title": "CreateRoomRequest",
         "type": "object"
       },
+      "DataCategory": {
+        "description": "A category of stored personal data a retention period can be attached\nto. Deliberately domain-agnostic \u2014 one category may span several\ndomains' tables (e.g. DOCUMENTS covers files across the product).",
+        "enum": [
+          "PERSONAL_PROFILE",
+          "ATTENDANCE_RECORDS",
+          "BILLING_RECORDS",
+          "DOCUMENTS",
+          "COMMUNICATIONS",
+          "MEDIA"
+        ],
+        "title": "DataCategory",
+        "type": "string"
+      },
+      "DebtSummaryResponse": {
+        "description": "Org-wide roll-up of :class:`PersonDebtItem` \u2014 the \"dugovanja\" total.",
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "people_with_debt": {
+            "title": "People With Debt",
+            "type": "integer"
+          },
+          "total_outstanding_minor": {
+            "title": "Total Outstanding Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "currency",
+          "total_outstanding_minor",
+          "people_with_debt"
+        ],
+        "title": "DebtSummaryResponse",
+        "type": "object"
+      },
+      "DecideDsarRequest": {
+        "description": "Staff's decision note. Required \u2014 a fulfilment/rejection is always\nattested with a reason (v1 has no automated action to point to instead).",
+        "properties": {
+          "note": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "DecideDsarRequest",
+        "type": "object"
+      },
       "DevIdentityResponse": {
         "properties": {
           "display_name": {
@@ -1043,6 +1503,212 @@
         ],
         "title": "DevIdentityResponse",
         "type": "object"
+      },
+      "DocumentResponse": {
+        "properties": {
+          "acknowledged_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged At"
+          },
+          "acknowledged_by_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged By Person Id"
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "document_type": {
+            "$ref": "#/components/schemas/DocumentType"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "owner_person_id": {
+            "title": "Owner Person Id",
+            "type": "string"
+          },
+          "retention_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetentionPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "subject_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Person Id"
+          },
+          "uploaded_at": {
+            "format": "date-time",
+            "title": "Uploaded At",
+            "type": "string"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/DocumentVisibility"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "owner_person_id",
+          "subject_person_id",
+          "filename",
+          "content_type",
+          "size_bytes",
+          "document_type",
+          "visibility",
+          "retention_period",
+          "uploaded_at",
+          "acknowledged_at",
+          "acknowledged_by_person_id"
+        ],
+        "title": "DocumentResponse",
+        "type": "object"
+      },
+      "DocumentType": {
+        "description": "GENERAL is any uploaded file (photo, form, certificate, ...). CONTRACT is\na subtype that carries an acknowledgement (electronic \"I have read/agree\")\nstate \u2014 see ``acknowledged_at``/``acknowledged_by_person_id`` on the model.",
+        "enum": [
+          "GENERAL",
+          "CONTRACT"
+        ],
+        "title": "DocumentType",
+        "type": "string"
+      },
+      "DocumentVisibility": {
+        "description": "Who \u2014 beyond staff, who can always reach anything in their own tenant via\nthe DOCUMENTS permission \u2014 may see this document.\n\nSTAFF_ONLY: no one outside staff (e.g. internal admin paperwork).\nSUBJECT: the person named in ``subject_person_id`` may see it, and \u2014 when\nthat subject is a child \u2014 so may any guardian with active\n``GuardianOrganizationAccess`` to that child in this organization. This\nmirrors how the events domain already resolves \"which children can this\nparent act for\" (see ``app.domains.events.repository.guardian_children``).",
+        "enum": [
+          "STAFF_ONLY",
+          "SUBJECT"
+        ],
+        "title": "DocumentVisibility",
+        "type": "string"
+      },
+      "DsarRequestResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decision_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Note"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          },
+          "request_type": {
+            "$ref": "#/components/schemas/DsarRequestType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DsarRequestStatus"
+          }
+        },
+        "required": [
+          "id",
+          "person_id",
+          "request_type",
+          "status",
+          "note",
+          "decision_note",
+          "decided_at",
+          "created_at"
+        ],
+        "title": "DsarRequestResponse",
+        "type": "object"
+      },
+      "DsarRequestStatus": {
+        "enum": [
+          "PENDING",
+          "IN_PROGRESS",
+          "FULFILLED",
+          "REJECTED"
+        ],
+        "title": "DsarRequestStatus",
+        "type": "string"
+      },
+      "DsarRequestType": {
+        "enum": [
+          "ACCESS",
+          "EXPORT",
+          "ERASURE"
+        ],
+        "title": "DsarRequestType",
+        "type": "string"
       },
       "DuplicateCandidate": {
         "properties": {
@@ -1200,6 +1866,55 @@
         ],
         "title": "EventType",
         "type": "string"
+      },
+      "FinancialReport": {
+        "description": "Billed vs. collected over an explicit date range, plus a breakdown of\nall currently-outstanding debt (not time-scoped \u2014 debt is a point-in-time\nbalance, not something that happened \"in\" the range).",
+        "properties": {
+          "billed_total_minor": {
+            "title": "Billed Total Minor",
+            "type": "integer"
+          },
+          "collected_total_minor": {
+            "title": "Collected Total Minor",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "outstanding_by_status": {
+            "items": {
+              "$ref": "#/components/schemas/OutstandingByStatus"
+            },
+            "title": "Outstanding By Status",
+            "type": "array"
+          },
+          "outstanding_debt_total_minor": {
+            "title": "Outstanding Debt Total Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to",
+          "currency",
+          "billed_total_minor",
+          "collected_total_minor",
+          "outstanding_debt_total_minor",
+          "outstanding_by_status"
+        ],
+        "title": "FinancialReport",
+        "type": "object"
       },
       "GroupCapacityMode": {
         "enum": [
@@ -1440,6 +2155,269 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ImportBatchResponse": {
+        "properties": {
+          "committed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Committed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_person_id": {
+            "title": "Created By Person Id",
+            "type": "string"
+          },
+          "created_rows": {
+            "title": "Created Rows",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "invalid_rows": {
+            "title": "Invalid Rows",
+            "type": "integer"
+          },
+          "previewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previewed At"
+          },
+          "skipped_rows": {
+            "title": "Skipped Rows",
+            "type": "integer"
+          },
+          "source_filename": {
+            "title": "Source Filename",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ImportBatchStatus"
+          },
+          "total_rows": {
+            "title": "Total Rows",
+            "type": "integer"
+          },
+          "valid_rows": {
+            "title": "Valid Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "source_filename",
+          "created_by_person_id",
+          "total_rows",
+          "valid_rows",
+          "invalid_rows",
+          "created_rows",
+          "skipped_rows",
+          "created_at",
+          "previewed_at",
+          "committed_at"
+        ],
+        "title": "ImportBatchResponse",
+        "type": "object"
+      },
+      "ImportBatchStatus": {
+        "description": "Lifecycle of one uploaded CSV file.\n\n``PENDING`` -> rows are staged, not yet validated. ``PREVIEWED`` -> every\nrow has been checked (dry-run) and the batch may be committed. ``COMMITTED``\nis terminal: a batch can be committed at most once (\u00a7 import v1 \u2014 no\nrollback, see service module docstring).",
+        "enum": [
+          "PENDING",
+          "PREVIEWED",
+          "COMMITTED"
+        ],
+        "title": "ImportBatchStatus",
+        "type": "string"
+      },
+      "ImportCommitResponse": {
+        "properties": {
+          "batch": {
+            "$ref": "#/components/schemas/ImportBatchResponse"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ImportRowCommitResult"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "batch",
+          "rows"
+        ],
+        "title": "ImportCommitResponse",
+        "type": "object"
+      },
+      "ImportPreviewResponse": {
+        "properties": {
+          "batch": {
+            "$ref": "#/components/schemas/ImportBatchResponse"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ImportRowPreviewResult"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "batch",
+          "rows"
+        ],
+        "title": "ImportPreviewResponse",
+        "type": "object"
+      },
+      "ImportRowCommitResult": {
+        "properties": {
+          "family_name": {
+            "title": "Family Name",
+            "type": "string"
+          },
+          "given_name": {
+            "title": "Given Name",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "CREATED",
+              "SKIPPED"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "row_number": {
+            "title": "Row Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row_number",
+          "given_name",
+          "family_name",
+          "outcome",
+          "reason",
+          "person_id"
+        ],
+        "title": "ImportRowCommitResult",
+        "type": "object"
+      },
+      "ImportRowPreviewResult": {
+        "description": "One row's dry-run outcome. ``valid`` and ``duplicate_person_ids`` are\nindependent \u2014 a row can be valid AND look like an existing person; the\ncaller decides whether that's acceptable (v1 never blocks on it).",
+        "properties": {
+          "duplicate_person_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Duplicate Person Ids",
+            "type": "array"
+          },
+          "family_name": {
+            "title": "Family Name",
+            "type": "string"
+          },
+          "given_name": {
+            "title": "Given Name",
+            "type": "string"
+          },
+          "group_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Name"
+          },
+          "local_member_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Member Code"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "row_number": {
+            "title": "Row Number",
+            "type": "integer"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "row_number",
+          "given_name",
+          "family_name",
+          "group_name",
+          "local_member_code",
+          "valid",
+          "reason",
+          "duplicate_person_ids"
+        ],
+        "title": "ImportRowPreviewResult",
         "type": "object"
       },
       "InvitationCreatedResponse": {
@@ -1795,6 +2773,103 @@
         "title": "MembershipTransitionRequest",
         "type": "object"
       },
+      "MembershipTrendByGroup": {
+        "properties": {
+          "active_member_count": {
+            "title": "Active Member Count",
+            "type": "integer"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "group_name": {
+            "title": "Group Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "group_id",
+          "group_name",
+          "active_member_count"
+        ],
+        "title": "MembershipTrendByGroup",
+        "type": "object"
+      },
+      "MembershipTrendPoint": {
+        "properties": {
+          "active_member_count": {
+            "title": "Active Member Count",
+            "type": "integer"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end",
+          "active_member_count"
+        ],
+        "title": "MembershipTrendPoint",
+        "type": "object"
+      },
+      "MembershipTrendReport": {
+        "description": "Monthly-bucketed active-membership growth. Membership rows carry only a\ncurrent ``status`` (no historical end date), so each bucket counts\ncurrently-active memberships that had already joined by the bucket's end \u2014\na join-cohort growth curve, not a historical point-in-time snapshot.",
+        "properties": {
+          "by_group": {
+            "items": {
+              "$ref": "#/components/schemas/MembershipTrendByGroup"
+            },
+            "title": "By Group",
+            "type": "array"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Id"
+          },
+          "trend": {
+            "items": {
+              "$ref": "#/components/schemas/MembershipTrendPoint"
+            },
+            "title": "Trend",
+            "type": "array"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to",
+          "group_id",
+          "trend",
+          "by_group"
+        ],
+        "title": "MembershipTrendReport",
+        "type": "object"
+      },
       "MergeDecisionRequest": {
         "properties": {
           "decision": {
@@ -1851,11 +2926,202 @@
         "title": "MergeReviewResponse",
         "type": "object"
       },
+      "NotificationDeliveryStatus": {
+        "description": "Delivery state of a single in-app :class:`Notification` row.\n\nv1 has exactly one channel \u2014 the in-app inbox \u2014 so ``DELIVERED`` simply\nmeans the row was committed successfully; there is no external send step\nyet (email/push are out of scope, see PRD 08 M4). The states still model a\nreal state machine so a future channel can slot in without a schema change:\n\n* ``PENDING`` \u2014 the row is being constructed; never observed once committed\n  (a handler either finishes and commits as ``DELIVERED``, or the whole\n  outbox message fails and retries \u2014 see ``app.platform.outbox``).\n* ``DELIVERED`` \u2014 the in-app record exists and is visible in the recipient's\n  inbox. Terminal for v1.\n* ``FAILED`` \u2014 reserved for a future external channel's delivery failure;\n  unused today because in-app \"delivery\" cannot partially fail (either the\n  transaction commits, or the outbox retries the whole event).",
+        "enum": [
+          "PENDING",
+          "DELIVERED",
+          "FAILED"
+        ],
+        "title": "NotificationDeliveryStatus",
+        "type": "string"
+      },
+      "NotificationResponse": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "delivery_status": {
+            "$ref": "#/components/schemas/NotificationDeliveryStatus"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "entity_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Type"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "event_type",
+          "entity_type",
+          "entity_id",
+          "title",
+          "body",
+          "delivery_status",
+          "created_at",
+          "read_at"
+        ],
+        "title": "NotificationResponse",
+        "type": "object"
+      },
+      "OnboardingProgressResponse": {
+        "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "can_activate": {
+            "title": "Can Activate",
+            "type": "boolean"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/OrganizationLifecycleStatus"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "remaining_steps": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingStep"
+            },
+            "title": "Remaining Steps",
+            "type": "array"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingStepStatus"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "organization_id",
+          "lifecycle_status",
+          "steps",
+          "remaining_steps",
+          "can_activate",
+          "activated_at"
+        ],
+        "title": "OnboardingProgressResponse",
+        "type": "object"
+      },
+      "OnboardingStep": {
+        "description": "A step of guided school setup, in the order a new owner walks them.\n\n``SCHOOL_PROFILE`` is satisfied by ``POST /organizations`` itself (name/\ntype/timezone are required at creation) so it is always complete.\n``LOCATIONS``/``ROOMS``/``PROGRAMS`` are satisfied by using the structure\ndomain's own create endpoints \u2014 onboarding does not duplicate them, it only\nreports whether at least one active row exists for the school (see\n``app.domains.onboarding.service``). ``FIRST_INVITE`` is satisfied by\nsending any invitation (in practice, during onboarding, the co-owner invite\n\u2014 see ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).\n``ACTIVATE`` is the terminal step: leaving \"u pripremi\".",
+        "enum": [
+          "SCHOOL_PROFILE",
+          "LOCATIONS",
+          "ROOMS",
+          "PROGRAMS",
+          "FIRST_INVITE",
+          "ACTIVATE"
+        ],
+        "title": "OnboardingStep",
+        "type": "string"
+      },
+      "OnboardingStepStatus": {
+        "properties": {
+          "completed": {
+            "title": "Completed",
+            "type": "boolean"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "step": {
+            "$ref": "#/components/schemas/OnboardingStep"
+          }
+        },
+        "required": [
+          "step",
+          "completed",
+          "completed_at"
+        ],
+        "title": "OnboardingStepStatus",
+        "type": "object"
+      },
+      "OrganizationLifecycleStatus": {
+        "description": "Where a school is in guided onboarding (PRD 02 \u00a724/\u00a725), independent of\n``record_status`` (which is the soft-delete/deactivation axis \u2014 \u00a731).\n\nA school created through ``POST /organizations`` starts ``IN_PREPARATION``\n(\"u pripremi\"): the owner may set up structure and invite a co-owner, but\nnormal STAFF/PARENT/STUDENT invitations are blocked until ``ACTIVE`` (see\n``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).\nLegacy/seed rows default to ``ACTIVE`` so behaviour outside the real\nsignup path is unchanged.",
+        "enum": [
+          "IN_PREPARATION",
+          "ACTIVE"
+        ],
+        "title": "OrganizationLifecycleStatus",
+        "type": "string"
+      },
       "OrganizationResponse": {
         "properties": {
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/OrganizationLifecycleStatus"
           },
           "name": {
             "title": "Name",
@@ -1885,7 +3151,8 @@
           "name",
           "slug",
           "type",
-          "timezone"
+          "timezone",
+          "lifecycle_status"
         ],
         "title": "OrganizationResponse",
         "type": "object"
@@ -1902,6 +3169,95 @@
         ],
         "title": "OrganizationType",
         "type": "string"
+      },
+      "OutstandingByStatus": {
+        "properties": {
+          "charge_count": {
+            "title": "Charge Count",
+            "type": "integer"
+          },
+          "outstanding_minor": {
+            "title": "Outstanding Minor",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "charge_count",
+          "outstanding_minor"
+        ],
+        "title": "OutstandingByStatus",
+        "type": "object"
+      },
+      "OverviewReport": {
+        "description": "Business dashboard: a snapshot of the organization's health right now,\nplus this-calendar-month billing and a recent attendance window.",
+        "properties": {
+          "active_member_count": {
+            "title": "Active Member Count",
+            "type": "integer"
+          },
+          "attendance_present_count": {
+            "title": "Attendance Present Count",
+            "type": "integer"
+          },
+          "attendance_rate": {
+            "title": "Attendance Rate",
+            "type": "number"
+          },
+          "attendance_recorded_count": {
+            "title": "Attendance Recorded Count",
+            "type": "integer"
+          },
+          "attendance_window_days": {
+            "title": "Attendance Window Days",
+            "type": "integer"
+          },
+          "billed_total_minor": {
+            "title": "Billed Total Minor",
+            "type": "integer"
+          },
+          "collected_total_minor": {
+            "title": "Collected Total Minor",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "outstanding_debt_total_minor": {
+            "title": "Outstanding Debt Total Minor",
+            "type": "integer"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end",
+          "currency",
+          "active_member_count",
+          "billed_total_minor",
+          "collected_total_minor",
+          "outstanding_debt_total_minor",
+          "attendance_window_days",
+          "attendance_recorded_count",
+          "attendance_present_count",
+          "attendance_rate"
+        ],
+        "title": "OverviewReport",
+        "type": "object"
       },
       "Page_CategoryResponse_": {
         "properties": {
@@ -1965,6 +3321,99 @@
         "title": "Page[ChargeResponse]",
         "type": "object"
       },
+      "Page_ConsentResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConsentResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[ConsentResponse]",
+        "type": "object"
+      },
+      "Page_DocumentResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[DocumentResponse]",
+        "type": "object"
+      },
+      "Page_DsarRequestResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DsarRequestResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[DsarRequestResponse]",
+        "type": "object"
+      },
       "Page_GroupResponse_": {
         "properties": {
           "items": {
@@ -1994,6 +3443,37 @@
           "offset"
         ],
         "title": "Page[GroupResponse]",
+        "type": "object"
+      },
+      "Page_ImportBatchResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ImportBatchResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[ImportBatchResponse]",
         "type": "object"
       },
       "Page_InvitationResponse_": {
@@ -2058,6 +3538,68 @@
         "title": "Page[LocationResponse]",
         "type": "object"
       },
+      "Page_NotificationResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[NotificationResponse]",
+        "type": "object"
+      },
+      "Page_PersonDebtItem_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PersonDebtItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[PersonDebtItem]",
+        "type": "object"
+      },
       "Page_PersonSummary_": {
         "properties": {
           "items": {
@@ -2118,6 +3660,37 @@
           "offset"
         ],
         "title": "Page[ProgramResponse]",
+        "type": "object"
+      },
+      "Page_RetentionPeriodResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RetentionPeriodResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[RetentionPeriodResponse]",
         "type": "object"
       },
       "Page_RoleAssignmentResponse_": {
@@ -2250,6 +3823,50 @@
         "title": "PaymentResponse",
         "type": "object"
       },
+      "PaymentVoidReasonCode": {
+        "enum": [
+          "ERROR",
+          "REFUNDED",
+          "DUPLICATE",
+          "OTHER"
+        ],
+        "title": "PaymentVoidReasonCode",
+        "type": "string"
+      },
+      "PersonDebtItem": {
+        "description": "One person's aggregated outstanding balance (open + partially-paid\ncharges only; cancelled charges never contribute).",
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "open_charge_count": {
+            "title": "Open Charge Count",
+            "type": "integer"
+          },
+          "outstanding_minor": {
+            "title": "Outstanding Minor",
+            "type": "integer"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person_id",
+          "display_name",
+          "currency",
+          "outstanding_minor",
+          "open_charge_count"
+        ],
+        "title": "PersonDebtItem",
+        "type": "object"
+      },
       "PersonIdentityStatus": {
         "enum": [
           "PROVISIONAL",
@@ -2328,9 +3945,16 @@
       "PostBillingRunRequest": {
         "properties": {
           "amount_minor": {
-            "exclusiveMinimum": 0.0,
-            "title": "Amount Minor",
-            "type": "integer"
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Minor"
           },
           "description": {
             "maxLength": 200,
@@ -2355,7 +3979,6 @@
         },
         "required": [
           "group_id",
-          "amount_minor",
           "description",
           "period_label",
           "preview_hash"
@@ -2407,6 +4030,79 @@
           "status"
         ],
         "title": "ProgramResponse",
+        "type": "object"
+      },
+      "ProgressLevel": {
+        "description": "A coarse, honest read on where a student is \u2014 not a graded score. Optional:\nmany notes are just prose with no level attached.",
+        "enum": [
+          "NOVICE",
+          "DEVELOPING",
+          "PROFICIENT",
+          "ADVANCED"
+        ],
+        "title": "ProgressLevel",
+        "type": "string"
+      },
+      "ProgressNoteResponse": {
+        "properties": {
+          "author_person_id": {
+            "title": "Author Person Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "person_id": {
+            "title": "Person Id",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "required": [
+          "id",
+          "person_id",
+          "group_id",
+          "author_person_id",
+          "session_id",
+          "note",
+          "level",
+          "created_at"
+        ],
+        "title": "ProgressNoteResponse",
         "type": "object"
       },
       "PublishAnnouncementRequest": {
@@ -2474,6 +4170,36 @@
           "database"
         ],
         "title": "ReadinessResponse",
+        "type": "object"
+      },
+      "RecordConsentRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "person_id": {
+            "minLength": 1,
+            "title": "Person Id",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ConsentScope"
+          }
+        },
+        "required": [
+          "person_id",
+          "scope"
+        ],
+        "title": "RecordConsentRequest",
         "type": "object"
       },
       "RecordPaymentRequest": {
@@ -2554,6 +4280,56 @@
         ],
         "title": "RegistrationStatus",
         "type": "string"
+      },
+      "RetentionPeriod": {
+        "description": "A declared retention policy label recorded at upload time. Nothing in this\nincrement enforces expiry/deletion against it \u2014 it is metadata for a future\nretention job, not a guarantee.",
+        "enum": [
+          "ONE_YEAR",
+          "THREE_YEARS",
+          "FIVE_YEARS",
+          "TEN_YEARS",
+          "INDEFINITE"
+        ],
+        "title": "RetentionPeriod",
+        "type": "string"
+      },
+      "RetentionPeriodResponse": {
+        "properties": {
+          "data_category": {
+            "$ref": "#/components/schemas/DataCategory"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "retention_period_days": {
+            "title": "Retention Period Days",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RecordStatus"
+          }
+        },
+        "required": [
+          "id",
+          "data_category",
+          "retention_period_days",
+          "note",
+          "status"
+        ],
+        "title": "RetentionPeriodResponse",
+        "type": "object"
       },
       "RevokeGuardianAccessRequest": {
         "properties": {
@@ -2770,6 +4546,13 @@
             },
             "title": "Exceptions",
             "type": "array"
+          },
+          "progress_notes": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceProgressNoteInput"
+            },
+            "title": "Progress Notes",
+            "type": "array"
           }
         },
         "required": [
@@ -2800,6 +4583,11 @@
             "title": "Present",
             "type": "integer"
           },
+          "progress_notes_saved": {
+            "default": 0,
+            "title": "Progress Notes Saved",
+            "type": "integer"
+          },
           "session_id": {
             "title": "Session Id",
             "type": "string"
@@ -2815,6 +4603,67 @@
         ],
         "title": "SaveAttendanceResponse",
         "type": "object"
+      },
+      "SearchResponse": {
+        "properties": {
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResultItem"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "query",
+          "results"
+        ],
+        "title": "SearchResponse",
+        "type": "object"
+      },
+      "SearchResultItem": {
+        "description": "One matched row, already shaped for a result list: enough to render and\nto navigate to the underlying record without a follow-up lookup.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "subtitle": {
+            "title": "Subtitle",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SearchResultType"
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "title",
+          "subtitle"
+        ],
+        "title": "SearchResultItem",
+        "type": "object"
+      },
+      "SearchResultType": {
+        "description": "Which entity a search result came from \u2014 drives icon/link choice client-side.",
+        "enum": [
+          "PERSON",
+          "GROUP",
+          "SESSION",
+          "EVENT",
+          "CHARGE"
+        ],
+        "title": "SearchResultType",
+        "type": "string"
       },
       "SeriesGenerateRequest": {
         "description": "Generate / top-up concrete sessions over a rolling horizon. Idempotent:\noccurrences that already exist for the series are left untouched.",
@@ -3403,6 +5252,60 @@
         "title": "UpdateCategoryRequest",
         "type": "object"
       },
+      "UpdateEventRequest": {
+        "description": "Partial update \u2014 only fields present in the request body are changed.\n``capacity`` may be sent as ``null`` to clear it (pair with switching\n``capacity_mode`` to UNLIMITED); omit a field entirely to leave it untouched.\nOnly permitted while the event is still upcoming (published/draft and not yet\nstarted).",
+        "properties": {
+          "capacity": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity"
+          },
+          "capacity_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventCapacityMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "UpdateEventRequest",
+        "type": "object"
+      },
       "UpdateGrantedAreasRequest": {
         "description": "``null`` clears the restriction back to the role's full default areas.",
         "properties": {
@@ -3584,6 +5487,36 @@
         "title": "UpdateProgramRequest",
         "type": "object"
       },
+      "UpdateRetentionPeriodRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "retention_period_days": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Period Days"
+          }
+        },
+        "title": "UpdateRetentionPeriodRequest",
+        "type": "object"
+      },
       "UpdateRoomRequest": {
         "properties": {
           "capacity": {
@@ -3667,6 +5600,36 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "VoidPaymentRequest": {
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/PaymentVoidReasonCode"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "VoidPaymentRequest",
+        "type": "object"
+      },
+      "WithdrawConsentRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "WithdrawConsentRequest",
+        "type": "object"
       }
     }
   },
@@ -3747,6 +5710,83 @@
         "summary": "Logout",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/billing/debts": {
+      "get": {
+        "operationId": "listDebts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PersonDebtItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Debts",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/debts/summary": {
+      "get": {
+        "operationId": "getDebtSummary",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebtSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Debt Summary",
+        "tags": [
+          "billing"
         ]
       }
     },
@@ -4154,6 +6194,77 @@
         ]
       }
     },
+    "/charges/{charge_id}/cancel": {
+      "post": {
+        "operationId": "cancelCharge",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "charge_id",
+            "required": true,
+            "schema": {
+              "title": "Charge Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelChargeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChargeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Charge already PAID or already CANCELLED."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Charge",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/charges/{charge_id}/payments": {
       "post": {
         "operationId": "recordPayment",
@@ -4328,6 +6439,833 @@
         ]
       }
     },
+    "/communications/inbox": {
+      "get": {
+        "description": "M3. Every authenticated person has an inbox \u2014 no COMMUNICATIONS\npermission required, since a person always sees only their own items.",
+        "operationId": "listInbox",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_NotificationResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Inbox",
+        "tags": [
+          "communications"
+        ]
+      }
+    },
+    "/communications/inbox/{notification_id}/read": {
+      "post": {
+        "operationId": "markInboxRead",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": {
+              "title": "Notification Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not found in the caller's own inbox."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Inbox Read",
+        "tags": [
+          "communications"
+        ]
+      }
+    },
+    "/consents": {
+      "get": {
+        "operationId": "listConsents",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ConsentResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Consents",
+        "tags": [
+          "privacy"
+        ]
+      },
+      "post": {
+        "operationId": "recordConsent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordConsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Consent",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/consents/{consent_id}/withdraw": {
+      "post": {
+        "operationId": "withdrawConsent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "consent_id",
+            "required": true,
+            "schema": {
+              "title": "Consent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawConsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Consent already withdrawn."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Withdraw Consent",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/documents": {
+      "get": {
+        "operationId": "listDocuments",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "document_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DocumentType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Document Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subject_person_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Person Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DocumentResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Documents",
+        "tags": [
+          "documents"
+        ]
+      },
+      "post": {
+        "operationId": "uploadDocument",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_uploadDocument"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Unsupported format, empty, or oversized file."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{document_id}": {
+      "get": {
+        "operationId": "getDocument",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{document_id}/acknowledge": {
+      "post": {
+        "operationId": "acknowledgeDocument",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Document is not a contract."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Acknowledge Document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{document_id}/content": {
+      "get": {
+        "operationId": "downloadDocumentContent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/octet-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Document Content",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/dsar-requests": {
+      "get": {
+        "operationId": "listDsarRequests",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "person_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Person Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DsarRequestResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Dsar Requests",
+        "tags": [
+          "privacy"
+        ]
+      },
+      "post": {
+        "operationId": "createDsarRequest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDsarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsarRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Dsar Request",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/dsar-requests/{request_id}": {
+      "get": {
+        "operationId": "getDsarRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsarRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Dsar Request",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/dsar-requests/{request_id}/fulfill": {
+      "post": {
+        "operationId": "fulfillDsarRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideDsarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsarRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Request already decided."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fulfill Dsar Request",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/dsar-requests/{request_id}/reject": {
+      "post": {
+        "operationId": "rejectDsarRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideDsarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsarRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Request already decided."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Dsar Request",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/dsar-requests/{request_id}/start": {
+      "post": {
+        "operationId": "startDsarRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsarRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Only a PENDING request may be started."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Dsar Request",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
     "/events": {
       "get": {
         "operationId": "listEvents",
@@ -4387,6 +7325,106 @@
           }
         },
         "summary": "Create Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/events/{event_id}": {
+      "patch": {
+        "operationId": "updateEvent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Event is cancelled, completed, or already past."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/events/{event_id}/cancel": {
+      "post": {
+        "operationId": "cancelEvent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Event is already cancelled or completed."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Event",
         "tags": [
           "events"
         ]
@@ -5062,6 +8100,236 @@
         ]
       }
     },
+    "/import/uploads": {
+      "get": {
+        "operationId": "listImportUploads",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ImportBatchResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Import Uploads",
+        "tags": [
+          "import"
+        ]
+      },
+      "post": {
+        "operationId": "createImportUpload",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_createImportUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportBatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "CSV missing a required column."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Import Upload",
+        "tags": [
+          "import"
+        ]
+      }
+    },
+    "/import/uploads/{batch_id}": {
+      "get": {
+        "operationId": "getImportUpload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportBatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Import Upload",
+        "tags": [
+          "import"
+        ]
+      }
+    },
+    "/import/uploads/{batch_id}/commit": {
+      "post": {
+        "operationId": "commitImportUpload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportCommitResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Not yet previewed, or already committed."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Commit Import Upload",
+        "tags": [
+          "import"
+        ]
+      }
+    },
+    "/import/uploads/{batch_id}/preview": {
+      "post": {
+        "operationId": "previewImportUpload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Import already committed."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Import Upload",
+        "tags": [
+          "import"
+        ]
+      }
+    },
     "/internal/dev/identities": {
       "post": {
         "operationId": "createDevIdentity",
@@ -5665,6 +8933,53 @@
         ]
       }
     },
+    "/onboarding/activate": {
+      "post": {
+        "description": "Leave \"u pripremi\": the school behaves normally from here on (\u00a713).",
+        "operationId": "activateOnboarding",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingProgressResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Already active, or the minimum setup (a location) is missing."
+          }
+        },
+        "summary": "Activate",
+        "tags": [
+          "onboarding"
+        ]
+      }
+    },
+    "/onboarding/progress": {
+      "get": {
+        "description": "Per-step guided-onboarding progress for the caller's active school\n(PRD 02 \u00a724/\u00a725) \u2014 what's done and what's left, including whether\nactivation is currently possible.",
+        "operationId": "getOnboardingProgress",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingProgressResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Progress",
+        "tags": [
+          "onboarding"
+        ]
+      }
+    },
     "/organizations": {
       "post": {
         "description": "Create a new organization. The caller becomes its owner. Requires\nauthentication but no prior context (this is how a tenant is bootstrapped).",
@@ -5827,6 +9142,77 @@
         "summary": "List My Children",
         "tags": [
           "parent"
+        ]
+      }
+    },
+    "/payments/{payment_id}/void": {
+      "post": {
+        "operationId": "voidPayment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidPaymentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Payment already voided."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Void Payment",
+        "tags": [
+          "payments"
         ]
       }
     },
@@ -6529,6 +9915,118 @@
         ]
       }
     },
+    "/people/{person_id}/progress-notes": {
+      "get": {
+        "operationId": "listProgressNotes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProgressNoteResponse"
+                  },
+                  "title": "Response Listprogressnotes",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Progress Notes",
+        "tags": [
+          "progress"
+        ]
+      },
+      "post": {
+        "operationId": "createProgressNote",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProgressNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressNoteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Progress Note",
+        "tags": [
+          "progress"
+        ]
+      }
+    },
     "/programs": {
       "get": {
         "operationId": "listPrograms",
@@ -6755,6 +10253,450 @@
         "summary": "Deactivate Program",
         "tags": [
           "structure"
+        ]
+      }
+    },
+    "/reports/attendance": {
+      "get": {
+        "operationId": "getAttendanceReport",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Attendance Report",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/financial": {
+      "get": {
+        "operationId": "getFinancialReport",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Financial Report",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/membership-trend": {
+      "get": {
+        "operationId": "getMembershipTrendReport",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipTrendReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Membership Trend Report",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/overview": {
+      "get": {
+        "operationId": "getOverviewReport",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Overview",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/retention-periods": {
+      "get": {
+        "operationId": "listRetentionPeriods",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RetentionPeriodResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Retention Periods",
+        "tags": [
+          "privacy"
+        ]
+      },
+      "post": {
+        "operationId": "createRetentionPeriod",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRetentionPeriodRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPeriodResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "An active retention period already exists for this category."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Retention Period",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/retention-periods/{retention_period_id}": {
+      "get": {
+        "operationId": "getRetentionPeriod",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "retention_period_id",
+            "required": true,
+            "schema": {
+              "title": "Retention Period Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPeriodResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Retention Period",
+        "tags": [
+          "privacy"
+        ]
+      },
+      "patch": {
+        "operationId": "updateRetentionPeriod",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "retention_period_id",
+            "required": true,
+            "schema": {
+              "title": "Retention Period Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRetentionPeriodRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPeriodResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Retention Period",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
+    "/retention-periods/{retention_period_id}/deactivate": {
+      "post": {
+        "operationId": "deactivateRetentionPeriod",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "retention_period_id",
+            "required": true,
+            "schema": {
+              "title": "Retention Period Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPeriodResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deactivate Retention Period",
+        "tags": [
+          "privacy"
         ]
       }
     },
@@ -7829,6 +11771,50 @@
         "summary": "Reactivate Session",
         "tags": [
           "schedule"
+        ]
+      }
+    },
+    "/search": {
+      "get": {
+        "description": "Search is gated on ``ContextDep`` alone \u2014 no new permission area. It only\never surfaces rows each sub-query already re-scopes to ``context.\norganization_id`` the same way that domain's own list endpoint would (e.g.\n``GET /charges`` is likewise ``ContextDep``-only today, with no per-area\nguard), so this is behaviour-consistent with the codebase, not a new\nexposure. A future permission area is easy to add here if that changes.",
+        "operationId": "search",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search",
+        "tags": [
+          "search"
         ]
       }
     },

@@ -31,6 +31,13 @@ class Settings(BaseSettings):
 
     default_currency: str = "RSD"
 
+    # --- Document storage. Local filesystem only in this increment (no object
+    # store credentials available); relative paths resolve against the process
+    # cwd (apps/api in dev/CI). Gitignored — a runtime cache, not source of
+    # truth (the `document` table row is). See app/domains/documents/storage.py
+    # for the interface a future S3/GCS backend would implement instead. ---
+    documents_storage_dir: str = "var/documents"
+
     # --- Auth session (signed cookie). Change the secret outside local. ---
     session_secret: str = "dev-insecure-session-secret-change-me"
 

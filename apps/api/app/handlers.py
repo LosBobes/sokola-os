@@ -7,12 +7,12 @@ and by tests that exercise delivery.
 
 from __future__ import annotations
 
+from app.domains.communications import outbox as communications_outbox
+
 
 def register_all() -> None:
     """Register every domain's outbox handlers. Extended per increment."""
-    # e.g. from app.domains.communications import outbox as communications_outbox
-    #      communications_outbox.register()
-    return None
+    communications_outbox.register()
 
 
 register_all()
