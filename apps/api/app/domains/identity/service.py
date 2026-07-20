@@ -87,6 +87,9 @@ def send_invitation(
         actor_role_code=context.role_code,
         actor_granted_areas=context.granted_areas,
     )
+    organization = db.get(Organization, context.organization_id)
+    assert organization is not None  # context guarantees the active org exists
+    policy.ensure_invitation_allowed_during_onboarding(organization, role_code)
 
     if req.type is InvitationType.PARENT:
         if not req.target_child_person_id:
