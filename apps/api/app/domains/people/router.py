@@ -5,7 +5,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 
 from app.common.pagination import Page, PageParams, page_params
-from app.domains.identity.enums import RoleCode
 from app.domains.people import service
 from app.domains.people.schemas import (
     CreateMergeReviewRequest,
@@ -21,12 +20,13 @@ from app.domains.people.schemas import (
     RevokeGuardianAccessRequest,
     UpdateMemberDataRequest,
 )
-from app.security.deps import ContextDep, DbDep, require_roles
+from app.security.deps import ContextDep, DbDep
+from app.security.permissions import PermissionArea, require_permission
 
 router = APIRouter(tags=["people"])
 
 # Staff who may manage the roster.
-_staff = require_roles(RoleCode.OWNER, RoleCode.MANAGER, RoleCode.ADMIN)
+_staff = require_permission(PermissionArea.PEOPLE)
 StaffContext = Annotated[ContextDep, Depends(_staff)]
 
 

@@ -36,11 +36,13 @@ def assign_role(
     person: Person,
     organization: Organization,
     role: RoleCode = RoleCode.MANAGER,
+    granted_areas: list[str] | None = None,
 ) -> RoleAssignment:
     assignment = RoleAssignment(
         person_id=person.id,
         organization_id=organization.id,
         role_code=role,
+        granted_areas=granted_areas,
     )
     db.add(assignment)
     db.commit()
@@ -80,12 +82,19 @@ def bootstrap_actor(
 
 
 def add_actor(
-    db: Session, *, organization: Organization, role: RoleCode, given: str = "Osoba"
+    db: Session,
+    *,
+    organization: Organization,
+    role: RoleCode,
+    given: str = "Osoba",
+    granted_areas: list[str] | None = None,
 ) -> Actor:
     """Another actor in an EXISTING organization (same tenant as another actor)."""
     person = make_person(db, given=given, family="X")
     add_membership(db, person=person, organization=organization)
-    assignment = assign_role(db, person=person, organization=organization, role=role)
+    assignment = assign_role(
+        db, person=person, organization=organization, role=role, granted_areas=granted_areas
+    )
     return Actor(person=person, organization=organization, assignment=assignment)
 
 

@@ -1,7 +1,7 @@
 """membership lifecycle, guardian primary/revoke, merge review
 
 Revision ID: 67466fa8faa5
-Revises: 4f3c0bbeb6de
+Revises: 3fed03b597f7
 Create Date: 2026-07-20 20:10:09.444875
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 revision: str = '67466fa8faa5'
-down_revision: str | None = '4f3c0bbeb6de'
+down_revision: str | None = '3fed03b597f7'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

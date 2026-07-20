@@ -109,6 +109,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Categories */
+        get: operations["listCategories"];
+        put?: never;
+        /** Create Category */
+        post: operations["createCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/categories/{category_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Category */
+        get: operations["getCategory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Category */
+        patch: operations["updateCategory"];
+        trace?: never;
+    };
+    "/categories/{category_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate Category */
+        post: operations["deactivateCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/charges": {
         parameters: {
             query?: never;
@@ -310,6 +363,59 @@ export interface paths {
         put?: never;
         /** Create Dev Identity */
         post: operations["createDevIdentity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Locations */
+        get: operations["listLocations"];
+        put?: never;
+        /** Create Location */
+        post: operations["createLocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/locations/{location_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Location */
+        get: operations["getLocation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Location */
+        patch: operations["updateLocation"];
+        trace?: never;
+    };
+    "/locations/{location_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate Location */
+        post: operations["deactivateLocation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -616,6 +722,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/programs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Programs */
+        get: operations["listPrograms"];
+        put?: never;
+        /** Create Program */
+        post: operations["createProgram"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/programs/{program_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Program */
+        get: operations["getProgram"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Program */
+        patch: operations["updateProgram"];
+        trace?: never;
+    };
+    "/programs/{program_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate Program */
+        post: operations["deactivateProgram"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rooms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Rooms */
+        get: operations["listRooms"];
+        put?: never;
+        /** Create Room */
+        post: operations["createRoom"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rooms/{room_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Room */
+        get: operations["getRoom"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Room */
+        patch: operations["updateRoom"];
+        trace?: never;
+    };
+    "/rooms/{room_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate Room */
+        post: operations["deactivateRoom"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/schedule/conflict-check": {
         parameters: {
             query?: never;
@@ -627,6 +839,41 @@ export interface paths {
         put?: never;
         /** Conflict Check */
         post: operations["checkSessionConflicts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedule/series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Series */
+        get: operations["listSessionSeries"];
+        put?: never;
+        /** Create Series */
+        post: operations["createSessionSeries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedule/series/{series_id}/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate Series Sessions */
+        post: operations["generateSeriesSessions"];
         delete?: never;
         options?: never;
         head?: never;
@@ -651,6 +898,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/schedule/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit Session */
+        patch: operations["editSession"];
+        trace?: never;
+    };
     "/schedule/sessions/{session_id}/attendance": {
         parameters: {
             query?: never;
@@ -663,6 +927,40 @@ export interface paths {
         /** Save Attendance */
         put: operations["saveAttendance"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedule/sessions/{session_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Session */
+        post: operations["cancelSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedule/sessions/{session_id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reactivate Session */
+        post: operations["reactivateSession"];
         delete?: never;
         options?: never;
         head?: never;
@@ -826,6 +1124,14 @@ export interface components {
             /** Total Minor */
             total_minor: number;
         };
+        /** CategoryResponse */
+        CategoryResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            status: components["schemas"]["RecordStatus"];
+        };
         /** ChargeResponse */
         ChargeResponse: {
             /** Amount Due Minor */
@@ -877,6 +1183,11 @@ export interface components {
             scope_ref_id: string | null;
             scope_type: components["schemas"]["RoleScopeType"];
         };
+        /** CreateCategoryRequest */
+        CreateCategoryRequest: {
+            /** Name */
+            name: string;
+        };
         /** CreateDevIdentityRequest */
         CreateDevIdentityRequest: {
             /** Family Name */
@@ -910,6 +1221,15 @@ export interface components {
             capacity?: number | null;
             /** @default UNLIMITED */
             capacity_mode: components["schemas"]["GroupCapacityMode"];
+            /** Name */
+            name: string;
+        };
+        /** CreateLocationRequest */
+        CreateLocationRequest: {
+            /** Address */
+            address?: string | null;
+            /** Internal Code */
+            internal_code?: string | null;
             /** Name */
             name: string;
         };
@@ -947,6 +1267,26 @@ export interface components {
             family_name: string;
             /** Given Name */
             given_name: string;
+        };
+        /** CreateProgramRequest */
+        CreateProgramRequest: {
+            /** Category Id */
+            category_id?: string | null;
+            /** Internal Code */
+            internal_code?: string | null;
+            /** Name */
+            name: string;
+        };
+        /** CreateRoomRequest */
+        CreateRoomRequest: {
+            /** Capacity */
+            capacity?: number | null;
+            /** Internal Code */
+            internal_code?: string | null;
+            /** Location Id */
+            location_id: string;
+            /** Name */
+            name: string;
         };
         /** DevIdentityResponse */
         DevIdentityResponse: {
@@ -1069,6 +1409,18 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** LocationResponse */
+        LocationResponse: {
+            /** Address */
+            address: string | null;
+            /** Id */
+            id: string;
+            /** Internal Code */
+            internal_code: string | null;
+            /** Name */
+            name: string;
+            status: components["schemas"]["RecordStatus"];
+        };
         /** MeResponse */
         MeResponse: {
             /** Contexts */
@@ -1143,6 +1495,17 @@ export interface components {
          * @enum {string}
          */
         OrganizationType: "SCHOOL" | "SPORTS_CLUB" | "DANCE_SCHOOL" | "COURSE_PROVIDER" | "EVENT_ORGANIZER" | "BUSINESS" | "OTHER";
+        /** Page[CategoryResponse] */
+        Page_CategoryResponse_: {
+            /** Items */
+            items: components["schemas"]["CategoryResponse"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
         /** Page[ChargeResponse] */
         Page_ChargeResponse_: {
             /** Items */
@@ -1165,10 +1528,43 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** Page[LocationResponse] */
+        Page_LocationResponse_: {
+            /** Items */
+            items: components["schemas"]["LocationResponse"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
         /** Page[PersonSummary] */
         Page_PersonSummary_: {
             /** Items */
             items: components["schemas"]["PersonSummary"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[ProgramResponse] */
+        Page_ProgramResponse_: {
+            /** Items */
+            items: components["schemas"]["ProgramResponse"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[RoomResponse] */
+        Page_RoomResponse_: {
+            /** Items */
+            items: components["schemas"]["RoomResponse"][];
             /** Limit */
             limit: number;
             /** Offset */
@@ -1251,6 +1647,18 @@ export interface components {
             /** Preview Hash */
             preview_hash: string;
         };
+        /** ProgramResponse */
+        ProgramResponse: {
+            /** Category Id */
+            category_id: string | null;
+            /** Id */
+            id: string;
+            /** Internal Code */
+            internal_code: string | null;
+            /** Name */
+            name: string;
+            status: components["schemas"]["RecordStatus"];
+        };
         /** PublishAnnouncementRequest */
         PublishAnnouncementRequest: {
             /** Body */
@@ -1282,6 +1690,15 @@ export interface components {
             amount_minor: number;
             method: components["schemas"]["PaymentMethod"];
         };
+        /**
+         * RecordStatus
+         * @description Soft-lifecycle marker present on most tenant rows.
+         *
+         *     We never hard-delete business records; we transition them. ``ARCHIVED`` hides
+         *     a row from normal reads while preserving history and audit lineage.
+         * @enum {string}
+         */
+        RecordStatus: "ACTIVE" | "ARCHIVED";
         /** RegisterChildrenRequest */
         RegisterChildrenRequest: {
             /** Child Person Ids */
@@ -1317,6 +1734,20 @@ export interface components {
          * @enum {string}
          */
         RoleScopeType: "ORGANIZATION" | "BRANCH" | "GROUP";
+        /** RoomResponse */
+        RoomResponse: {
+            /** Capacity */
+            capacity: number | null;
+            /** Id */
+            id: string;
+            /** Internal Code */
+            internal_code: string | null;
+            /** Location Id */
+            location_id: string;
+            /** Name */
+            name: string;
+            status: components["schemas"]["RecordStatus"];
+        };
         /** SaveAttendanceRequest */
         SaveAttendanceRequest: {
             /** Attendance Version */
@@ -1340,6 +1771,57 @@ export interface components {
             session_id: string;
         };
         /**
+         * SeriesGenerateRequest
+         * @description Generate / top-up concrete sessions over a rolling horizon. Idempotent:
+         *     occurrences that already exist for the series are left untouched.
+         */
+        SeriesGenerateRequest: {
+            /** From Date */
+            from_date?: string | null;
+            /**
+             * Weeks
+             * @default 12
+             */
+            weeks: number;
+        };
+        /** SeriesGenerateResult */
+        SeriesGenerateResult: {
+            /** Created Count */
+            created_count: number;
+            /**
+             * Horizon End
+             * Format: date
+             */
+            horizon_end: string;
+            /**
+             * Horizon Start
+             * Format: date
+             */
+            horizon_start: string;
+            /** Series Id */
+            series_id: string;
+            /** Skipped Conflicts */
+            skipped_conflicts: components["schemas"]["SkippedOccurrence"][];
+            /** Skipped Existing */
+            skipped_existing: number;
+        };
+        /** SessionCancel */
+        SessionCancel: {
+            /** Note */
+            note?: string | null;
+            reason: components["schemas"]["SessionCancellationReasonCode"];
+        };
+        /**
+         * SessionCancellationReasonCode
+         * @enum {string}
+         */
+        SessionCancellationReasonCode: "WEATHER" | "TRAINER_UNAVAILABLE" | "HOLIDAY" | "LOW_ATTENDANCE" | "OTHER";
+        /**
+         * SessionChangeReasonCode
+         * @enum {string}
+         */
+        SessionChangeReasonCode: "TIME_CHANGE" | "LOCATION_CHANGE" | "TRAINER_CHANGE" | "OTHER";
+        /**
          * SessionDraft
          * @description The proposed shape of a session — used for both conflict preview and create.
          */
@@ -1360,12 +1842,110 @@ export interface components {
             title?: string | null;
         };
         /**
+         * SessionEdit
+         * @description Edit a generated session at the chosen scope. Any field left ``None`` is
+         *     unchanged. ``local_time``/``duration_minutes`` re-materialize UTC instants.
+         */
+        SessionEdit: {
+            /** Duration Minutes */
+            duration_minutes?: number | null;
+            /** Local Time */
+            local_time?: string | null;
+            /** @default OTHER */
+            reason: components["schemas"]["SessionChangeReasonCode"];
+            scope: components["schemas"]["SessionEditScope"];
+            /** Title */
+            title?: string | null;
+            /** Trainer Person Id */
+            trainer_person_id?: string | null;
+        };
+        /**
+         * SessionEditScope
+         * @description Calendar-style edit scope for a session that belongs to a series.
+         *
+         *     * ``SINGLE`` — change only this one occurrence; the series is untouched.
+         *     * ``THIS_AND_FUTURE`` — change the series template and every scheduled
+         *       occurrence from this one forward; past occurrences keep their old values.
+         *     * ``ALL_FUTURE`` — change the series template and every upcoming scheduled
+         *       occurrence (from now on), regardless of which occurrence was edited.
+         * @enum {string}
+         */
+        SessionEditScope: "SINGLE" | "THIS_AND_FUTURE" | "ALL_FUTURE";
+        /**
+         * SessionSeriesCreate
+         * @description A weekly recurrence rule: weekday(s) + local time + start date, bound to a
+         *     group and (optionally) a trainer.
+         */
+        SessionSeriesCreate: {
+            /** Duration Minutes */
+            duration_minutes: number;
+            /** @default WEEKLY */
+            frequency: components["schemas"]["SessionSeriesFrequency"];
+            /** Group Id */
+            group_id: string;
+            /**
+             * Local Time
+             * Format: time
+             */
+            local_time: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * Timezone
+             * @default Europe/Belgrade
+             */
+            timezone: string;
+            /** Title */
+            title: string;
+            /** Trainer Person Id */
+            trainer_person_id?: string | null;
+            /** Weekdays */
+            weekdays: number[];
+        };
+        /**
+         * SessionSeriesFrequency
+         * @enum {string}
+         */
+        SessionSeriesFrequency: "WEEKLY" | "BIWEEKLY" | "MONTHLY";
+        /** SessionSeriesSummary */
+        SessionSeriesSummary: {
+            /** Duration Minutes */
+            duration_minutes: number;
+            frequency: components["schemas"]["SessionSeriesFrequency"];
+            /** Group Id */
+            group_id: string;
+            /** Id */
+            id: string;
+            /**
+             * Local Time
+             * Format: time
+             */
+            local_time: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Timezone */
+            timezone: string;
+            /** Title */
+            title: string;
+            /** Trainer Person Id */
+            trainer_person_id: string | null;
+            /** Weekdays */
+            weekdays: number[];
+        };
+        /**
          * SessionStatus
          * @enum {string}
          */
         SessionStatus: "SCHEDULED" | "CANCELLED" | "COMPLETED";
         /** SessionSummary */
         SessionSummary: {
+            cancellation_reason?: components["schemas"]["SessionCancellationReasonCode"] | null;
             /**
              * Ends At
              * Format: date-time
@@ -1375,6 +1955,8 @@ export interface components {
             group_id: string;
             /** Id */
             id: string;
+            /** Series Id */
+            series_id?: string | null;
             /**
              * Starts At
              * Format: date-time
@@ -1383,6 +1965,18 @@ export interface components {
             status: components["schemas"]["SessionStatus"];
             /** Title */
             title: string | null;
+            /** Trainer Person Id */
+            trainer_person_id?: string | null;
+        };
+        /** SkippedOccurrence */
+        SkippedOccurrence: {
+            /** Reason */
+            reason: string;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
         };
         /**
          * TenantPublic
@@ -1397,6 +1991,20 @@ export interface components {
             /** Slug */
             slug: string;
         };
+        /** UpdateCategoryRequest */
+        UpdateCategoryRequest: {
+            /** Name */
+            name?: string | null;
+        };
+        /** UpdateLocationRequest */
+        UpdateLocationRequest: {
+            /** Address */
+            address?: string | null;
+            /** Internal Code */
+            internal_code?: string | null;
+            /** Name */
+            name?: string | null;
+        };
         /**
          * UpdateMemberDataRequest
          * @description School-local member data. Only fields present in the request body are
@@ -1407,6 +2015,24 @@ export interface components {
             admin_note?: string | null;
             /** Local Member Code */
             local_member_code?: string | null;
+        };
+        /** UpdateProgramRequest */
+        UpdateProgramRequest: {
+            /** Category Id */
+            category_id?: string | null;
+            /** Internal Code */
+            internal_code?: string | null;
+            /** Name */
+            name?: string | null;
+        };
+        /** UpdateRoomRequest */
+        UpdateRoomRequest: {
+            /** Capacity */
+            capacity?: number | null;
+            /** Internal Code */
+            internal_code?: string | null;
+            /** Name */
+            name?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -1570,6 +2196,168 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BillingPreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listCategories: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_CategoryResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCategoryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                category_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                category_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCategoryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivateCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                category_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2055,6 +2843,168 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DevIdentityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listLocations: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_LocationResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLocationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                location_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                location_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLocationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivateLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                location_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2690,6 +3640,331 @@ export interface operations {
             };
         };
     };
+    listPrograms: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ProgramResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createProgram: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProgramRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getProgram: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateProgram: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProgramRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivateProgram: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listRooms: {
+        parameters: {
+            query?: {
+                location_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_RoomResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRoomRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoomResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                room_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoomResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                room_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRoomRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoomResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivateRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                room_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoomResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     checkSessionConflicts: {
         parameters: {
             query?: never;
@@ -2710,6 +3985,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConflictCheckResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listSessionSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionSeriesSummary"][];
+                };
+            };
+        };
+    };
+    createSessionSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionSeriesCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionSeriesSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generateSeriesSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                series_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeriesGenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeriesGenerateResult"];
                 };
             };
             /** @description Validation Error */
@@ -2797,6 +4160,48 @@ export interface operations {
             };
         };
     };
+    editSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionSummary"][];
+                };
+            };
+            /** @description Time conflict with an existing session. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getAttendanceSheet: {
         parameters: {
             query?: never;
@@ -2853,6 +4258,79 @@ export interface operations {
                 };
             };
             /** @description Attendance changed since it was loaded; reload. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancelSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionCancel"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reactivateSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionSummary"];
+                };
+            };
+            /** @description Time conflict with an existing session. */
             409: {
                 headers: {
                     [name: string]: unknown;

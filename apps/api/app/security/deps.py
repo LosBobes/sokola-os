@@ -65,6 +65,11 @@ def get_context(request: Request, db: DbDep, principal: PrincipalDep) -> Request
         role_code=assignment.role_code,
         scope_type=assignment.scope_type,
         scope_ref_id=assignment.scope_ref_id,
+        granted_areas=(
+            tuple(assignment.granted_areas)
+            if assignment.granted_areas is not None
+            else None
+        ),
     )
 
 

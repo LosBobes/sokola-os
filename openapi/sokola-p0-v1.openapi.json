@@ -350,6 +350,28 @@
         "title": "BillingRunResponse",
         "type": "object"
       },
+      "CategoryResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RecordStatus"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "title": "CategoryResponse",
+        "type": "object"
+      },
       "ChargeResponse": {
         "properties": {
           "amount_due_minor": {
@@ -485,6 +507,21 @@
         "title": "ContextSummary",
         "type": "object"
       },
+      "CreateCategoryRequest": {
+        "properties": {
+          "name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateCategoryRequest",
+        "type": "object"
+      },
       "CreateDevIdentityRequest": {
         "properties": {
           "family_name": {
@@ -595,6 +632,47 @@
         "title": "CreateGroupRequest",
         "type": "object"
       },
+      "CreateLocationRequest": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "internal_code": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Code"
+          },
+          "name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateLocationRequest",
+        "type": "object"
+      },
       "CreateMergeReviewRequest": {
         "properties": {
           "reason": {
@@ -683,6 +761,90 @@
           "family_name"
         ],
         "title": "CreatePersonRequest",
+        "type": "object"
+      },
+      "CreateProgramRequest": {
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "internal_code": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Code"
+          },
+          "name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateProgramRequest",
+        "type": "object"
+      },
+      "CreateRoomRequest": {
+        "properties": {
+          "capacity": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity"
+          },
+          "internal_code": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Code"
+          },
+          "location_id": {
+            "title": "Location Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "location_id",
+          "name"
+        ],
+        "title": "CreateRoomRequest",
         "type": "object"
       },
       "DevIdentityResponse": {
@@ -982,6 +1144,52 @@
         "title": "LivenessResponse",
         "type": "object"
       },
+      "LocationResponse": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "internal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Code"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RecordStatus"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "address",
+          "internal_code",
+          "status"
+        ],
+        "title": "LocationResponse",
+        "type": "object"
+      },
       "MeResponse": {
         "properties": {
           "contexts": {
@@ -1194,6 +1402,37 @@
         "title": "OrganizationType",
         "type": "string"
       },
+      "Page_CategoryResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[CategoryResponse]",
+        "type": "object"
+      },
       "Page_ChargeResponse_": {
         "properties": {
           "items": {
@@ -1256,6 +1495,37 @@
         "title": "Page[GroupResponse]",
         "type": "object"
       },
+      "Page_LocationResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LocationResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[LocationResponse]",
+        "type": "object"
+      },
       "Page_PersonSummary_": {
         "properties": {
           "items": {
@@ -1285,6 +1555,68 @@
           "offset"
         ],
         "title": "Page[PersonSummary]",
+        "type": "object"
+      },
+      "Page_ProgramResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProgramResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[ProgramResponse]",
+        "type": "object"
+      },
+      "Page_RoomResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RoomResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[RoomResponse]",
         "type": "object"
       },
       "PaymentMethod": {
@@ -1468,6 +1800,52 @@
         "title": "PostBillingRunRequest",
         "type": "object"
       },
+      "ProgramResponse": {
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "internal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Code"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RecordStatus"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category_id",
+          "internal_code",
+          "status"
+        ],
+        "title": "ProgramResponse",
+        "type": "object"
+      },
       "PublishAnnouncementRequest": {
         "properties": {
           "body": {
@@ -1552,6 +1930,15 @@
         ],
         "title": "RecordPaymentRequest",
         "type": "object"
+      },
+      "RecordStatus": {
+        "description": "Soft-lifecycle marker present on most tenant rows.\n\nWe never hard-delete business records; we transition them. ``ARCHIVED`` hides\na row from normal reads while preserving history and audit lineage.",
+        "enum": [
+          "ACTIVE",
+          "ARCHIVED"
+        ],
+        "title": "RecordStatus",
+        "type": "string"
       },
       "RegisterChildrenRequest": {
         "properties": {
@@ -1644,6 +2031,57 @@
         "title": "RoleScopeType",
         "type": "string"
       },
+      "RoomResponse": {
+        "properties": {
+          "capacity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "internal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Code"
+          },
+          "location_id": {
+            "title": "Location Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RecordStatus"
+          }
+        },
+        "required": [
+          "id",
+          "location_id",
+          "name",
+          "capacity",
+          "internal_code",
+          "status"
+        ],
+        "title": "RoomResponse",
+        "type": "object"
+      },
       "SaveAttendanceRequest": {
         "properties": {
           "attendance_version": {
@@ -1703,6 +2141,120 @@
         "title": "SaveAttendanceResponse",
         "type": "object"
       },
+      "SeriesGenerateRequest": {
+        "description": "Generate / top-up concrete sessions over a rolling horizon. Idempotent:\noccurrences that already exist for the series are left untouched.",
+        "properties": {
+          "from_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Date"
+          },
+          "weeks": {
+            "default": 12,
+            "maximum": 104.0,
+            "minimum": 1.0,
+            "title": "Weeks",
+            "type": "integer"
+          }
+        },
+        "title": "SeriesGenerateRequest",
+        "type": "object"
+      },
+      "SeriesGenerateResult": {
+        "properties": {
+          "created_count": {
+            "title": "Created Count",
+            "type": "integer"
+          },
+          "horizon_end": {
+            "format": "date",
+            "title": "Horizon End",
+            "type": "string"
+          },
+          "horizon_start": {
+            "format": "date",
+            "title": "Horizon Start",
+            "type": "string"
+          },
+          "series_id": {
+            "title": "Series Id",
+            "type": "string"
+          },
+          "skipped_conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/SkippedOccurrence"
+            },
+            "title": "Skipped Conflicts",
+            "type": "array"
+          },
+          "skipped_existing": {
+            "title": "Skipped Existing",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "series_id",
+          "created_count",
+          "skipped_existing",
+          "skipped_conflicts",
+          "horizon_start",
+          "horizon_end"
+        ],
+        "title": "SeriesGenerateResult",
+        "type": "object"
+      },
+      "SessionCancel": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/SessionCancellationReasonCode"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "SessionCancel",
+        "type": "object"
+      },
+      "SessionCancellationReasonCode": {
+        "enum": [
+          "WEATHER",
+          "TRAINER_UNAVAILABLE",
+          "HOLIDAY",
+          "LOW_ATTENDANCE",
+          "OTHER"
+        ],
+        "title": "SessionCancellationReasonCode",
+        "type": "string"
+      },
+      "SessionChangeReasonCode": {
+        "enum": [
+          "TIME_CHANGE",
+          "LOCATION_CHANGE",
+          "TRAINER_CHANGE",
+          "OTHER"
+        ],
+        "title": "SessionChangeReasonCode",
+        "type": "string"
+      },
       "SessionDraft": {
         "description": "The proposed shape of a session \u2014 used for both conflict preview and create.",
         "properties": {
@@ -1741,6 +2293,228 @@
         "title": "SessionDraft",
         "type": "object"
       },
+      "SessionEdit": {
+        "description": "Edit a generated session at the chosen scope. Any field left ``None`` is\nunchanged. ``local_time``/``duration_minutes`` re-materialize UTC instants.",
+        "properties": {
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1440.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Minutes"
+          },
+          "local_time": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Time"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/SessionChangeReasonCode",
+            "default": "OTHER"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/SessionEditScope"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "trainer_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trainer Person Id"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "title": "SessionEdit",
+        "type": "object"
+      },
+      "SessionEditScope": {
+        "description": "Calendar-style edit scope for a session that belongs to a series.\n\n* ``SINGLE`` \u2014 change only this one occurrence; the series is untouched.\n* ``THIS_AND_FUTURE`` \u2014 change the series template and every scheduled\n  occurrence from this one forward; past occurrences keep their old values.\n* ``ALL_FUTURE`` \u2014 change the series template and every upcoming scheduled\n  occurrence (from now on), regardless of which occurrence was edited.",
+        "enum": [
+          "SINGLE",
+          "THIS_AND_FUTURE",
+          "ALL_FUTURE"
+        ],
+        "title": "SessionEditScope",
+        "type": "string"
+      },
+      "SessionSeriesCreate": {
+        "description": "A weekly recurrence rule: weekday(s) + local time + start date, bound to a\ngroup and (optionally) a trainer.",
+        "properties": {
+          "duration_minutes": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1440.0,
+            "title": "Duration Minutes",
+            "type": "integer"
+          },
+          "frequency": {
+            "$ref": "#/components/schemas/SessionSeriesFrequency",
+            "default": "WEEKLY"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "local_time": {
+            "format": "time",
+            "title": "Local Time",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "timezone": {
+            "default": "Europe/Belgrade",
+            "maxLength": 64,
+            "title": "Timezone",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 160,
+            "title": "Title",
+            "type": "string"
+          },
+          "trainer_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trainer Person Id"
+          },
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 1,
+            "title": "Weekdays",
+            "type": "array"
+          }
+        },
+        "required": [
+          "group_id",
+          "title",
+          "weekdays",
+          "start_date",
+          "local_time",
+          "duration_minutes"
+        ],
+        "title": "SessionSeriesCreate",
+        "type": "object"
+      },
+      "SessionSeriesFrequency": {
+        "enum": [
+          "WEEKLY",
+          "BIWEEKLY",
+          "MONTHLY"
+        ],
+        "title": "SessionSeriesFrequency",
+        "type": "string"
+      },
+      "SessionSeriesSummary": {
+        "properties": {
+          "duration_minutes": {
+            "title": "Duration Minutes",
+            "type": "integer"
+          },
+          "frequency": {
+            "$ref": "#/components/schemas/SessionSeriesFrequency"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "local_time": {
+            "format": "time",
+            "title": "Local Time",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "trainer_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trainer Person Id"
+          },
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "group_id",
+          "trainer_person_id",
+          "title",
+          "frequency",
+          "weekdays",
+          "start_date",
+          "timezone",
+          "local_time",
+          "duration_minutes"
+        ],
+        "title": "SessionSeriesSummary",
+        "type": "object"
+      },
       "SessionStatus": {
         "enum": [
           "SCHEDULED",
@@ -1752,6 +2526,16 @@
       },
       "SessionSummary": {
         "properties": {
+          "cancellation_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionCancellationReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "ends_at": {
             "format": "date-time",
             "title": "Ends At",
@@ -1764,6 +2548,17 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "series_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Id"
           },
           "starts_at": {
             "format": "date-time",
@@ -1783,6 +2578,17 @@
               }
             ],
             "title": "Title"
+          },
+          "trainer_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trainer Person Id"
           }
         },
         "required": [
@@ -1794,6 +2600,25 @@
           "status"
         ],
         "title": "SessionSummary",
+        "type": "object"
+      },
+      "SkippedOccurrence": {
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "starts_at",
+          "reason"
+        ],
+        "title": "SkippedOccurrence",
         "type": "object"
       },
       "TenantPublic": {
@@ -1818,6 +2643,70 @@
           "slug"
         ],
         "title": "TenantPublic",
+        "type": "object"
+      },
+      "UpdateCategoryRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "UpdateCategoryRequest",
+        "type": "object"
+      },
+      "UpdateLocationRequest": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "internal_code": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Code"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "UpdateLocationRequest",
         "type": "object"
       },
       "UpdateMemberDataRequest": {
@@ -1849,6 +2738,93 @@
           }
         },
         "title": "UpdateMemberDataRequest",
+        "type": "object"
+      },
+      "UpdateProgramRequest": {
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "internal_code": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Code"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "UpdateProgramRequest",
+        "type": "object"
+      },
+      "UpdateRoomRequest": {
+        "properties": {
+          "capacity": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity"
+          },
+          "internal_code": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Code"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "UpdateRoomRequest",
         "type": "object"
       },
       "ValidationError": {
@@ -2073,6 +3049,235 @@
         "summary": "Preview Billing Run",
         "tags": [
           "billing"
+        ]
+      }
+    },
+    "/categories": {
+      "get": {
+        "operationId": "listCategories",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_CategoryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Categories",
+        "tags": [
+          "structure"
+        ]
+      },
+      "post": {
+        "operationId": "createCategory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Category",
+        "tags": [
+          "structure"
+        ]
+      }
+    },
+    "/categories/{category_id}": {
+      "get": {
+        "operationId": "getCategory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "category_id",
+            "required": true,
+            "schema": {
+              "title": "Category Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Category",
+        "tags": [
+          "structure"
+        ]
+      },
+      "patch": {
+        "operationId": "updateCategory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "category_id",
+            "required": true,
+            "schema": {
+              "title": "Category Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Category",
+        "tags": [
+          "structure"
+        ]
+      }
+    },
+    "/categories/{category_id}/deactivate": {
+      "post": {
+        "operationId": "deactivateCategory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "category_id",
+            "required": true,
+            "schema": {
+              "title": "Category Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deactivate Category",
+        "tags": [
+          "structure"
         ]
       }
     },
@@ -2783,6 +3988,235 @@
         "summary": "Create Dev Identity",
         "tags": [
           "internal"
+        ]
+      }
+    },
+    "/locations": {
+      "get": {
+        "operationId": "listLocations",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_LocationResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Locations",
+        "tags": [
+          "structure"
+        ]
+      },
+      "post": {
+        "operationId": "createLocation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Location",
+        "tags": [
+          "structure"
+        ]
+      }
+    },
+    "/locations/{location_id}": {
+      "get": {
+        "operationId": "getLocation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "location_id",
+            "required": true,
+            "schema": {
+              "title": "Location Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Location",
+        "tags": [
+          "structure"
+        ]
+      },
+      "patch": {
+        "operationId": "updateLocation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "location_id",
+            "required": true,
+            "schema": {
+              "title": "Location Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Location",
+        "tags": [
+          "structure"
+        ]
+      }
+    },
+    "/locations/{location_id}/deactivate": {
+      "post": {
+        "operationId": "deactivateLocation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "location_id",
+            "required": true,
+            "schema": {
+              "title": "Location Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deactivate Location",
+        "tags": [
+          "structure"
         ]
       }
     },
@@ -3620,6 +5054,480 @@
         ]
       }
     },
+    "/programs": {
+      "get": {
+        "operationId": "listPrograms",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ProgramResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Programs",
+        "tags": [
+          "structure"
+        ]
+      },
+      "post": {
+        "operationId": "createProgram",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProgramRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Program",
+        "tags": [
+          "structure"
+        ]
+      }
+    },
+    "/programs/{program_id}": {
+      "get": {
+        "operationId": "getProgram",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "title": "Program Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Program",
+        "tags": [
+          "structure"
+        ]
+      },
+      "patch": {
+        "operationId": "updateProgram",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "title": "Program Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProgramRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Program",
+        "tags": [
+          "structure"
+        ]
+      }
+    },
+    "/programs/{program_id}/deactivate": {
+      "post": {
+        "operationId": "deactivateProgram",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "program_id",
+            "required": true,
+            "schema": {
+              "title": "Program Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deactivate Program",
+        "tags": [
+          "structure"
+        ]
+      }
+    },
+    "/rooms": {
+      "get": {
+        "operationId": "listRooms",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "location_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Location Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RoomResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Rooms",
+        "tags": [
+          "structure"
+        ]
+      },
+      "post": {
+        "operationId": "createRoom",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoomRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Room",
+        "tags": [
+          "structure"
+        ]
+      }
+    },
+    "/rooms/{room_id}": {
+      "get": {
+        "operationId": "getRoom",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "room_id",
+            "required": true,
+            "schema": {
+              "title": "Room Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Room",
+        "tags": [
+          "structure"
+        ]
+      },
+      "patch": {
+        "operationId": "updateRoom",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "room_id",
+            "required": true,
+            "schema": {
+              "title": "Room Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoomRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Room",
+        "tags": [
+          "structure"
+        ]
+      }
+    },
+    "/rooms/{room_id}/deactivate": {
+      "post": {
+        "operationId": "deactivateRoom",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "room_id",
+            "required": true,
+            "schema": {
+              "title": "Room Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deactivate Room",
+        "tags": [
+          "structure"
+        ]
+      }
+    },
     "/schedule/conflict-check": {
       "post": {
         "operationId": "checkSessionConflicts",
@@ -3656,6 +5564,122 @@
           }
         },
         "summary": "Conflict Check",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/schedule/series": {
+      "get": {
+        "operationId": "listSessionSeries",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionSeriesSummary"
+                  },
+                  "title": "Response Listsessionseries",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Series",
+        "tags": [
+          "schedule"
+        ]
+      },
+      "post": {
+        "operationId": "createSessionSeries",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionSeriesCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSeriesSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Series",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/schedule/series/{series_id}/generate": {
+      "post": {
+        "operationId": "generateSeriesSessions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeriesGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesGenerateResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Series Sessions",
         "tags": [
           "schedule"
         ]
@@ -3778,6 +5802,65 @@
         ]
       }
     },
+    "/schedule/sessions/{session_id}": {
+      "patch": {
+        "operationId": "editSession",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionSummary"
+                  },
+                  "title": "Response Editsession",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Time conflict with an existing session."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Edit Session",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
     "/schedule/sessions/{session_id}/attendance": {
       "get": {
         "operationId": "getAttendanceSheet",
@@ -3870,6 +5953,103 @@
         "summary": "Save Attendance",
         "tags": [
           "attendance"
+        ]
+      }
+    },
+    "/schedule/sessions/{session_id}/cancel": {
+      "post": {
+        "operationId": "cancelSession",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionCancel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Session",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/schedule/sessions/{session_id}/reactivate": {
+      "post": {
+        "operationId": "reactivateSession",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Time conflict with an existing session."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reactivate Session",
+        "tags": [
+          "schedule"
         ]
       }
     },

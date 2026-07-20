@@ -12,12 +12,12 @@ from app.domains.communications.schemas import (
     AnnouncementResponse,
     PublishAnnouncementRequest,
 )
-from app.domains.identity.enums import RoleCode
-from app.security.deps import ContextDep, DbDep, require_roles
+from app.security.deps import ContextDep, DbDep
+from app.security.permissions import PermissionArea, require_permission
 
 router = APIRouter(tags=["communications"])
 
-_staff = require_roles(RoleCode.OWNER, RoleCode.MANAGER, RoleCode.ADMIN)
+_staff = require_permission(PermissionArea.COMMUNICATIONS)
 StaffContext = Annotated[ContextDep, Depends(_staff)]
 
 
