@@ -424,6 +424,49 @@
         "title": "BillingRunResponse",
         "type": "object"
       },
+      "Body_uploadDocument": {
+        "properties": {
+          "document_type": {
+            "$ref": "#/components/schemas/DocumentType",
+            "default": "GENERAL"
+          },
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "retention_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetentionPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subject_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Person Id"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/DocumentVisibility",
+            "default": "STAFF_ONLY"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_uploadDocument",
+        "type": "object"
+      },
       "CategoryResponse": {
         "properties": {
           "id": {
@@ -1196,6 +1239,124 @@
         ],
         "title": "DevIdentityResponse",
         "type": "object"
+      },
+      "DocumentResponse": {
+        "properties": {
+          "acknowledged_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged At"
+          },
+          "acknowledged_by_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged By Person Id"
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "document_type": {
+            "$ref": "#/components/schemas/DocumentType"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "owner_person_id": {
+            "title": "Owner Person Id",
+            "type": "string"
+          },
+          "retention_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetentionPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "subject_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Person Id"
+          },
+          "uploaded_at": {
+            "format": "date-time",
+            "title": "Uploaded At",
+            "type": "string"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/DocumentVisibility"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "owner_person_id",
+          "subject_person_id",
+          "filename",
+          "content_type",
+          "size_bytes",
+          "document_type",
+          "visibility",
+          "retention_period",
+          "uploaded_at",
+          "acknowledged_at",
+          "acknowledged_by_person_id"
+        ],
+        "title": "DocumentResponse",
+        "type": "object"
+      },
+      "DocumentType": {
+        "description": "GENERAL is any uploaded file (photo, form, certificate, ...). CONTRACT is\na subtype that carries an acknowledgement (electronic \"I have read/agree\")\nstate \u2014 see ``acknowledged_at``/``acknowledged_by_person_id`` on the model.",
+        "enum": [
+          "GENERAL",
+          "CONTRACT"
+        ],
+        "title": "DocumentType",
+        "type": "string"
+      },
+      "DocumentVisibility": {
+        "description": "Who \u2014 beyond staff, who can always reach anything in their own tenant via\nthe DOCUMENTS permission \u2014 may see this document.\n\nSTAFF_ONLY: no one outside staff (e.g. internal admin paperwork).\nSUBJECT: the person named in ``subject_person_id`` may see it, and \u2014 when\nthat subject is a child \u2014 so may any guardian with active\n``GuardianOrganizationAccess`` to that child in this organization. This\nmirrors how the events domain already resolves \"which children can this\nparent act for\" (see ``app.domains.events.repository.guardian_children``).",
+        "enum": [
+          "STAFF_ONLY",
+          "SUBJECT"
+        ],
+        "title": "DocumentVisibility",
+        "type": "string"
       },
       "DsarRequestResponse": {
         "properties": {
@@ -2092,11 +2253,117 @@
         "title": "MergeReviewResponse",
         "type": "object"
       },
+      "OnboardingProgressResponse": {
+        "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "can_activate": {
+            "title": "Can Activate",
+            "type": "boolean"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/OrganizationLifecycleStatus"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "remaining_steps": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingStep"
+            },
+            "title": "Remaining Steps",
+            "type": "array"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingStepStatus"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "organization_id",
+          "lifecycle_status",
+          "steps",
+          "remaining_steps",
+          "can_activate",
+          "activated_at"
+        ],
+        "title": "OnboardingProgressResponse",
+        "type": "object"
+      },
+      "OnboardingStep": {
+        "description": "A step of guided school setup, in the order a new owner walks them.\n\n``SCHOOL_PROFILE`` is satisfied by ``POST /organizations`` itself (name/\ntype/timezone are required at creation) so it is always complete.\n``LOCATIONS``/``ROOMS``/``PROGRAMS`` are satisfied by using the structure\ndomain's own create endpoints \u2014 onboarding does not duplicate them, it only\nreports whether at least one active row exists for the school (see\n``app.domains.onboarding.service``). ``FIRST_INVITE`` is satisfied by\nsending any invitation (in practice, during onboarding, the co-owner invite\n\u2014 see ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).\n``ACTIVATE`` is the terminal step: leaving \"u pripremi\".",
+        "enum": [
+          "SCHOOL_PROFILE",
+          "LOCATIONS",
+          "ROOMS",
+          "PROGRAMS",
+          "FIRST_INVITE",
+          "ACTIVATE"
+        ],
+        "title": "OnboardingStep",
+        "type": "string"
+      },
+      "OnboardingStepStatus": {
+        "properties": {
+          "completed": {
+            "title": "Completed",
+            "type": "boolean"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "step": {
+            "$ref": "#/components/schemas/OnboardingStep"
+          }
+        },
+        "required": [
+          "step",
+          "completed",
+          "completed_at"
+        ],
+        "title": "OnboardingStepStatus",
+        "type": "object"
+      },
+      "OrganizationLifecycleStatus": {
+        "description": "Where a school is in guided onboarding (PRD 02 \u00a724/\u00a725), independent of\n``record_status`` (which is the soft-delete/deactivation axis \u2014 \u00a731).\n\nA school created through ``POST /organizations`` starts ``IN_PREPARATION``\n(\"u pripremi\"): the owner may set up structure and invite a co-owner, but\nnormal STAFF/PARENT/STUDENT invitations are blocked until ``ACTIVE`` (see\n``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).\nLegacy/seed rows default to ``ACTIVE`` so behaviour outside the real\nsignup path is unchanged.",
+        "enum": [
+          "IN_PREPARATION",
+          "ACTIVE"
+        ],
+        "title": "OrganizationLifecycleStatus",
+        "type": "string"
+      },
       "OrganizationResponse": {
         "properties": {
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/OrganizationLifecycleStatus"
           },
           "name": {
             "title": "Name",
@@ -2126,7 +2393,8 @@
           "name",
           "slug",
           "type",
-          "timezone"
+          "timezone",
+          "lifecycle_status"
         ],
         "title": "OrganizationResponse",
         "type": "object"
@@ -2235,6 +2503,37 @@
           "offset"
         ],
         "title": "Page[ConsentResponse]",
+        "type": "object"
+      },
+      "Page_DocumentResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[DocumentResponse]",
         "type": "object"
       },
       "Page_DsarRequestResponse_": {
@@ -2917,6 +3216,18 @@
           "CANCELLED"
         ],
         "title": "RegistrationStatus",
+        "type": "string"
+      },
+      "RetentionPeriod": {
+        "description": "A declared retention policy label recorded at upload time. Nothing in this\nincrement enforces expiry/deletion against it \u2014 it is metadata for a future\nretention job, not a guarantee.",
+        "enum": [
+          "ONE_YEAR",
+          "THREE_YEARS",
+          "FIVE_YEARS",
+          "TEN_YEARS",
+          "INDEFINITE"
+        ],
+        "title": "RetentionPeriod",
         "type": "string"
       },
       "RetentionPeriodResponse": {
@@ -4937,6 +5248,264 @@
         ]
       }
     },
+    "/documents": {
+      "get": {
+        "operationId": "listDocuments",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "document_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DocumentType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Document Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subject_person_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Person Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DocumentResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Documents",
+        "tags": [
+          "documents"
+        ]
+      },
+      "post": {
+        "operationId": "uploadDocument",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_uploadDocument"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Unsupported format, empty, or oversized file."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{document_id}": {
+      "get": {
+        "operationId": "getDocument",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{document_id}/acknowledge": {
+      "post": {
+        "operationId": "acknowledgeDocument",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Document is not a contract."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Acknowledge Document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{document_id}/content": {
+      "get": {
+        "operationId": "downloadDocumentContent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/octet-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Document Content",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
     "/dsar-requests": {
       "get": {
         "operationId": "listDsarRequests",
@@ -6579,6 +7148,53 @@
         "summary": "List My Contexts",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/onboarding/activate": {
+      "post": {
+        "description": "Leave \"u pripremi\": the school behaves normally from here on (\u00a713).",
+        "operationId": "activateOnboarding",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingProgressResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Already active, or the minimum setup (a location) is missing."
+          }
+        },
+        "summary": "Activate",
+        "tags": [
+          "onboarding"
+        ]
+      }
+    },
+    "/onboarding/progress": {
+      "get": {
+        "description": "Per-step guided-onboarding progress for the caller's active school\n(PRD 02 \u00a724/\u00a725) \u2014 what's done and what's left, including whether\nactivation is currently possible.",
+        "operationId": "getOnboardingProgress",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingProgressResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Progress",
+        "tags": [
+          "onboarding"
         ]
       }
     },

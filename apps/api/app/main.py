@@ -17,11 +17,13 @@ from app.domains.attendance.router import router as attendance_router
 from app.domains.auth.router import router as auth_router
 from app.domains.billing.router import router as billing_router
 from app.domains.communications.router import router as communications_router
+from app.domains.documents.router import router as documents_router
 from app.domains.events.router import router as events_router
 from app.domains.groups.router import router as groups_router
 from app.domains.health.router import router as health_router
 from app.domains.identity.router import router as identity_router
 from app.domains.internal.router import router as internal_router
+from app.domains.onboarding.router import router as onboarding_router
 from app.domains.organization.router import router as organization_router
 from app.domains.parent.router import router as parent_router
 from app.domains.payments.router import router as payments_router
@@ -75,6 +77,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(internal_router)
     app.include_router(identity_router)
     app.include_router(organization_router)
+    app.include_router(onboarding_router)
     app.include_router(structure_router)
     app.include_router(people_router)
     app.include_router(groups_router)
@@ -84,6 +87,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(payments_router)
     app.include_router(events_router)
     app.include_router(communications_router)
+    app.include_router(documents_router)
     app.include_router(parent_router)
     app.include_router(privacy_router)
 

@@ -1,7 +1,7 @@
 """privacy domain: consents, dsar requests, retention periods
 
 Revision ID: d3d1b0e93328
-Revises: 83eee9b8c108
+Revises: 0ab285bfbb27
 Create Date: 2026-07-20 21:28:11.557214
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 revision: str = 'd3d1b0e93328'
-down_revision: str | None = '83eee9b8c108'
+down_revision: str | None = '0ab285bfbb27'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
