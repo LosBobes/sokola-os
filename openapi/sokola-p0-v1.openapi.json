@@ -2816,6 +2816,67 @@
         "title": "SaveAttendanceResponse",
         "type": "object"
       },
+      "SearchResponse": {
+        "properties": {
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResultItem"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "query",
+          "results"
+        ],
+        "title": "SearchResponse",
+        "type": "object"
+      },
+      "SearchResultItem": {
+        "description": "One matched row, already shaped for a result list: enough to render and\nto navigate to the underlying record without a follow-up lookup.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "subtitle": {
+            "title": "Subtitle",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SearchResultType"
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "title",
+          "subtitle"
+        ],
+        "title": "SearchResultItem",
+        "type": "object"
+      },
+      "SearchResultType": {
+        "description": "Which entity a search result came from \u2014 drives icon/link choice client-side.",
+        "enum": [
+          "PERSON",
+          "GROUP",
+          "SESSION",
+          "EVENT",
+          "CHARGE"
+        ],
+        "title": "SearchResultType",
+        "type": "string"
+      },
       "SeriesGenerateRequest": {
         "description": "Generate / top-up concrete sessions over a rolling horizon. Idempotent:\noccurrences that already exist for the series are left untouched.",
         "properties": {
@@ -7829,6 +7890,50 @@
         "summary": "Reactivate Session",
         "tags": [
           "schedule"
+        ]
+      }
+    },
+    "/search": {
+      "get": {
+        "description": "Search is gated on ``ContextDep`` alone \u2014 no new permission area. It only\never surfaces rows each sub-query already re-scopes to ``context.\norganization_id`` the same way that domain's own list endpoint would (e.g.\n``GET /charges`` is likewise ``ContextDep``-only today, with no per-area\nguard), so this is behaviour-consistent with the codebase, not a new\nexposure. A future permission area is easy to add here if that changes.",
+        "operationId": "search",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search",
+        "tags": [
+          "search"
         ]
       }
     },

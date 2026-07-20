@@ -1277,6 +1277,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search
+         * @description Search is gated on ``ContextDep`` alone — no new permission area. It only
+         *     ever surfaces rows each sub-query already re-scopes to ``context.
+         *     organization_id`` the same way that domain's own list endpoint would (e.g.
+         *     ``GET /charges`` is likewise ``ContextDep``-only today, with no per-area
+         *     guard), so this is behaviour-consistent with the codebase, not a new
+         *     exposure. A future permission area is easy to add here if that changes.
+         */
+        get: operations["search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tenants/{slug}": {
         parameters: {
             query?: never;
@@ -2279,6 +2304,33 @@ export interface components {
             /** Session Id */
             session_id: string;
         };
+        /** SearchResponse */
+        SearchResponse: {
+            /** Query */
+            query: string;
+            /** Results */
+            results: components["schemas"]["SearchResultItem"][];
+        };
+        /**
+         * SearchResultItem
+         * @description One matched row, already shaped for a result list: enough to render and
+         *     to navigate to the underlying record without a follow-up lookup.
+         */
+        SearchResultItem: {
+            /** Id */
+            id: string;
+            /** Subtitle */
+            subtitle: string;
+            /** Title */
+            title: string;
+            type: components["schemas"]["SearchResultType"];
+        };
+        /**
+         * SearchResultType
+         * @description Which entity a search result came from — drives icon/link choice client-side.
+         * @enum {string}
+         */
+        SearchResultType: "PERSON" | "GROUP" | "SESSION" | "EVENT" | "CHARGE";
         /**
          * SeriesGenerateRequest
          * @description Generate / top-up concrete sessions over a rolling horizon. Idempotent:
@@ -5636,6 +5688,37 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search: {
+        parameters: {
+            query?: {
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
