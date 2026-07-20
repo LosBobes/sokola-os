@@ -30,6 +30,11 @@ export interface Organization {
   timezone: string;
 }
 
+export interface LocationSummary {
+  id: string;
+  name: string;
+}
+
 export interface TenantPublic {
   organization_id: string;
   name: string;
@@ -86,6 +91,7 @@ export interface SessionSummary {
   starts_at: string;
   ends_at: string;
   status: SessionStatus;
+  trainer_person_id?: string | null;
 }
 
 export interface ConflictCheck {
