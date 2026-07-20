@@ -1,7 +1,7 @@
 """structure sub-entities: category, program, location, room
 
 Revision ID: 2d0e95a75ed8
-Revises: 4f3c0bbeb6de
+Revises: 41f45ac4b0ee
 Create Date: 2026-07-20 19:57:09.304653
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 revision: str = '2d0e95a75ed8'
-down_revision: str | None = '4f3c0bbeb6de'
+down_revision: str | None = '41f45ac4b0ee'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
