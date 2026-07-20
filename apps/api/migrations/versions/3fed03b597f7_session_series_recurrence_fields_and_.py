@@ -1,7 +1,7 @@
 """session series recurrence fields and trainer
 
 Revision ID: 3fed03b597f7
-Revises: 4f3c0bbeb6de
+Revises: 2d0e95a75ed8
 Create Date: 2026-07-20 20:05:58.081882
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 revision: str = '3fed03b597f7'
-down_revision: str | None = '4f3c0bbeb6de'
+down_revision: str | None = '2d0e95a75ed8'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
