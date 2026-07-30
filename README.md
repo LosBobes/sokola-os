@@ -54,7 +54,7 @@ scripts/check.sh        # ruff + mypy + alembic check + pytest (backend)
 ```
 
 Every increment must end green on the harness before the next begins. See
-`BUILD_SOKOLA_OS_FROM_SCRATCH_PROMPT.md` §10–11 for the full gate list.
+`BUILD_SOKOLA_OS_FROM_SCRATCH_PROMPT.md` §10 and §11 for the full gate list.
 
 ## Security & multi-tenancy
 

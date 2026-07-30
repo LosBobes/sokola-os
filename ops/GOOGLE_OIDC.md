@@ -37,7 +37,7 @@ and the web app shows **"Prijava Google nalogom"**.
 2. API → Google authorization endpoint (scope `openid email profile`).
 3. Google → `GET /api/auth/google/callback?code=…`.
 4. API exchanges the code, validates the ID token (signature via JWKS, issuer,
-   audience, expiry, nonce — all handled by Authlib), then:
+   audience, expiry, nonce, all handled by Authlib), then:
    - maps the Google `sub` to a Person, creating one on first login (JIT), and
    - stores `person_id` in a signed, httpOnly session cookie.
 5. API redirects the browser to `SOKOLA_WEB_POST_LOGIN_URL`; the SPA calls `/me`
@@ -56,7 +56,7 @@ and the web app shows **"Prijava Google nalogom"**.
   `AuthAccount`; setting its `status` to `DISABLED` immediately invalidates all
   outstanding sessions (`app/security/auth.py::_account_revoked`).
 - **Provider-outage behavior.** If Google's discovery, redirect, or token
-  exchange fails, the login/callback endpoints don't 500 — they redirect to
+  exchange fails, the login/callback endpoints don't 500. They redirect to
   `SOKOLA_WEB_POST_LOGIN_URL?login=failed` and the SPA shows a soft retry notice.
 - **CSRF.** Cookie-authenticated mutations require a synchronizer token: a random
   value is stored in the signed session at login and mirrored in a JS-readable

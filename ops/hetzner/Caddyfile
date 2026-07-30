@@ -7,13 +7,13 @@
 #   caddy validate --config /etc/caddy/Caddyfile
 #   systemctl reload caddy
 #
-# Do NOT overwrite the server's Caddyfile — appending keeps every other
+# Do NOT overwrite the server's Caddyfile. Appending keeps every other
 # service's block untouched. Caddy automatically obtains and renews a Let's
 # Encrypt TLS certificate for the domain below once DNS points at the host.
 #
 # Port 3003 comes from the add-hetzner-service skill's PORT_REGISTRY.md
 # (3000 gamgee, 3001 iris, 3002 flora-find, 3003 sokola). The live Caddyfile on
-# the server is still the source of truth — confirm 3003 is free before
+# the server is still the source of truth, so confirm 3003 is free before
 # appending:
 #   ssh <user>@<host> "grep -oE 'localhost:[0-9]+' /etc/caddy/Caddyfile | sort -u"
 # If it is taken, change the port in three places: this file, the `web.ports`
