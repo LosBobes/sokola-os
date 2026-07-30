@@ -65,4 +65,8 @@ jobs:
             docker image prune -f
 
             echo "Running containers:"
-            docker compose -f compose.prod.yml ps
+            # --env-file is required here too: compose interpolates the file's
+            # ${VAR:?} references even for a read-only command like `ps`, so
+            # omitting it fails the step and reports a successful deploy as a
+            # failure.
+            docker compose -f compose.prod.yml --env-file ops/hetzner/.env ps
