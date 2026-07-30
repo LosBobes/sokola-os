@@ -1,9 +1,9 @@
-# Build Prompt — SOKOLA OS, from scratch to production
+# Build Prompt: SOKOLA OS, from scratch to production
 
 > Paste everything below into a capable autonomous coding agent (or hand it to a small team). It is a
 > single, self-contained specification. It reconstructs the SOKOLA OS platform described in the
-> archived `SOKOLA_COMPLETE_MASTER_ARCHIVE` and — unlike that archive, which deliberately stopped at
-> "portable, not production authorized" — it carries the product all the way to a live, production-ready
+> archived `SOKOLA_COMPLETE_MASTER_ARCHIVE` and, unlike that archive, which deliberately stopped at
+> "portable, not production authorized", it carries the product all the way to a live, production-ready
 > system. Do not skip the completion gates in Part 9; closing them is the whole point.
 
 ---
@@ -19,10 +19,10 @@ Non-negotiable working rules:
 
 - **Modular monolith.** One API, one web app, one PostgreSQL database. Domains are separated *in code*,
   not over the network. Extract a service only when a domain provably has a different load, lifecycle,
-  team, or security profile — never for cosmetic tidiness.
+  team, or security profile, never for cosmetic tidiness.
 - **Scope discipline.** Do not add capabilities outside the P0 domain list (Part 3) without an explicit
   written change record justifying a real user workflow. No gamification, no marketplace, no public API,
-  no mySOKOLA, no Events ERP in the first production release — those are later, sequenced work packages
+  no mySOKOLA, no Events ERP in the first production release, those are later, sequenced work packages
   (Part 10). Naming them does not authorize building them.
 - **Every increment is provable.** Static checks (types, lint, OpenAPI/router parity, migration
   audit, tenant-boundary audit) plus real integration tests must pass. "It compiles" is not evidence.
@@ -34,7 +34,7 @@ Non-negotiable working rules:
 
 ## 1. Product vision
 
-SOKOLA OS is the daily operating system for a training organization. It must work perfectly on its own —
+SOKOLA OS is the daily operating system for a training organization. It must work perfectly on its own,
 before any ecosystem layer exists. It answers, for each role:
 
 - **Manager/Owner/Admin:** who are my members, what's scheduled, who owes money, what needs sending.
@@ -79,7 +79,7 @@ security, and removal analysis.
 
 ---
 
-## 3. Domain scope (P0 — the first production release)
+## 3. Domain scope (P0, the first production release)
 
 Exactly these product domains, each a FastAPI router package with `router → application service → domain
 policy → SQLAlchemy repository → outbox events`:
@@ -96,7 +96,7 @@ Dependency direction (enforced by a static audit):
 - domain services use their own policies, shared `common` primitives, and SQLAlchemy repositories;
 - `common` never imports a product domain;
 - `contracts` is dependency-free;
-- **domains never import another domain's service** — they communicate via stable records and versioned
+- **domains never import another domain's service**: they communicate via stable records and versioned
   outbox events;
 - web consumes `contracts`; it never re-implements backend authorization.
 
@@ -113,8 +113,8 @@ domain:
 
 **Identity & access**
 - `Person` (global identity; `PersonIdentityStatus`: PROVISIONAL | CLAIMED | VERIFIED | MERGED | ARCHIVED)
-- `AuthAccount`, `AuthIdentifier` (maps external OIDC subject/email/phone to a Person — the *only* auth authority)
-- `RoleAssignment` (`RoleCode`: OWNER, MANAGER, ADMIN, TRAINER, PARENT, STUDENT — a **closed access
+- `AuthAccount`, `AuthIdentifier` (maps external OIDC subject/email/phone to a Person, the *only* auth authority)
+- `RoleAssignment` (`RoleCode`: OWNER, MANAGER, ADMIN, TRAINER, PARENT, STUDENT, a **closed access
   template facade only**, never a profile/credential taxonomy; `RoleScopeType`, `RoleAssignmentStatus`)
 - `StudentLoginAuthorization` (separates a child's identity from login permission)
 - `Invitation` (`InvitationType`, `InvitationStatus`; invitations expire and may be reissued)
@@ -136,14 +136,14 @@ domain:
 **Scheduling & attendance**
 - `SessionSeries` (`SessionSeriesFrequency`; stores local time + timezone), `Session`
   (`SessionStatus`, `SessionChangeReasonCode`, `SessionCancellationReasonCode`; generated sessions store
-  UTC — single-instance edits are session *changes*, never destructive series edits)
+  UTC, single-instance edits are session *changes*, never destructive series edits)
 - `AttendanceRecord` (`AttendanceStatus`, `AttendanceOverrideReasonCode`; batch carries an
   `attendanceVersion` for optimistic concurrency)
 
 **Billing & payments**
 - `BillingRun` (`BillingRunStatus`), `BillingRunItem`, `Charge` (`ChargeStatus`, `ChargeSourceType`,
   `ChargeCancellationReasonCode`; `amountDueMinor`), `DiscountType`
-- `PaymentRecord` (`PaymentRecordStatus`, `PaymentMethod`, `PaymentVoidReasonCode`; ledger record —
+- `PaymentRecord` (`PaymentRecordStatus`, `PaymentMethod`, `PaymentVoidReasonCode`; ledger record,
   voidable, never edited in place; partial → PARTIALLY_PAID; overpayment rejected at P0)
 - `FinancialReviewCase` (`FinancialReviewType`, `FinancialReviewStatus`)
 
@@ -155,7 +155,7 @@ domain:
 
 **Imports**
 - `ImportBatch` (`ImportType`, `ImportStatus`), `ImportRow` (`ImportRowStatus`), `ImportMutation`
-  (`ImportMutationType`, `ImportResolutionAction`) — preview/review before any invitation is sent
+  (`ImportMutationType`, `ImportResolutionAction`), preview/review before any invitation is sent
 
 **Communications**
 - `Announcement` (`AnnouncementStatus`, `AnnouncementTargetType`), `AnnouncementAudience`,
@@ -164,7 +164,7 @@ domain:
 
 **Documents**
 - `Document` (`DocumentCategory`, `DocumentVisibility`, `DocumentLifecycleStatus`, `DocumentScanStatus`),
-  `DocumentAccessLog` (`DocumentAccessAction`) — PDF/JPG/PNG ≤ 10 MB, private keys, signed retrieval,
+  `DocumentAccessLog` (`DocumentAccessAction`), PDF/JPG/PNG ≤ 10 MB, private keys, signed retrieval,
   malware scan, **no medical categories**
 
 **Privacy**
@@ -176,7 +176,7 @@ domain:
 
 Every tenant-scoped table carries the organization key and is filtered server-side. Amounts bounded to
 PostgreSQL `Integer` minor units at P0. Deliver as ordered, reversible Alembic migrations (the archive had
-14 migration steps building the schema up domain by domain — mirror that incremental discipline, and keep
+14 migration steps building the schema up domain by domain; mirror that incremental discipline, and keep
 autogenerated migrations reviewed, never blindly applied).
 
 ---
@@ -206,7 +206,7 @@ Isolation rule: **an organization may never read a person just because that pers
 person becomes visible only through an explicit organization-scoped relationship (membership, group
 membership, guardian access, role assignment).
 
-Server-derived context — the client may *request* a context but never *grant* one:
+Server-derived context: the client may *request* a context but never *grant* one:
 1. Authenticate via OIDC. 2. Resolve global `Person` + `AuthAccount`. 3. `/me/contexts` returns only
 active membership-role combinations. 4. Client selects one. 5. Requests carry a context token/session
 reference. 6. Server resolves membership/org/role/scope from the DB. 7. **Every referenced resource is
@@ -234,7 +234,7 @@ quotas, and **cross-tenant negative tests** are mandatory.
 - **Outbox:** in one transaction, write the business change *and* the domain event to `OutboxMessage`,
   then commit both. A worker delivers email, rebuilds read models, calls partners. Side effects never
   ride inside the primary business transaction. Versioned event envelopes for anything external.
-- **State machines (explicit, per domain — no generic workflow engine):** ended membership reactivates
+- **State machines (explicit, per domain, no generic workflow engine):** ended membership reactivates
   by opening a new period, not by deleting history; cancelled registration reactivates before deadline;
   attended/no-show cannot be silently cancelled; payments void, never overwrite; imports require
   preview → review → apply; invitations expire and reissue.
@@ -250,7 +250,7 @@ quotas, and **cross-tenant negative tests** are mandatory.
 
 ## 8. Web product experience
 
-Role-based shells — **not** one universal dashboard with hidden items. Each role gets its own home, at
+Role-based shells, **not** one universal dashboard with hidden items. Each role gets its own home, at
 most **five** primary destinations, and one dominant next action.
 
 - **Manager:** Today · People & groups · Schedule · Money · More (communications, documents, imports,
@@ -263,7 +263,7 @@ most **five** primary destinations, and one dominant next action.
 **Semantic design system** (small, repo-owned, zero heavy UI-kit dependency): a `design-tokens.css`
 splitting brand/neutral primitives from semantic roles (surface/border/text/action, success/warning/
 error/info, focus-ring, 44px min target, spacing/type/radius/elevation, motion + reduced-motion). Product
-components consume semantic aliases only — **never raw color values in TSX**. Shared primitives:
+components consume semantic aliases only, **never raw color values in TSX**. Shared primitives:
 ProductShell, RoleNavigation, ContextSwitcher, PageHeader, primary/secondary actions, Field/Select/
 Checkbox, StatusBadge (status by text+tone, never color alone), ResponsiveDataList (table on wide,
 labelled stacked cells on mobile), Pagination, SystemState/LoadingState, InlineNotice, ConfirmDialog
@@ -273,7 +273,7 @@ safety.
 
 **Responsive navigation:** persistent sidebar > 920px (`aria-current`, icon+label+description); at
 ≤ 920px a sticky header + fixed bottom bar with exactly five 44px targets, safe-area insets, no
-horizontal-scroll nav. Navigation availability is never permission — re-validate on the server.
+horizontal-scroll nav. Navigation availability is never permission, re-validate on the server.
 
 **Shared state & recovery contract.** Every non-normal state answers: *what happened / what was
 preserved / what is the safe next action.* States: loading (`aria-busy`, no fake values), empty
@@ -287,7 +287,7 @@ click; financial/destructive/publish require deliberate confirmation showing sco
 
 **Accessibility target WCAG 2.2 AA:** visible focus, skip link, landmarks, 44px targets, text alongside
 icon+color, `aria-live` route/state, programmatic field-error association, native dialog semantics,
-reduced motion. This must be validated live on real devices/AT for completion — not just asserted in code.
+reduced motion. This must be validated live on real devices/AT for completion, not just asserted in code.
 
 **Product language:** Serbian Latin, one noun/verb per task across all roles (e.g. *škola* not tenant,
 *prisustvo* / *sačuvaj prisustvo*, *obračun članarina* / *pregled obračuna*, *podaci su promenjeni u
@@ -303,23 +303,23 @@ canonical UI states (401/403 → permission, 409 → conflict/review, missing/5x
 **manual recovery, never automatic replay**). Each routine happy path = exactly **three** primary
 actions; safety branches may exceed it.
 
-1. **Manager creates a one-off session** — Raspored → Novi termin → Sačuvaj termin. Adapter auto-calls
+1. **Manager creates a one-off session**: Raspored → Novi termin → Sačuvaj termin. Adapter auto-calls
    conflict preview before the idempotent create; a conflict keeps the draft.
-2. **Trainer records attendance** — Danas → Izaberi termin → Sačuvaj prisustvo. Load roster +
+2. **Trainer records attendance**: Danas → Izaberi termin → Sačuvaj prisustvo. Load roster +
    `attendanceVersion`, default all PRESENT, send only exceptions, one idempotent PUT; 409 → reload &
    review, never silent overwrite.
-3. **Parent registers child/children** — Događaji → Izaberi dete/decu → Potvrdi prijavu. Only children
+3. **Parent registers child/children**: Događaji → Izaberi dete/decu → Potvrdi prijavu. Only children
    from active guardian access; one command may carry multiple child IDs.
-4. **Parent cancels a registration** — Događaji → Otkaži prijavu → Potvrdi otkazivanje. Cancellation ≠
+4. **Parent cancels a registration**: Događaji → Otkaži prijavu → Potvrdi otkazivanje. Cancellation ≠
    deletion; history stays canonical; no automatic-refund promise.
-5. **Manager posts a billing run** — Finansije → Pregledaj obračun → Proknjiži obaveze. Exact preview
+5. **Manager posts a billing run**: Finansije → Pregledaj obračun → Proknjiži obaveze. Exact preview
    hash sent to create; create and post have separate idempotency keys; unknown outcome → manual recovery.
-6. **Administrator records a payment** — Izaberi zaduženje → Evidentiraj uplatu → Sačuvaj uplatu.
+6. **Administrator records a payment**: Izaberi zaduženje → Evidentiraj uplatu → Sačuvaj uplatu.
    External-payment record, not a provider capture; missing response → unknown-commit verification first.
-7. **Manager publishes an announcement** — Komunikacija → Pregledaj primaoce → Objavi poruku. Recipient
+7. **Manager publishes an announcement**: Komunikacija → Pregledaj primaoce → Objavi poruku. Recipient
    preview returns count + snapshot hash; publish succeeds only if both still match; delivery failure is
    a partial state, not a reason to re-publish.
-8. **Manager creates a provisional person** — Ljudi → Dodaj osobu → Sačuvaj osobu. Possible-duplicate is
+8. **Manager creates a provisional person**: Ljudi → Dodaj osobu → Sačuvaj osobu. Possible-duplicate is
    a deliberate safety branch requiring explicit confirmation + written reason.
 
 ---
@@ -345,7 +345,7 @@ Automate, and run in CI on every change:
 ## 11. Taking it to completion (the gates the archive left open)
 
 The reference archive stopped at "portable PASS / not production authorized." **Completion means closing
-all of these with retained evidence** — this section is the difference between a demo and a product:
+all of these with retained evidence**: this section is the difference between a demo and a product:
 
 1. **Real database:** `alembic upgrade head` on the release machine; clean-DB and copied-data migration +
    seed runs on the target PostgreSQL version, with a downgrade path proven for each migration.
@@ -363,7 +363,7 @@ all of these with retained evidence** — this section is the difference between
 8. **Edge:** distributed rate limiting / WAF configured with bypass/abuse tests.
 9. **Observability:** structured logs, metrics, dashboards, alert delivery, and one exercised incident
    runbook. Define SLOs + error budgets per key flow (sign-in success, attendance-record success,
-   financial-posting success, key-screen latency, message-delivery accuracy, recovery time) — manage
+   financial-posting success, key-screen latency, message-delivery accuracy, recovery time), manage
    reliability by numbers, not by "it won't go down."
 10. **Backup/restore:** timed isolated-restore rehearsal with reconciliation and sign-off.
 11. **Frontend quality:** responsive + WCAG 2.2 AA validated on real desktop/mobile/assistive tech;
