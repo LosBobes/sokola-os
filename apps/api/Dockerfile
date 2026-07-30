@@ -16,6 +16,15 @@ RUN pip install . --no-deps
 
 # Non-root runtime user.
 RUN useradd --create-home --uid 10001 sokola
+
+# Document uploads land in SOKOLA_DOCUMENTS_STORAGE_DIR (default var/documents,
+# i.e. /app/var/documents). /app itself is root-owned, so the directory has to
+# exist and be owned by the runtime user or every upload fails with EACCES.
+# Creating it here also fixes ownership for the named volume compose.prod.yml
+# mounts over it: Docker seeds a fresh volume from the image path, ownership
+# included.
+RUN mkdir -p /app/var/documents && chown -R sokola:sokola /app/var
+
 USER sokola
 
 EXPOSE 8000
