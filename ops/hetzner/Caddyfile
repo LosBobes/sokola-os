@@ -11,13 +11,14 @@
 # service's block untouched. Caddy automatically obtains and renews a Let's
 # Encrypt TLS certificate for the domain below once DNS points at the host.
 #
-# TODO(human): replace sokola.example.com with the real domain before
-# appending this to the server, and confirm port 3003 is actually free on
-# the box (see the add-hetzner-service skill's PORT_REGISTRY.md — 3003 was
-# the next free slot as of this PR, but the live Caddyfile on the server is
-# the source of truth; re-check with:
+# Port 3003 comes from the add-hetzner-service skill's PORT_REGISTRY.md
+# (3000 gamgee, 3001 iris, 3002 flora-find, 3003 sokola). The live Caddyfile on
+# the server is still the source of truth — confirm 3003 is free before
+# appending:
 #   ssh <user>@<host> "grep -oE 'localhost:[0-9]+' /etc/caddy/Caddyfile | sort -u"
+# If it is taken, change the port in three places: this file, the `web.ports`
+# mapping in compose.prod.yml, and deployment-hetzner.md.
 
-sokola.example.com {
+sokola.losbobes.com {
     reverse_proxy localhost:3003
 }

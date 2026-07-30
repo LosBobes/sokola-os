@@ -2,10 +2,14 @@ name: Deploy to Hetzner
 
 # Builds SOKOLA on the server from source on every push to main.
 #
-# PREP ONLY: this workflow is complete and correct, but it will safely no-op
-# until a human adds the required repo (or org) secrets — see the
-# "Manual steps still required" checklist in the PR that introduced this
-# file. No live deploy has been run from this workflow.
+# HETZNER_HOST / HETZNER_USER / HETZNER_SSH_KEY are inherited from LosBobes
+# org secrets; DEPLOY_PATH is set at the repo level (/opt/sokola) so this
+# service can never deploy into another app's directory. The check-secrets job
+# below no-ops the deploy if any of them go missing.
+#
+# This expects /opt/sokola to already exist on the server as a clone of this
+# repo, with ops/hetzner/.env filled in — see ops/hetzner/deployment-hetzner.md
+# steps 1-5. Until that first manual bootstrap is done, this job fails at `cd`.
 
 on:
   push:

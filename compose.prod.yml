@@ -53,8 +53,24 @@ services:
       SOKOLA_SESSION_SECRET: "${SOKOLA_SESSION_SECRET:?set SOKOLA_SESSION_SECRET in .env, e.g. openssl rand -hex 32}"
       SOKOLA_GOOGLE_CLIENT_ID: "${SOKOLA_GOOGLE_CLIENT_ID:-}"
       SOKOLA_GOOGLE_CLIENT_SECRET: "${SOKOLA_GOOGLE_CLIENT_SECRET:-}"
-      SOKOLA_OIDC_REDIRECT_URL: "${SOKOLA_OIDC_REDIRECT_URL:-https://sokola.example.com/api/auth/google/callback}"
-      SOKOLA_WEB_POST_LOGIN_URL: "${SOKOLA_WEB_POST_LOGIN_URL:-https://sokola.example.com/}"
+      SOKOLA_OIDC_REDIRECT_URL: "${SOKOLA_OIDC_REDIRECT_URL:-https://sokola.losbobes.com/api/auth/google/callback}"
+      SOKOLA_WEB_POST_LOGIN_URL: "${SOKOLA_WEB_POST_LOGIN_URL:-https://sokola.losbobes.com/}"
+      # Email + password login. The pepper is required whenever password auth
+      # is on (the default): app.main refuses to start in production while it
+      # still holds its insecure dev default. Rotating it invalidates every
+      # existing password hash.
+      SOKOLA_PASSWORD_AUTH_ENABLED: "${SOKOLA_PASSWORD_AUTH_ENABLED:-true}"
+      SOKOLA_PASSWORD_PEPPER: "${SOKOLA_PASSWORD_PEPPER:?set SOKOLA_PASSWORD_PEPPER in .env, e.g. openssl rand -hex 32}"
+      # Magic-link login. Without SMTP_HOST + SMTP_FROM_EMAIL the API only logs
+      # the link to its own stdout instead of emailing it, which makes
+      # passwordless login unusable for real users — set both in production.
+      SOKOLA_MAGIC_LINK_TTL_MINUTES: "${SOKOLA_MAGIC_LINK_TTL_MINUTES:-15}"
+      SOKOLA_SMTP_HOST: "${SOKOLA_SMTP_HOST:-}"
+      SOKOLA_SMTP_PORT: "${SOKOLA_SMTP_PORT:-587}"
+      SOKOLA_SMTP_USERNAME: "${SOKOLA_SMTP_USERNAME:-}"
+      SOKOLA_SMTP_PASSWORD: "${SOKOLA_SMTP_PASSWORD:-}"
+      SOKOLA_SMTP_FROM_EMAIL: "${SOKOLA_SMTP_FROM_EMAIL:-}"
+      SOKOLA_SMTP_USE_TLS: "${SOKOLA_SMTP_USE_TLS:-true}"
     command: >
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000"
@@ -65,6 +81,11 @@ services:
     # Compose network; the host Caddy never talks to it directly.
     expose:
       - "8000"
+    # Uploaded documents are stored on the filesystem, not in Postgres or object
+    # storage. Without this volume they live in the container's writable layer
+    # and every `up --build` (i.e. every deploy) destroys them.
+    volumes:
+      - sokola_documents:/app/var/documents
 
   worker:
     build:
@@ -92,3 +113,4 @@ services:
 
 volumes:
   sokola_pg:
+  sokola_documents:
