@@ -1,15 +1,16 @@
-name: Deploy to Hetzner
+name: 🚀 Deploy to Hetzner
 
 # Builds SOKOLA on the server from source on every push to main.
 #
 # HETZNER_HOST / HETZNER_USER / HETZNER_SSH_KEY are inherited from LosBobes
-# org secrets; DEPLOY_PATH is set at the repo level (/opt/sokola) so this
+# org secrets. DEPLOY_PATH is set at the repo level (/opt/sokola) so this
 # service can never deploy into another app's directory. The check-secrets job
 # below no-ops the deploy if any of them go missing.
 #
 # This expects /opt/sokola to already exist on the server as a clone of this
-# repo, with ops/hetzner/.env filled in — see ops/hetzner/deployment-hetzner.md
-# steps 1-5. Until that first manual bootstrap is done, this job fails at `cd`.
+# repo, with ops/hetzner/.env filled in. See ops/hetzner/deployment-hetzner.md
+# steps 1 to 5. Until that first manual bootstrap is done, this job fails at
+# `cd`.
 
 on:
   push:
@@ -18,29 +19,31 @@ on:
 
 jobs:
   check-secrets:
-    name: Check deploy secrets are configured
+    name: 🔑 Check deploy secrets are configured
     runs-on: ubuntu-latest
     outputs:
       configured: ${{ steps.check.outputs.configured }}
     steps:
-      - id: check
+      - name: 🔎 Look for the Hetzner secrets
+        id: check
         run: |
           if [ -n "${{ secrets.HETZNER_HOST }}" ] && [ -n "${{ secrets.HETZNER_USER }}" ] && [ -n "${{ secrets.HETZNER_SSH_KEY }}" ] && [ -n "${{ secrets.DEPLOY_PATH }}" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "✅ All deploy secrets present."
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Hetzner deploy secrets are not fully configured (HETZNER_HOST, HETZNER_USER, HETZNER_SSH_KEY, DEPLOY_PATH). Skipping deploy — see ops/hetzner/deployment-hetzner.md."
+            echo "::warning::Hetzner deploy secrets are not fully configured (HETZNER_HOST, HETZNER_USER, HETZNER_SSH_KEY, DEPLOY_PATH). Skipping deploy. See ops/hetzner/deployment-hetzner.md."
           fi
 
   deploy:
-    name: Deploy
+    name: 🛫 Deploy
     runs-on: ubuntu-latest
     needs: check-secrets
     if: needs.check-secrets.outputs.configured == 'true'
     timeout-minutes: 20
 
     steps:
-      - name: SSH deploy
+      - name: 🔐 SSH deploy
         uses: appleboy/ssh-action@v1.2.0
         with:
           host:     ${{ secrets.HETZNER_HOST }}
@@ -52,21 +55,23 @@ jobs:
             set -e
             cd "${{ secrets.DEPLOY_PATH }}"
 
-            echo "Pulling latest code..."
+            echo "📥 Pulling latest code..."
             git fetch origin main
             git reset --hard origin/main
 
-            echo "Rebuilding containers..."
-            # App secrets live in ops/hetzner/.env on the box (gitignored);
-            # compose reads them via --env-file.
+            echo "🏗️ Rebuilding containers..."
+            # App secrets live in ops/hetzner/.env on the box (gitignored).
+            # Compose reads them via --env-file.
             docker compose -f compose.prod.yml --env-file ops/hetzner/.env up --build -d --remove-orphans
 
-            echo "Pruning old images..."
+            echo "🧹 Pruning old images..."
             docker image prune -f
 
-            echo "Running containers:"
+            echo "📋 Running containers:"
             # --env-file is required here too: compose interpolates the file's
             # ${VAR:?} references even for a read-only command like `ps`, so
             # omitting it fails the step and reports a successful deploy as a
             # failure.
             docker compose -f compose.prod.yml --env-file ops/hetzner/.env ps
+
+            echo "✅ Deploy complete."

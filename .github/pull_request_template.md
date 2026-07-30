@@ -6,7 +6,7 @@
 
 ## Scope check
 
-- [ ] Stays within the P0 domain list (no red-list features — see BUILD_SOKOLA_OS_FROM_SCRATCH_PROMPT.md §12)
+- [ ] Stays within the P0 domain list (no red-list features, see BUILD_SOKOLA_OS_FROM_SCRATCH_PROMPT.md §12)
 - [ ] No new runtime dependency without a purpose/security/removal note
 - [ ] No `domain → domain` service import; `common` imports no domain
 - [ ] User-facing strings are Serbian (Latin) product vocabulary

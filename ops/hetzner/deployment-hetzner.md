@@ -67,7 +67,7 @@ cp ops/hetzner/.env.prod.example ops/hetzner/.env
 nano ops/hetzner/.env
 ```
 
-Three secrets are mandatory — the stack refuses to start without any of them,
+Three secrets are mandatory, and the stack refuses to start without any of them,
 by design (`compose.prod.yml` uses `${VAR:?...}`, and `app.main` rejects the
 insecure defaults whenever `SOKOLA_ENVIRONMENT` is production-like):
 
@@ -134,7 +134,7 @@ nothing. Two options:
   at `github.com/organizations/LosBobes/settings/secrets/actions`.
 - **Or set the three `HETZNER_*` secrets on this repo directly.** GitHub secrets
   are write-only, so the existing values cannot be read back out of the other
-  repos — you would need the SSH key material to hand.
+  repos, so you would need the SSH key material to hand.
 
 Either way, set `DEPLOY_PATH` at the **repo** level:
 
@@ -160,7 +160,7 @@ Or `make -f ops/hetzner/Makefile deploy` from your laptop. The `sokola_pg` and
 
 Uploaded documents are stored on the filesystem (`SOKOLA_DOCUMENTS_STORAGE_DIR`,
 default `/app/var/documents`), not in Postgres and not in object storage. The
-`sokola_documents` named volume is what keeps them across deploys — without it
+`sokola_documents` named volume is what keeps them across deploys. Without it
 they would live in the container's writable layer and `up --build` would delete
 them. Back it up alongside the database:
 
