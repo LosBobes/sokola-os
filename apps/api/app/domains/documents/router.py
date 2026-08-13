@@ -16,7 +16,7 @@ from app.security.permissions import PermissionArea, require_permission
 router = APIRouter(tags=["documents"])
 
 # Upload is a staff write path. Reads (list/get/download/acknowledge) are
-# gated at the resource level in the service instead — a non-staff caller may
+# gated at the resource level in the service instead, a non-staff caller may
 # still reach their own or their guarded child's documents.
 _staff = require_permission(PermissionArea.DOCUMENTS)
 StaffContext = Annotated[ContextDep, Depends(_staff)]

@@ -60,5 +60,6 @@ Every increment must end green on the harness before the next begins. See
 
 Context is **server-derived**: the client may request a role/organization but never grants one.
 Every resource is re-checked against the active organization on every read and write.
-Auth is external OIDC in production; a header adapter exists for local dev only and is
-impossible to enable in staging/production.
+Sign-in is email+password by default (scrypt + a server-side pepper, hashed only on
+`AuthAccount`), with Google OIDC available alongside it. A header adapter exists for local
+dev only and is impossible to enable in staging/production.

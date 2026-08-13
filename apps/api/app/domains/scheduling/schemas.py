@@ -12,9 +12,12 @@ from app.domains.scheduling.enums import (
     SessionStatus,
 )
 
+_MAX_SCHEDULING_PAST = dt.timedelta(days=730)
+_MAX_SCHEDULING_FUTURE = dt.timedelta(days=1825)
+
 
 class SessionDraft(BaseModel):
-    """The proposed shape of a session — used for both conflict preview and create."""
+    """The proposed shape of a session, used for both conflict preview and create."""
 
     group_id: str
     title: str | None = Field(default=None, max_length=160)
@@ -25,6 +28,13 @@ class SessionDraft(BaseModel):
     def _time_order(self) -> SessionDraft:
         if self.ends_at <= self.starts_at:
             raise ValueError("ends_at must be after starts_at")
+        now = dt.datetime.now(dt.UTC)
+        starts = self.starts_at if self.starts_at.tzinfo else self.starts_at.replace(tzinfo=dt.UTC)
+        if starts < now - _MAX_SCHEDULING_PAST or starts > now + _MAX_SCHEDULING_FUTURE:
+            # Catches malformed client input (e.g. a partially-typed datetime-local
+            # value silently producing a year like 1111) before it becomes a
+            # session that's created successfully but invisible in every view.
+            raise ValueError("starts_at nije u razumnom opsegu za zakazivanje.")
         return self
 
 

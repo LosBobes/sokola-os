@@ -216,7 +216,7 @@ def test_student_has_no_area_access(client: TestClient, db: Session) -> None:
 
 def test_area_grant_does_not_cross_tenants(client: TestClient, db: Session) -> None:
     # Staff in org A create a person; an admin in org B (same area access, other
-    # tenant) must not see it — the org re-check is independent of the area layer.
+    # tenant) must not see it, the org re-check is independent of the area layer.
     org_a = bootstrap_actor(db, org_name="Klub A", role=RoleCode.MANAGER)
     person_id = client.post(
         "/people", headers=org_a.headers, json={"given_name": "Tajna", "family_name": "A"}

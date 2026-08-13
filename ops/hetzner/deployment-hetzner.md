@@ -81,15 +81,13 @@ The pepper is folded into every password hash and is never stored in the
 database. **Rotating it invalidates every existing password**, so set it once
 and keep it.
 
-Optional but strongly recommended:
+SOKOLA sends no email, so no SMTP configuration is needed. Sign-in is
+email+password (the default, on in every environment) plus optional Google.
+Note the consequence: there is no self-service password reset, so a user who
+forgets their password needs an administrator.
 
-- **SMTP** (`SOKOLA_SMTP_HOST`, `SOKOLA_SMTP_FROM_EMAIL`, and credentials).
-  Without these the API only writes magic-link login URLs to its own stdout,
-  so passwordless login silently does nothing for real users. SendGrid's SMTP
-  relay works with the stdlib sender: host `smtp.sendgrid.net`, username the
-  literal `apikey`, password the API key. See `gamgee/docs/sendgrid-setup.md`
-  for the domain-verification walkthrough (DKIM/SPF/DMARC), which is per-domain
-  and so has to be redone for whatever sender address SOKOLA uses.
+Optional:
+
 - **Google OIDC** (`SOKOLA_GOOGLE_CLIENT_ID` / `_SECRET`). The redirect URL
   defaults to `https://sokola.losbobes.com/api/auth/google/callback` and must
   match an Authorized redirect URI on the Google OAuth client exactly. See

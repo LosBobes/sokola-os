@@ -111,7 +111,7 @@ def update_event(
 
 
 def cancel_event(db: Session, context: RequestContext, event_id: str) -> EventResponse:
-    """M1. Cancel the whole event — distinct from cancelling a single
+    """M1. Cancel the whole event, distinct from cancelling a single
     registration. Cascades: every active (REGISTERED) registration is cancelled
     too, atomically in the same transaction as the event's own status change."""
     event = repository.get_event(db, context.organization_id, event_id, for_update=True)
@@ -163,7 +163,7 @@ def register_children(
     idempotency_key: str | None,
 ) -> list[RegistrationResponse]:
     """Journey 3. A parent registers one or more of their own children in a single
-    command. Capacity is enforced atomically — if the batch would overflow, none
+    command. Capacity is enforced atomically, if the batch would overflow, none
     are registered."""
     unique_ids = list(dict.fromkeys(child_ids))
     params = {"event_id": event_id, "child_ids": sorted(unique_ids)}

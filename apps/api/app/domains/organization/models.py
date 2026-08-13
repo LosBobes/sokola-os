@@ -28,7 +28,7 @@ class Organization(Base, TimestampMixin, RecordStatusMixin):
     )
     # IANA timezone; recurring schedules are interpreted against this.
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="Europe/Belgrade")
-    # Guided-onboarding state (§24/§25) — see OrganizationLifecycleStatus. Defaults
+    # Guided-onboarding state (§24/§25), see OrganizationLifecycleStatus. Defaults
     # to ACTIVE so every row created outside the real signup path (fixtures,
     # legacy data) behaves normally; only ``create_organization`` opts a fresh
     # school into IN_PREPARATION.

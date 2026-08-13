@@ -46,7 +46,7 @@ def save_attendance(
     db: DbSession, context: RequestContext, session_id: str, req: SaveAttendanceRequest
 ) -> SaveAttendanceResponse:
     """Journey 2. Optimistic-concurrency save: the caller echoes the version they
-    read; a mismatch means someone else saved first — reload and review, never
+    read; a mismatch means someone else saved first, reload and review, never
     silently overwrite. The session row is locked to serialize concurrent saves.
     """
     session = repository.get_session(
@@ -94,7 +94,7 @@ def save_attendance(
             record.status = status
             record.override_reason = reason
 
-    # PRD 06 M2: notes are optional and additive to the save — a trainer may
+    # PRD 06 M2: notes are optional and additive to the save, a trainer may
     # jot progress notes for any roster member without a separate round trip.
     # Anchored to this session's group and to the session itself, so a note
     # written here is indistinguishable in provenance from one written via the

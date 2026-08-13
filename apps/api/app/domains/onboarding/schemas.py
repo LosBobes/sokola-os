@@ -19,7 +19,7 @@ class OnboardingProgressResponse(BaseModel):
     lifecycle_status: OrganizationLifecycleStatus
     steps: list[OnboardingStepStatus]
     remaining_steps: list[OnboardingStep]
-    # Whether ``POST /onboarding/activate`` would currently succeed — i.e. the
+    # Whether ``POST /onboarding/activate`` would currently succeed, i.e. the
     # school is IN_PREPARATION and its minimum activation bar (at least one
     # active location) is met.
     can_activate: bool

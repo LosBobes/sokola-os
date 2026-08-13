@@ -23,7 +23,7 @@ def test_create_one_off_session_journey1(client: TestClient, db: Session) -> Non
 
     draft = {"group_id": group_id, "starts_at": T1, "ends_at": T1_END, "title": "Trening"}
 
-    # Adapter previews conflicts first — none yet.
+    # Adapter previews conflicts first, none yet.
     preview = client.post("/schedule/conflict-check", headers=actor.headers, json=draft).json()
     assert preview["has_conflict"] is False
 
@@ -65,3 +65,18 @@ def test_create_session_is_idempotent(client: TestClient, db: Session) -> None:
         params={"date_from": "2026-09-01T00:00:00+00:00", "date_to": "2026-09-02T00:00:00+00:00"},
     ).json()
     assert len(listing) == 1  # replay did not create a duplicate
+
+
+def test_implausible_date_is_rejected(client: TestClient, db: Session) -> None:
+    """A malformed datetime-local value (e.g. an incomplete year picker producing
+    "1111-11-11") must be refused, not silently create a session no view will
+    ever show."""
+    actor = bootstrap_actor(db)
+    group_id = _group(client, actor)
+    draft = {
+        "group_id": group_id,
+        "starts_at": "1111-11-11T09:49:00+00:00",
+        "ends_at": "1111-11-11T10:49:00+00:00",
+    }
+    resp = client.post("/schedule/sessions", headers=actor.headers, json=draft)
+    assert resp.status_code == 422

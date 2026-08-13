@@ -33,7 +33,7 @@ def upgrade() -> None:
         postgresql_where=sa.text('is_primary_contact'),
     )
 
-    # School-local member data (§8/§9/§10) — nullable, unique code within the org.
+    # School-local member data (§8/§9/§10), nullable, unique code within the org.
     op.add_column(
         'organization_membership', sa.Column('local_member_code', sa.String(length=60),
                                              nullable=True))

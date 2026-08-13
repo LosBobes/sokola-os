@@ -6,6 +6,8 @@ Domains are wired here and nowhere else.
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -41,6 +43,11 @@ API_TITLE = "SOKOLA OS P0 API"
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
+    # Without this, app-level logger.info/warning calls are silently dropped
+    # under uvicorn's default root log level. Idempotent, safe to call once
+    # per create_app().
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+
     settings = settings or get_settings()
     _guard_dev_auth(settings)
 
@@ -111,6 +118,12 @@ def _guard_dev_auth(settings: Settings) -> None:
         )
     if settings.is_production_like and "insecure" in settings.session_secret:
         raise RuntimeError("SOKOLA_SESSION_SECRET must be set in staging/production.")
+    if (
+        settings.is_production_like
+        and settings.password_auth_enabled
+        and "insecure" in settings.password_pepper
+    ):
+        raise RuntimeError("SOKOLA_PASSWORD_PEPPER must be set in staging/production.")
 
 
 app = create_app()

@@ -38,7 +38,7 @@ def create_organization(
 ) -> OrganizationResponse:
     """Bootstrap a new tenant. The creating person becomes its OWNER and first
     member, all in one transaction. The school starts ``IN_PREPARATION``
-    ("u pripremi") — guided onboarding (app.domains.onboarding) walks it through
+    ("u pripremi"), guided onboarding (app.domains.onboarding) walks it through
     structure setup and an optional co-owner invite before it may ``activate``."""
     org = Organization(
         name=req.name,
@@ -99,7 +99,7 @@ def lookup_tenant(db: Session, slug: str) -> TenantPublic:
 
 
 # ---------------------------------------------------------------------------
-# Deactivate / reactivate (§31) — P1
+# Deactivate / reactivate (§31), P1
 # ---------------------------------------------------------------------------
 
 
@@ -116,7 +116,7 @@ def _is_active_owner(db: Session, organization_id: str, person_id: str) -> bool:
 
 def deactivate_organization(db: Session, context: RequestContext) -> OrganizationResponse:
     """Deactivating a school locks out every future context resolution against
-    it (``app.security.deps.get_context`` rejects an ARCHIVED org) — so
+    it (``app.security.deps.get_context`` rejects an ARCHIVED org), so
     reactivation cannot go through that same context-gated path; see
     :func:`reactivate_organization`."""
     org = db.get(Organization, context.organization_id)
@@ -150,7 +150,7 @@ def reactivate_organization(
 ) -> OrganizationResponse:
     """A deactivated org blocks ordinary context resolution (§31), so this is
     authorized directly against an ACTIVE OWNER role assignment for the named
-    org — the same authority ``require_permission(ROLES)`` grants an OWNER,
+    org, the same authority ``require_permission(ROLES)`` grants an OWNER,
     evaluated without the context the deactivation itself makes unreachable."""
     org = db.get(Organization, organization_id)
     if org is None:

@@ -1,4 +1,4 @@
-"""Guided school onboarding (PRD 02 §24/§25, PRD 01 §13) — the Wave 1 capstone.
+"""Guided school onboarding (PRD 02 §24/§25, PRD 01 §13), the Wave 1 capstone.
 
 Per-step progress, the "u pripremi" invite gate (only a co-owner invite is
 allowed until the school activates), and the activation transition itself.
@@ -23,7 +23,7 @@ def _bootstrap_owner(
     client: TestClient, db: Session, *, org_name: str = "Nova Škola"
 ) -> tuple[dict[str, str], dict[str, Any]]:
     """Create a school through the real signup path (``POST /organizations``),
-    which — unlike ``tests.factories.bootstrap_actor`` — starts it
+    which, unlike ``tests.factories.bootstrap_actor``, starts it
     IN_PREPARATION. Returns ready owner headers plus the created organization."""
     person = make_person(db, given="Osnivač")
     bare_headers = {DEV_PERSON_HEADER: person.id}
@@ -43,7 +43,7 @@ def _step(progress: dict[str, Any], name: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# M1 — per-step progress, "what's left"
+# M1, per-step progress, "what's left"
 # ---------------------------------------------------------------------------
 
 
@@ -118,7 +118,7 @@ def test_progress_tracks_structure_setup_and_first_invite(
 
 
 # ---------------------------------------------------------------------------
-# M2/M3 — "u pripremi" blocks normal staff invites, not the first-owner path
+# M2/M3, "u pripremi" blocks normal staff invites, not the first-owner path
 # ---------------------------------------------------------------------------
 
 
@@ -142,7 +142,7 @@ def test_in_preparation_blocks_parent_invite(client: TestClient, db: Session) ->
     headers, _org = _bootstrap_owner(client, db)
 
     # Blocked by the onboarding gate before the (nonexistent) child is even
-    # looked up — a PARENT invite isn't the first-owner path either.
+    # looked up, a PARENT invite isn't the first-owner path either.
     resp = client.post(
         "/invitations",
         headers=headers,
@@ -218,7 +218,7 @@ def test_activation_requires_a_location(client: TestClient, db: Session) -> None
     assert org_row is not None
     assert org_row.lifecycle_status is OrganizationLifecycleStatus.ACTIVE
 
-    # Already active — a second activation is refused.
+    # Already active, a second activation is refused.
     again = client.post("/onboarding/activate", headers=headers)
     assert again.status_code == 409
 

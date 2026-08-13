@@ -29,7 +29,7 @@ class CreateGroupRequest(BaseModel):
 
 
 class UpdateGroupRequest(BaseModel):
-    """Partial update. Only fields present in the request body are changed —
+    """Partial update. Only fields present in the request body are changed , 
     send ``null`` for ``program_id``/``location_id``/``base_monthly_price_minor``
     to clear that link/price, omit a field entirely to leave it untouched."""
 
@@ -78,7 +78,7 @@ class EndGroupMembershipRequest(BaseModel):
 
 class SetMembershipDiscountRequest(BaseModel):
     """Absolute discount in minor currency units against the group's
-    ``base_monthly_price_minor`` — see :class:`app.domains.groups.models.
+    ``base_monthly_price_minor``, see :class:`app.domains.groups.models.
     GroupMembership` for why this is absolute rather than a percentage."""
 
     discount_minor: int = Field(ge=0)

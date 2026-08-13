@@ -67,7 +67,7 @@ Match these unless you have a concrete reason to deviate; they are proven for th
 | Web | React 19 + Vite + React Router (a typed API client is generated from the OpenAPI doc) |
 | Shared types | The single checked-in OpenAPI 3 doc is the contract: Pydantic generates it on the api side, web consumes a generated typed client. `packages/contracts` stays dependency-free. |
 | API contract | FastAPI-generated OpenAPI 3, checked in and frozen; a gate verifies router/OpenAPI parity |
-| Auth (prod) | External OIDC provider (SOKOLA stores identity links + authorization context, **never** local password hashes or reset tokens) |
+| Auth (prod) | Email+password is the default sign-in, with Google OIDC alongside it. Password hashes live on `AuthAccount` and nowhere else (scrypt + server-side pepper); **no** password-reset tokens or MFA secrets are stored, so a forgotten password is an admin action. Authorization context is always server-derived. |
 | Money | Integer minor units only. No floating-point money. Default currency `RSD`. |
 | Async work | Transactional **outbox** + Python worker process. No direct coupling of side effects to request commits. |
 | Object storage | Private-keyed provider (S3-compatible), signed/authorized retrieval only |
@@ -332,7 +332,7 @@ Automate, and run in CI on every change:
   migration static audit (naming, reversibility, no destructive drift).
 - OpenAPI ↔ router parity gate: regenerate the doc, diff against the committed one, orphans fail.
 - Architecture/simplicity fitness: dependency-direction audit, service/method size ratchet, surface-count
-  budget, dependency allowlist, no domain→domain imports, no local-password schema.
+  budget, dependency allowlist, no domain→domain imports, credentials centralized on `AuthAccount`.
 - Tenant-boundary audit: static + **real cross-tenant HTTP negative tests** (org A cannot read/write org
   B through any endpoint).
 - Unit tests per domain policy + service; integration suite against real PostgreSQL.
@@ -382,7 +382,7 @@ Without a formal decision record backed by a named customer workflow, quantified
 retention analysis, acceptance tests, and a rollback plan, do **not** add: microservices / Kubernetes /
 Kafka / service mesh; a generic workflow / rules / form-builder / custom-field engine; event sourcing as
 the primary write model; GraphQL beside REST; native mobile / offline sync; a second auth or identity
-model; local passwords / reset / MFA implementation; marketplace / partner portal / public API over
+model; self-service password-reset flows / MFA implementation; marketplace / partner portal / public API over
 ORM models; gamification, leaderboards, virtual currency, wallet, or blockchain achievements;
 multi-currency ledger or payment-gateway capture before finance requirements are contracted; tenant-
 specific code forks; any AI feature without a clear user problem and a human-review boundary.

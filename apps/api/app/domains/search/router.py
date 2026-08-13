@@ -1,4 +1,4 @@
-"""Unified operational search (PRD 15) — one box that fans out over people,
+"""Unified operational search (PRD 15), one box that fans out over people,
 groups, sessions, events, and charges instead of five separately-scoped lists.
 
 No ``service.py``: this domain is read-only and has nothing to orchestrate
@@ -25,7 +25,7 @@ router = APIRouter(tags=["search"])
 def search(
     db: DbDep, context: ContextDep, q: Annotated[str, Query()] = ""
 ) -> SearchResponse:
-    """Search is gated on ``ContextDep`` alone — no new permission area. It only
+    """Search is gated on ``ContextDep`` alone, no new permission area. It only
     ever surfaces rows each sub-query already re-scopes to ``context.
     organization_id`` the same way that domain's own list endpoint would (e.g.
     ``GET /charges`` is likewise ``ContextDep``-only today, with no per-area
@@ -62,7 +62,7 @@ def search(
         )
 
     for session, group in repository.search_sessions(db, org_id, term):
-        title = session.title or f"Trening — {group.name}"
+        title = session.title or f"Trening · {group.name}"
         results.append(
             SearchResultItem(
                 type=SearchResultType.SESSION,

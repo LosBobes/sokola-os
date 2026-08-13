@@ -14,7 +14,7 @@ class OnboardingProgress(Base, TimestampMixin):
     organization, created lazily on first read/write.
 
     Most steps (locations/rooms/programs/first-invite) are derived live from
-    the organization's own data — see ``app.domains.onboarding.service`` — so
+    the organization's own data (see ``app.domains.onboarding.service``), so
     this row only needs to remember the one fact nothing else can reconstruct:
     the moment the school left "u pripremi" and became active.
     """

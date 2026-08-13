@@ -1,16 +1,16 @@
 """Pluggable byte storage for uploaded documents.
 
 ``StorageBackend`` is the seam between the documents domain and wherever the
-actual bytes live. This increment ships exactly one implementation —
-``LocalFilesystemBackend``, writing to a gitignored runtime directory — because
+actual bytes live. This increment ships exactly one implementation , 
+``LocalFilesystemBackend``, writing to a gitignored runtime directory, because
 standing up a real object store (S3/GCS) needs infrastructure credentials this
 PR does not have.
 
 Swapping to S3/GCS later is meant to be a drop-in: write a new class satisfying
 this same ``save``/``load`` shape and construct it instead of
 ``LocalFilesystemBackend`` wherever the domain builds its backend (currently
-``app.domains.documents.service._storage``). Nothing else in the domain — the
-router, service business logic, or the ``storage_key`` column itself — needs to
+``app.domains.documents.service._storage``). Nothing else in the domain, the
+router, service business logic, or the ``storage_key`` column itself, needs to
 change, since ``storage_key`` is already an opaque string as far as the rest of
 the domain is concerned.
 """
@@ -40,7 +40,7 @@ class LocalFilesystemBackend:
     """Writes each document under ``base_dir/<uuid4 hex>``.
 
     The directory is created lazily on first use and is NOT part of the git
-    tree (see the repo ``.gitignore``) — it is a runtime cache, not a source of
+    tree (see the repo ``.gitignore``), it is a runtime cache, not a source of
     truth the way the database row is. Losing it loses file *contents*, not the
     document's existence/metadata/audit trail.
 

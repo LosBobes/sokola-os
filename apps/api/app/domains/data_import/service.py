@@ -5,7 +5,7 @@ as deliberate, reviewable operations (cf. the merge-review workflow in
 ``app.domains.people.service``):
 
   1. ``create_upload`` parses the CSV against a FIXED header and stages every
-     row as an :class:`ImportRow` — no validation, no writes to Person/Group
+     row as an :class:`ImportRow`, no validation, no writes to Person/Group
      yet. The v1 header is exactly::
 
          given_name,family_name,group_name,local_member_code
@@ -13,16 +13,16 @@ as deliberate, reviewable operations (cf. the merge-review workflow in
      ``given_name``/``family_name`` are required columns; ``group_name`` and
      ``local_member_code`` are optional (may be blank per-row, or the column
      may be absent entirely). This is a deliberate v1 scope cut over a full
-     flexible column-mapper — see the PR description.
+     flexible column-mapper, see the PR description.
   2. ``preview_batch`` is a dry-run: it validates every staged row (required
      fields present, named group exists in this org, local member code not
      already taken) and flags rows that look like an existing person, without
      writing anything to Person/Group tables. Re-runnable until commit.
   3. ``commit_batch`` creates a real Person (+ GroupMembership, if a group was
      named) for every row that was VALID at the last preview, and SKIPS the
-     rest — a partial result, never an all-or-nothing transaction. A batch may
+     rest, a partial result, never an all-or-nothing transaction. A batch may
      be committed at most once; there is no rollback (see module docstring in
-     ``app.domains.data_import.enums`` and the PR description — undoing a
+     ``app.domains.data_import.enums`` and the PR description, undoing a
      commit would mean deleting real Person rows that other domains may
      already reference, which is unsafe to do blindly).
 """
@@ -76,7 +76,7 @@ def _get_batch_or_404(db: Session, context: RequestContext, batch_id: str) -> Im
 
 
 # ---------------------------------------------------------------------------
-# 1. Upload — parse a fixed-header CSV into staged rows
+# 1. Upload, parse a fixed-header CSV into staged rows
 # ---------------------------------------------------------------------------
 
 
@@ -153,7 +153,7 @@ def list_uploads(
 
 
 # ---------------------------------------------------------------------------
-# 2. Preview — dry-run validation, writes nothing to Person/Group
+# 2. Preview, dry-run validation, writes nothing to Person/Group
 # ---------------------------------------------------------------------------
 
 
@@ -248,7 +248,7 @@ def preview_batch(
 
 
 # ---------------------------------------------------------------------------
-# 3. Commit — create valid rows as real Person records, skip the rest
+# 3. Commit, create valid rows as real Person records, skip the rest
 # ---------------------------------------------------------------------------
 
 

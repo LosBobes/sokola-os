@@ -2,7 +2,7 @@
   "name": "sokola-os",
   "version": "0.1.0",
   "private": true,
-  "description": "SOKOLA OS — modular-monolith operating system for training organizations",
+  "description": "SOKOLA OS: a modular-monolith operating system for training organizations",
   "engines": {
     "node": ">=22"
   },

@@ -1,8 +1,9 @@
 # Google OIDC setup
 
-SOKOLA uses Google as an external identity provider (OpenID Connect,
-Authorization Code flow). SOKOLA stores only the identity link (Google `sub` →
-Person) and issues its own signed session cookie. No passwords are ever stored.
+SOKOLA can use Google as an external identity provider (OpenID Connect,
+Authorization Code flow), alongside the default email+password sign-in. For a
+Google account SOKOLA stores only the identity link (Google `sub` → Person) and
+issues its own signed session cookie; no password hash is involved.
 
 ## 1. Create a Google OAuth client
 

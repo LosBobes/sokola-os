@@ -23,7 +23,7 @@ class ImportBatch(Base, TimestampMixin):
     when (``created_at`` from :class:`TimestampMixin`, plus ``previewed_at`` /
     ``committed_at``), and the row-count summary at each stage. Rows themselves
     live in :class:`ImportRow`, staged separately from the source file (v1
-    stores parsed rows, not the raw upload — see the service module docstring).
+    stores parsed rows, not the raw upload, see the service module docstring).
     """
 
     __tablename__ = "import_batch"
@@ -64,7 +64,7 @@ class ImportRow(Base, TimestampMixin):
     )
     row_number: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    # Raw (trimmed) values as read from the CSV — the fixed v1 header, see
+    # Raw (trimmed) values as read from the CSV, the fixed v1 header, see
     # app.domains.data_import.service.REQUIRED_COLUMNS / OPTIONAL_COLUMNS.
     given_name: Mapped[str] = mapped_column(String(120), nullable=False)
     family_name: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -78,7 +78,7 @@ class ImportRow(Base, TimestampMixin):
     )
     validation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Existing people in this org whose name looks like a match (§6-style
-    # duplicate detection) — informational, never makes a row invalid.
+    # duplicate detection), informational, never makes a row invalid.
     duplicate_person_ids: Mapped[list[str] | None] = mapped_column(
         ARRAY(String(64)), nullable=True
     )

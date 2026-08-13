@@ -130,7 +130,7 @@ def publish(
 def list_inbox(
     db: Session, context: RequestContext, params: PageParams
 ) -> Page[NotificationResponse]:
-    """M3. A person's own in-app inbox — scoped to the caller alone, never to
+    """M3. A person's own in-app inbox, scoped to the caller alone, never to
     another person, even within the same organization."""
     items, total = repository.list_inbox(db, context.organization_id, context.person_id, params)
     return Page.build([NotificationResponse.model_validate(n) for n in items], total, params)
@@ -139,7 +139,7 @@ def list_inbox(
 def mark_notification_read(
     db: Session, context: RequestContext, notification_id: str
 ) -> NotificationResponse:
-    """M3. Marking read is idempotent — reading an already-read notification is
+    """M3. Marking read is idempotent, reading an already-read notification is
     a no-op, not an error."""
     notification = repository.get_inbox_notification(
         db, context.organization_id, context.person_id, notification_id

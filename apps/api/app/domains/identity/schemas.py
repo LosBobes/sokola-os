@@ -35,7 +35,7 @@ class MeResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Invitations (§16-24, §19.3-19.5) — M1/M2/M7/M8
+# Invitations (§16-24, §19.3-19.5), M1/M2/M7/M8
 # ---------------------------------------------------------------------------
 
 
@@ -87,7 +87,7 @@ class InvitationResponse(BaseModel):
 
 
 class InvitationCreatedResponse(BaseModel):
-    """Send/reissue response. ``token`` is shown exactly once — only its hash is
+    """Send/reissue response. ``token`` is shown exactly once, only its hash is
     ever persisted (see ``invite_tokens.py``)."""
 
     invitation: InvitationResponse
@@ -107,7 +107,7 @@ class AcceptInvitationResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Role assignment + permission-change endpoints (§25/§26) — M3/M4/M8
+# Role assignment + permission-change endpoints (§25/§26), M3/M4/M8
 # ---------------------------------------------------------------------------
 
 
@@ -142,7 +142,7 @@ class RoleAssignmentResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Ownership add/transfer (§14) — M5
+# Ownership add/transfer (§14), M5
 # ---------------------------------------------------------------------------
 
 

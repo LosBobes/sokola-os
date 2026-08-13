@@ -85,7 +85,7 @@ def count_active_registrations(db: Session, event_id: str) -> int:
 
 
 def list_active_registrations(db: Session, event_id: str) -> list[EventRegistration]:
-    """Every REGISTERED registration for an event — used to cascade-cancel them
+    """Every REGISTERED registration for an event, used to cascade-cancel them
     when the whole event is cancelled."""
     stmt = select(EventRegistration).where(
         EventRegistration.event_id == event_id,

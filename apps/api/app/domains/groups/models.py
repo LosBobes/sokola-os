@@ -20,14 +20,14 @@ class Group(Base, TimestampMixin, RecordStatusMixin):
     attendance are derived from active group memberships.
 
     ``program_id``/``location_id`` link the group into the structure domain
-    (PRD 04 M4) — nullable so a group can exist before either is assigned, and
+    (PRD 04 M4), nullable so a group can exist before either is assigned, and
     ``SET NULL`` so archiving a program/location never destroys group history.
     Only the *models* are imported here (cross-domain model imports are
     allowed); validation that an id belongs to the caller's org happens in this
     domain's own repository/service, never by calling structure's service.
 
     ``base_monthly_price_minor`` is the group's list price in the
-    organization's minor currency unit (PRD 04 M1) — ``None`` means pricing has
+    organization's minor currency unit (PRD 04 M1), ``None`` means pricing has
     not been configured yet. Billing (PRD 07) reads this directly; per-member
     discounts live on :class:`GroupMembership`.
     """
@@ -62,7 +62,7 @@ class GroupMembership(Base, TimestampMixin):
 
     ``discount_minor`` is a per-member discount against ``Group.base_monthly_
     price_minor``, expressed as an ABSOLUTE amount in the same minor currency
-    unit (not a percentage) — billing computes what this member owes as
+    unit (not a percentage), billing computes what this member owes as
     ``max(base_monthly_price_minor - discount_minor, 0)``. An absolute amount
     keeps that arithmetic exact and rounding-free, unlike a percentage.
     """

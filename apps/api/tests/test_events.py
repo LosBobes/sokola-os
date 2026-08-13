@@ -115,7 +115,7 @@ def test_capacity_boundary_rejects_the_registration_over_the_limit(
     client: TestClient, db: Session
 ) -> None:
     """P1: once capacity is reached one at a time, the N+1th registration is
-    rejected — not just the batch-overflow case."""
+    rejected, not just the batch-overflow case."""
     manager = bootstrap_actor(db)
     org = manager.organization
     parent = _parent_of(db, org)
@@ -140,7 +140,7 @@ def test_capacity_boundary_rejects_the_registration_over_the_limit(
 
 
 # ---------------------------------------------------------------------------
-# M1 — event lifecycle edges: edit and whole-event cancel
+# M1, event lifecycle edges: edit and whole-event cancel
 # ---------------------------------------------------------------------------
 
 

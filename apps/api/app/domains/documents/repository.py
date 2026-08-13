@@ -13,7 +13,7 @@ from app.domains.people.models import GuardianOrganizationAccess
 
 
 def get_document(db: Session, organization_id: str, document_id: str) -> Document | None:
-    """Org-scoped lookup — filtering by ``organization_id`` in the query itself
+    """Org-scoped lookup, filtering by ``organization_id`` in the query itself
     means a cross-tenant id simply doesn't match, so callers get a clean 404
     without ever branching on "wrong org" vs "no such id" (never confirm
     existence of a document the caller's tenant doesn't own)."""
@@ -35,7 +35,7 @@ def is_org_member(db: Session, organization_id: str, person_id: str) -> bool:
 
 
 def guardian_child_ids(db: Session, organization_id: str, guardian_person_id: str) -> set[str]:
-    """The children this guardian may act for in THIS organization — the same
+    """The children this guardian may act for in THIS organization, the same
     relationship the events domain resolves guardian access through."""
     stmt = select(GuardianOrganizationAccess.child_person_id).where(
         GuardianOrganizationAccess.organization_id == organization_id,

@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from tests.factories import add_actor, add_membership, bootstrap_actor, make_person
 
 # ---------------------------------------------------------------------------
-# Consent — record / list / withdraw
+# Consent, record / list / withdraw
 # ---------------------------------------------------------------------------
 
 
@@ -228,7 +228,7 @@ def test_dsar_rejection_directly_from_pending(client: TestClient, db: Session) -
     rejected = client.post(
         f"/dsar-requests/{req['id']}/reject",
         headers=staff.headers,
-        json={"note": "Nema pravnog osnova za brisanje — aktivan ugovor."},
+        json={"note": "Nema pravnog osnova za brisanje: aktivan ugovor."},
     )
     assert rejected.status_code == 200
     assert rejected.json()["status"] == "REJECTED"

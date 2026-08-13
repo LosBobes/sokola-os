@@ -28,7 +28,7 @@ class MembershipPeriodStatus(enum.StrEnum):
 
 class OrganizationLifecycleStatus(enum.StrEnum):
     """Where a school is in guided onboarding (PRD 02 §24/§25), independent of
-    ``record_status`` (which is the soft-delete/deactivation axis — §31).
+    ``record_status`` (which is the soft-delete/deactivation axis, §31).
 
     A school created through ``POST /organizations`` starts ``IN_PREPARATION``
     ("u pripremi"): the owner may set up structure and invite a co-owner, but

@@ -7,7 +7,7 @@ vs. parent split:
   tenant) are gated at the router with ``require_permission(DOCUMENTS)``.
 * Resource-level access (can THIS caller see/download/acknowledge THIS
   document) is re-checked here against ``organization_id`` and
-  ``visibility`` regardless of role — a staff member's DOCUMENTS grant always
+  ``visibility`` regardless of role, a staff member's DOCUMENTS grant always
   passes it; anyone else passes only for their own or their guarded child's
   SUBJECT-visibility documents. Never trust the client for either.
 """
@@ -222,7 +222,7 @@ def download_document(
     try:
         data = _storage().load(document.storage_key)
     except FileNotFoundError as exc:
-        # The metadata row exists but its bytes don't — a storage-layer problem,
+        # The metadata row exists but its bytes don't, a storage-layer problem,
         # not a caller error. Never expose the filesystem path.
         raise NotFoundError("Sadržaj dokumenta trenutno nije dostupan.") from exc
     return DocumentContent(

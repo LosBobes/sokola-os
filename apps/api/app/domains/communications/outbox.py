@@ -5,7 +5,7 @@ Wired the same way every outbox consumer is: :func:`register` binds these
 handlers to event types, and :mod:`app.handlers` calls it once at process
 startup (worker) or test setup. A handler receives only the
 :class:`~app.platform.outbox.models.OutboxMessage`, opens its own DB session,
-and commits independently — this mirrors the pattern already established by
+and commits independently, this mirrors the pattern already established by
 ``app.platform.outbox.worker`` (see its module docstring: "every handler must
 be idempotent").
 

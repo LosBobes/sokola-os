@@ -177,7 +177,7 @@ def test_commit_creates_valid_rows_and_skips_invalid_with_correct_counts(
     members = client.get(f"/groups/{group['id']}/members", headers=actor.headers).json()
     assert [m["person_id"] for m in members] == [created_person_id]
 
-    # Only one real person was created from the import — the invalid row never
+    # Only one real person was created from the import, the invalid row never
     # touched Person. Total is 2: the imported person plus the staff actor
     # themselves (bootstrap_actor is also a Person with org membership).
     people = client.get("/people", headers=actor.headers).json()

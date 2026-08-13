@@ -3,11 +3,11 @@ and per-category retention periods.
 
 Scope cuts, deliberate (see PR description):
 * DSAR fulfilment is a manual staff attestation (a note), not an automated
-  data export/erasure — that is a larger, separate effort.
+  data export/erasure, that is a larger, separate effort.
 * Retention periods are a data model only; no automated expiry/purge job
   reads them yet.
 * The consent-gating hook (``consent_gate.has_active_consent``) is not wired
-  into any other domain — each domain adopts it as its own follow-up.
+  into any other domain, each domain adopts it as its own follow-up.
 """
 
 from __future__ import annotations
@@ -254,7 +254,7 @@ def fulfill_dsar_request(
     db: Session, context: RequestContext, request_id: str, req: DecideDsarRequest
 ) -> DsarRequestResponse:
     """v1 fulfilment is a manual staff attestation: no automated data export
-    or erasure runs off this — see the PR description's scope cuts."""
+    or erasure runs off this, see the PR description's scope cuts."""
     return _decide_dsar_request(
         db,
         context,

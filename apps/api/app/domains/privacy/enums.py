@@ -7,7 +7,7 @@ import enum
 
 
 class ConsentScope(enum.StrEnum):
-    """What a consent covers — a closed vocabulary of processing purposes a
+    """What a consent covers, a closed vocabulary of processing purposes a
     person may grant or withdraw, independent of any one domain's own
     feature set."""
 
@@ -32,7 +32,7 @@ class DsarRequestStatus(enum.StrEnum):
 
 class DataCategory(enum.StrEnum):
     """A category of stored personal data a retention period can be attached
-    to. Deliberately domain-agnostic — one category may span several
+    to. Deliberately domain-agnostic, one category may span several
     domains' tables (e.g. DOCUMENTS covers files across the product)."""
 
     PERSONAL_PROFILE = "PERSONAL_PROFILE"

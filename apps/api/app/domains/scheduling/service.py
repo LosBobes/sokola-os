@@ -53,7 +53,7 @@ def create_session(
     idempotency_key: str | None,
 ) -> SessionSummary:
     """Journey 1. Idempotent one-off session create. A true time conflict for the
-    same group is refused (409) — the client previewed it and keeps its draft."""
+    same group is refused (409), the client previewed it and keeps its draft."""
     params = {
         "group_id": draft.group_id,
         "starts_at": draft.starts_at.isoformat(),
@@ -163,7 +163,7 @@ def _require_trainer_in_org(
     if trainer_person_id is None:
         return
     if not repository.is_org_trainer(db, context.organization_id, trainer_person_id):
-        # Same error for foreign/nonexistent — never leak cross-tenant existence.
+        # Same error for foreign/nonexistent, never leak cross-tenant existence.
         raise NotFoundError("Trener nije pronađen.")
 
 
@@ -472,7 +472,7 @@ def cancel_session(
 def reactivate_session(
     db: DbSession, context: RequestContext, session_id: str
 ) -> SessionSummary:
-    """M5. Reactivate a cancelled session — refused if the slot is no longer free."""
+    """M5. Reactivate a cancelled session, refused if the slot is no longer free."""
     session = repository.get_org_session(db, context.organization_id, session_id)
     if session is None:
         raise NotFoundError("Termin nije pronađen.")

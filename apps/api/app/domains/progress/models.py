@@ -11,7 +11,7 @@ from app.domains.progress.enums import ProgressLevel
 
 class ProgressNote(Base, TimestampMixin):
     """A trainer or staff member's note on one student's progress in one group
-    (PRD 06). Append-only like :class:`AttendanceRecord` — a correction is a new
+    (PRD 06). Append-only like :class:`AttendanceRecord`, a correction is a new
     note, never an edit of history, so the record stays honest.
 
     ``session_id`` is set when the note was written as part of taking attendance

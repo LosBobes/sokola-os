@@ -79,7 +79,7 @@ ContextDep = Annotated[RequestContext, Depends(get_context)]
 def require_roles(*roles: RoleCode) -> Callable[[RequestContext], RequestContext]:
     """Dependency factory: the active context must hold one of ``roles``.
 
-    Feature flags are checked separately — a user must pass *both* the flag and
+    Feature flags are checked separately, a user must pass *both* the flag and
     the permission. This guard is only the permission half.
     """
     allowed = set(roles)

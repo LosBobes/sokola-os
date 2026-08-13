@@ -30,7 +30,7 @@ class OutstandingByStatus(BaseModel):
 
 class FinancialReport(BaseModel):
     """Billed vs. collected over an explicit date range, plus a breakdown of
-    all currently-outstanding debt (not time-scoped — debt is a point-in-time
+    all currently-outstanding debt (not time-scoped, debt is a point-in-time
     balance, not something that happened "in" the range)."""
 
     date_from: dt.date
@@ -81,7 +81,7 @@ class MembershipTrendByGroup(BaseModel):
 class MembershipTrendReport(BaseModel):
     """Monthly-bucketed active-membership growth. Membership rows carry only a
     current ``status`` (no historical end date), so each bucket counts
-    currently-active memberships that had already joined by the bucket's end —
+    currently-active memberships that had already joined by the bucket's end , 
     a join-cohort growth curve, not a historical point-in-time snapshot."""
 
     date_from: dt.date

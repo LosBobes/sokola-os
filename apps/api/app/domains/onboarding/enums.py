@@ -11,11 +11,11 @@ class OnboardingStep(enum.StrEnum):
     ``SCHOOL_PROFILE`` is satisfied by ``POST /organizations`` itself (name/
     type/timezone are required at creation) so it is always complete.
     ``LOCATIONS``/``ROOMS``/``PROGRAMS`` are satisfied by using the structure
-    domain's own create endpoints — onboarding does not duplicate them, it only
+    domain's own create endpoints, onboarding does not duplicate them, it only
     reports whether at least one active row exists for the school (see
     ``app.domains.onboarding.service``). ``FIRST_INVITE`` is satisfied by
     sending any invitation (in practice, during onboarding, the co-owner invite
-    — see ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).
+   , see ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).
     ``ACTIVATE`` is the terminal step: leaving "u pripremi".
     """
 

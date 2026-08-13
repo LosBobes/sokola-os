@@ -28,7 +28,7 @@ class AttendanceException(BaseModel):
 
 
 class AttendanceProgressNoteInput(BaseModel):
-    """A progress note (PRD 06 M2) attached to this attendance save. Optional —
+    """A progress note (PRD 06 M2) attached to this attendance save. Optional , 
     a trainer taking attendance may jot a note about a roster member without
     leaving the sheet; equivalent to a standalone POST to
     ``/people/{person_id}/progress-notes`` scoped to this session's group."""

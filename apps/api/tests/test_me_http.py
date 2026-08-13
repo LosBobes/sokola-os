@@ -29,7 +29,7 @@ def test_me_lists_only_own_contexts(client: TestClient, db: Session) -> None:
     body = resp.json()
     assert body["person_id"] == ana.id
     orgs = {c["organization_name"]: c["role_code"] for c in body["contexts"]}
-    # Ana sees exactly her two contexts — never Marko's, never orgs she has no role in.
+    # Ana sees exactly her two contexts, never Marko's, never orgs she has no role in.
     assert orgs == {"Klub Soko": "MANAGER", "Škola Ritam": "TRAINER"}
 
 

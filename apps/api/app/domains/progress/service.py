@@ -15,7 +15,7 @@ def create_note(
     db: DbSession, context: RequestContext, person_id: str, req: CreateProgressNoteRequest
 ) -> ProgressNoteResponse:
     """M1. A trainer/staff member writes a note about a student in one of their
-    groups. The student must be an active member of that group — a note is
+    groups. The student must be an active member of that group, a note is
     always honest about who it's about and in what context."""
     person = repository.get_org_person(db, context.organization_id, person_id)
     if person is None:

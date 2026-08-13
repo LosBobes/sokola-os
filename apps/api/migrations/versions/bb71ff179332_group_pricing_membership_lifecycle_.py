@@ -19,7 +19,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # PRD 04 M4 — nullable links into the structure domain (SET NULL so
+    # PRD 04 M4, nullable links into the structure domain (SET NULL so
     # archiving a program/location never destroys group history).
     op.add_column('group', sa.Column('program_id', sa.String(length=64), nullable=True))
     op.add_column('group', sa.Column('location_id', sa.String(length=64), nullable=True))
@@ -32,12 +32,12 @@ def upgrade() -> None:
         ['location_id'], ['id'], ondelete='SET NULL',
     )
 
-    # PRD 04 M1 — group list price, in the organization's minor currency unit.
+    # PRD 04 M1, group list price, in the organization's minor currency unit.
     op.add_column(
         'group', sa.Column('base_monthly_price_minor', sa.Integer(), nullable=True)
     )
 
-    # PRD 04 M2 — membership lifecycle status, replacing the ended_at-only proxy.
+    # PRD 04 M2, membership lifecycle status, replacing the ended_at-only proxy.
     # Backfill existing rows to ACTIVE, then drop the server default so the
     # column matches the model (Python-side default).
     op.add_column(
@@ -51,7 +51,7 @@ def upgrade() -> None:
     )
     op.alter_column('group_membership', 'status', server_default=None)
 
-    # PRD 04 M1 — absolute per-member discount, in minor currency units.
+    # PRD 04 M1, absolute per-member discount, in minor currency units.
     op.add_column(
         'group_membership',
         sa.Column('discount_minor', sa.Integer(), nullable=False, server_default=sa.text('0')),

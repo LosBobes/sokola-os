@@ -2,7 +2,7 @@
 
 Kept apart from ``service.py`` (which owns transactions/audit/outbox) purely to
 stay under the service-size ratchet; these are pure functions plus read-only
-lookups against sibling domains' models (allowed — only service/repository/
+lookups against sibling domains' models (allowed, only service/repository/
 router/policy imports are forbidden across domains, never models/enums).
 """
 
@@ -65,7 +65,7 @@ def validate_scope(
             raise NotFoundError("Ogranak nije pronađen.")
         return
 
-    # GROUP — the trainer-scoped-to-a-group path (§19.3/M8).
+    # GROUP, the trainer-scoped-to-a-group path (§19.3/M8).
     group = db.get(Group, scope_ref_id)
     if (
         group is None
@@ -83,18 +83,18 @@ def validate_granted_areas(
     actor_granted_areas: tuple[str, ...] | None,
 ) -> None:
     """A restriction can only narrow a role's default areas, never escalate
-    (§19.2/§25.5) — checked two ways:
+    (§19.2/§25.5), checked two ways:
 
     1. Every requested area must be one the target role could ever reach
        (reject areas outside the role's own defaults).
-    2. For a STAFF-family target role (OWNER/MANAGER/ADMIN/TRAINER — the roles
+    2. For a STAFF-family target role (OWNER/MANAGER/ADMIN/TRAINER, the roles
        whose access is denominated in these areas at all), the resulting areas
-       must never exceed what the ACTING context itself effectively holds —
+       must never exceed what the ACTING context itself effectively holds , 
        otherwise a restricted admin could invite/assign someone (or edit their
        own assignment) into MORE access than they have, laundering a narrow
        grant into a broad one. An unrestricted actor's effective areas already
        cover every staff role's defaults, so this is a no-op for the common
-       case. PARENT/STUDENT are a different axis entirely — becoming a parent
+       case. PARENT/STUDENT are a different axis entirely, becoming a parent
        or student isn't a point on the staff-area scale (no staff role's
        defaults include PARENTS), so granting those role kinds is data
        administration already gated by ROLES/PEOPLE, not an area escalation.
@@ -124,10 +124,10 @@ def validate_granted_areas(
 def ensure_invitation_allowed_during_onboarding(
     organization: Organization, role_code: RoleCode
 ) -> None:
-    """§13/M2 (guided onboarding) — while a school is ``IN_PREPARATION``
+    """§13/M2 (guided onboarding), while a school is ``IN_PREPARATION``
     ("u pripremi"), the only invitation the owner may send is a co-owner
-    invite (STAFF/OWNER). Every other invitation — another staff role, a
-    parent, a student — is blocked until the school ``activate``-s out of
+    invite (STAFF/OWNER). Every other invitation, another staff role, a
+    parent, a student, is blocked until the school ``activate``-s out of
     onboarding, so a school-in-progress never accidentally onboards real
     members before its structure exists.
     """
@@ -136,7 +136,7 @@ def ensure_invitation_allowed_during_onboarding(
         and role_code is not RoleCode.OWNER
     ):
         raise ForbiddenError(
-            "Škola je u pripremi — dok se podešavanje ne završi, moguće je "
+            "Škola je u pripremi. Dok se podešavanje ne završi, moguće je "
             "pozvati samo dodatnog vlasnika."
         )
 

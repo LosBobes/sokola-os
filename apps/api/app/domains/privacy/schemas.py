@@ -48,7 +48,7 @@ class CreateDsarRequest(BaseModel):
 
 
 class DecideDsarRequest(BaseModel):
-    """Staff's decision note. Required — a fulfilment/rejection is always
+    """Staff's decision note. Required, a fulfilment/rejection is always
     attested with a reason (v1 has no automated action to point to instead)."""
 
     note: str = Field(min_length=1, max_length=1000)

@@ -127,7 +127,7 @@ def test_org_b_data_never_appears_in_org_a_results(client: TestClient, db: Sessi
     assert session_b not in ids_a
     assert event_b not in ids_a
     # Charges aren't easily correlated by id across orgs from this test alone,
-    # but there must be exactly one (org A's) — never two.
+    # but there must be exactly one (org A's), never two.
     charge_results_a = [r for r in results_a if r["type"] == "CHARGE"]
     assert len(charge_results_a) == 1
 

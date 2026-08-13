@@ -12,7 +12,7 @@ from app.domains.privacy.models import ConsentRecord, DataSubjectRequest, Retent
 
 
 def get_org_person(db: Session, organization_id: str, person_id: str) -> Person | None:
-    """A person visible through an active membership in this org — the same
+    """A person visible through an active membership in this org, the same
     visibility rule every domain applies before touching someone's data."""
     stmt = (
         select(Person)

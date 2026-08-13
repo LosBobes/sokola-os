@@ -1,5 +1,5 @@
 """The consent-gating hook other domains may call before relying on a
-person's consent for something — e.g. "has this person consented to appear
+person's consent for something, e.g. "has this person consented to appear
 in photos before a media feature publishes one".
 
 This is deliberately **not wired into any other domain yet**; each domain

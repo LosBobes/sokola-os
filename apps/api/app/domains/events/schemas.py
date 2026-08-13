@@ -24,7 +24,7 @@ class CreateEventRequest(BaseModel):
 
 
 class UpdateEventRequest(BaseModel):
-    """Partial update — only fields present in the request body are changed.
+    """Partial update, only fields present in the request body are changed.
     ``capacity`` may be sent as ``null`` to clear it (pair with switching
     ``capacity_mode`` to UNLIMITED); omit a field entirely to leave it untouched.
     Only permitted while the event is still upcoming (published/draft and not yet

@@ -1,4 +1,4 @@
-"""Principal resolution — who is making the request.
+"""Principal resolution, who is making the request.
 
 Order:
 

@@ -1,6 +1,6 @@
 """Google OIDC: the Authlib client and just-in-time Person provisioning.
 
-We store only identity links — the Google ``sub`` mapped to a Person via
+We store only identity links, the Google ``sub`` mapped to a Person via
 ``AuthAccount`` / ``AuthIdentifier``. No password hashes or reset tokens ever.
 """
 
@@ -19,6 +19,7 @@ from app.domains.identity.enums import (
     PersonIdentityStatus,
 )
 from app.domains.identity.models import AuthAccount, AuthIdentifier, Person
+from app.security.identity_lookup import find_person_by_email, normalize_email
 
 _oauth: OAuth | None = None
 
@@ -55,7 +56,10 @@ def _find_by_subject(db: Session, subject: str) -> Person | None:
 
 def jit_provision(db: Session, claims: dict[str, Any]) -> Person:
     """Return the Person for these verified ID-token claims, creating the
-    identity link on first login. Idempotent on the Google ``sub``."""
+    identity link on first login. Idempotent on the Google ``sub``, and, when
+    the same email already reached us via a different provider (e.g. an
+    existing email+password account), links this subject to that Person instead
+    of creating a duplicate."""
     subject = claims["sub"]
     existing = _find_by_subject(db, subject)
     if existing is not None:
@@ -65,6 +69,19 @@ def jit_provision(db: Session, claims: dict[str, Any]) -> Person:
     given = (claims.get("given_name") or "").strip()
     family = (claims.get("family_name") or "").strip()
     display = (claims.get("name") or f"{given} {family}").strip() or email or "Korisnik"
+
+    by_email = find_person_by_email(db, email) if email else None
+    if by_email is not None:
+        account = db.execute(
+            select(AuthAccount).where(AuthAccount.person_id == by_email.id)
+        ).scalar_one()
+        db.add(
+            AuthIdentifier(
+                auth_account_id=account.id, type=AuthIdentifierType.SUBJECT, value=subject
+            )
+        )
+        db.commit()
+        return by_email
 
     person = Person(
         given_name=given or display,
@@ -89,7 +106,9 @@ def jit_provision(db: Session, claims: dict[str, Any]) -> Person:
     if email and not _email_taken(db, email):
         db.add(
             AuthIdentifier(
-                auth_account_id=account.id, type=AuthIdentifierType.EMAIL, value=email
+                auth_account_id=account.id,
+                type=AuthIdentifierType.EMAIL,
+                value=normalize_email(email),
             )
         )
     db.commit()
@@ -98,6 +117,7 @@ def jit_provision(db: Session, claims: dict[str, Any]) -> Person:
 
 def _email_taken(db: Session, email: str) -> bool:
     stmt = select(AuthIdentifier.id).where(
-        AuthIdentifier.type == AuthIdentifierType.EMAIL, AuthIdentifier.value == email
+        AuthIdentifier.type == AuthIdentifierType.EMAIL,
+        AuthIdentifier.value == normalize_email(email),
     )
     return db.execute(stmt).scalar_one_or_none() is not None

@@ -2,7 +2,7 @@
 
 Authorization follows GRANTED AREAS, not the role *name* (PRD 01 §19.2/§25.5).
 A role has a default set of areas it may touch; an individual ``RoleAssignment``
-may be *restricted* to a subset of those (``granted_areas``) — for example an
+may be *restricted* to a subset of those (``granted_areas``), for example an
 ADMIN invited "for finances only". A restriction can only ever *narrow* a role's
 defaults, never escalate them.
 
@@ -21,7 +21,7 @@ preserved exactly:
     EVENTS          | OWNER, MANAGER, ADMIN            (events _staff)
     COMMUNICATIONS  | OWNER, MANAGER, ADMIN            (communications _staff)
     PARENTS         | PARENT                           (parent router + events _parent)
-    DOCUMENTS       | OWNER, MANAGER, ADMIN            (documents _staff — new area, no
+    DOCUMENTS       | OWNER, MANAGER, ADMIN            (documents _staff, new area, no
                     |                                    require_roles precedent to audit)
 
 ORGANIZATION and ROLES have no ``require_roles`` guard today (the organization
@@ -35,7 +35,7 @@ payments, attendance and membership, so its guard is granted the same
 OWNER/MANAGER/ADMIN set as the other administrative areas.
 
 IMPORT (PRD 11, added with the CSV bulk-import feature) has no legacy
-``require_roles`` guard to audit — it is granted to OWNER/MANAGER/ADMIN
+``require_roles`` guard to audit, it is granted to OWNER/MANAGER/ADMIN
 directly, matching PEOPLE/GROUPS since importing people/groups is exactly the
 same administrative surface those areas already gate.
 """
@@ -74,7 +74,7 @@ class PermissionArea(enum.StrEnum):
 
 # Everything a staff role administers by default. ORGANIZATION/ROLES/PRIVACY are
 # behaviour-neutral today except where their own domain's routes now guard on
-# them (PRIVACY does) — see module docstring.
+# them (PRIVACY does), see module docstring.
 _STAFF_AREAS: frozenset[PermissionArea] = frozenset(
     {
         PermissionArea.PEOPLE,
@@ -100,7 +100,7 @@ ROLE_DEFAULT_AREAS: dict[RoleCode, frozenset[PermissionArea]] = {
     RoleCode.ADMIN: _STAFF_AREAS,
     # TRAINER only ever passed the attendance recorder guard.
     RoleCode.TRAINER: frozenset({PermissionArea.ATTENDANCE}),
-    # PARENT reaches only the parent surface — including the parent-facing event
+    # PARENT reaches only the parent surface, including the parent-facing event
     # routes, which are guarded on PARENTS (not EVENTS, which is staff-only).
     RoleCode.PARENT: frozenset({PermissionArea.PARENTS}),
     # STUDENT held no require_roles guard on any product route.
@@ -147,7 +147,7 @@ def require_permission(
     """Dependency factory: the active context's effective areas must intersect
     ``areas`` (OR semantics, mirroring :func:`require_roles`).
 
-    Feature flags remain separate — this is only the permission half.
+    Feature flags remain separate, this is only the permission half.
     """
     required = frozenset(areas)
 

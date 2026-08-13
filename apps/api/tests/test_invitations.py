@@ -54,14 +54,14 @@ def _send(
 
 
 def _accept_headers(db: Session, *, email: str, given: str = "Novi") -> tuple[dict[str, str], str]:
-    """A brand-new person, with a verified login email — ready to accept."""
+    """A brand-new person, with a verified login email, ready to accept."""
     person = make_person(db, given=given, family="Član")
     link_login_email(db, person=person, email=email)
     return {DEV_PERSON_HEADER: person.id}, person.id
 
 
 # ---------------------------------------------------------------------------
-# M1 — send / accept-new / accept-existing
+# M1, send / accept-new / accept-existing
 # ---------------------------------------------------------------------------
 
 
@@ -110,7 +110,7 @@ def test_accept_invitation_as_existing_person_adds_second_context(
     client: TestClient, db: Session
 ) -> None:
     """The same accept path also serves a person who already has a context
-    elsewhere (§21) — acceptance only ever adds, never replaces."""
+    elsewhere (§21), acceptance only ever adds, never replaces."""
     other_org = bootstrap_actor(db, org_name="Prva škola")
     headers = other_org.headers
     link_login_email(db, person=other_org.person, email="postojeci@primer.rs")
@@ -127,7 +127,7 @@ def test_accept_invitation_as_existing_person_adds_second_context(
 
 
 # ---------------------------------------------------------------------------
-# M2 — wrong-account rejection (§23)
+# M2, wrong-account rejection (§23)
 # ---------------------------------------------------------------------------
 
 
@@ -145,7 +145,7 @@ def test_accept_invitation_wrong_account_is_rejected(client: TestClient, db: Ses
 
 
 # ---------------------------------------------------------------------------
-# M1 — revoke / reissue / expiry
+# M1, revoke / reissue / expiry
 # ---------------------------------------------------------------------------
 
 
@@ -229,7 +229,7 @@ def test_invitation_expires_after_seven_days(client: TestClient, db: Session) ->
 
 
 # ---------------------------------------------------------------------------
-# M7 — parent-invite-to-specific-child + additional guardian (§19.4/19.5)
+# M7, parent-invite-to-specific-child + additional guardian (§19.4/19.5)
 # ---------------------------------------------------------------------------
 
 
@@ -267,7 +267,7 @@ def test_parent_invitation_links_guardian_to_specific_child(
     children = client.get("/parent/children", headers=parent_headers).json()
     assert [c["person_id"] for c in children] == [child.id]
 
-    # The original guardian keeps their own access too — this was additive.
+    # The original guardian keeps their own access too, this was additive.
     original_headers = existing_guardian.headers
     original_children = client.get("/parent/children", headers=original_headers).json()
     assert [c["person_id"] for c in original_children] == [child.id]
@@ -291,7 +291,7 @@ def test_parent_invitation_requires_a_child_in_this_school(
 
 
 # ---------------------------------------------------------------------------
-# M8 — trainer group-assignment path (§19.3)
+# M8, trainer group-assignment path (§19.3)
 # ---------------------------------------------------------------------------
 
 

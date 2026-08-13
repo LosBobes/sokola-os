@@ -99,7 +99,7 @@ def list_members_with_people(
 def get_org_membership(
     db: Session, organization_id: str, group_id: str, membership_id: str
 ) -> tuple[GroupMembership, Person] | None:
-    """Loaded without a status filter — lifecycle transitions must be able to
+    """Loaded without a status filter, lifecycle transitions must be able to
     find an already-ended membership too, in order to raise a clean conflict
     rather than a not-found."""
     stmt = (
@@ -116,7 +116,7 @@ def get_org_membership(
 
 
 # ---------------------------------------------------------------------------
-# Structure links (program/location) — models only, per the architecture gate.
+# Structure links (program/location), models only, per the architecture gate.
 # ---------------------------------------------------------------------------
 
 

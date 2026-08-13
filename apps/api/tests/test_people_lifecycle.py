@@ -28,7 +28,7 @@ def _create_member(client: TestClient, actor: Actor, given: str, family: str) ->
 
 
 # ---------------------------------------------------------------------------
-# M1 — end / suspend / resume
+# M1, end / suspend / resume
 # ---------------------------------------------------------------------------
 
 
@@ -90,7 +90,7 @@ def test_membership_end_suspend_resume(client: TestClient, db: Session) -> None:
 
 
 # ---------------------------------------------------------------------------
-# M2 — protected last owner (§22)
+# M2, protected last owner (§22)
 # ---------------------------------------------------------------------------
 
 
@@ -115,7 +115,7 @@ def test_ending_last_owner_is_blocked_until_a_second_owner_exists(
 
 
 # ---------------------------------------------------------------------------
-# M6 — school-local member data (§8/§9/§10)
+# M6, school-local member data (§8/§9/§10)
 # ---------------------------------------------------------------------------
 
 
@@ -148,7 +148,7 @@ def test_local_member_code_is_unique_within_org(client: TestClient, db: Session)
 
 
 # ---------------------------------------------------------------------------
-# M4 — revoke parental access (§30)
+# M4, revoke parental access (§30)
 # ---------------------------------------------------------------------------
 
 
@@ -185,7 +185,7 @@ def test_revoke_parental_access(client: TestClient, db: Session) -> None:
 
 
 # ---------------------------------------------------------------------------
-# M5 — primary contact designation (§25)
+# M5, primary contact designation (§25)
 # ---------------------------------------------------------------------------
 
 
@@ -225,7 +225,7 @@ def test_primary_contact_is_exclusive_per_child(client: TestClient, db: Session)
     assert first.status_code == 200
     assert first.json()["is_primary_contact"] is True
 
-    # Designating the second guardian demotes the first — only one primary remains.
+    # Designating the second guardian demotes the first, only one primary remains.
     second = client.post(
         f"/people/{child.id}/guardians/{g2.id}/primary", headers=staff.headers
     )
@@ -239,7 +239,7 @@ def test_primary_contact_is_exclusive_per_child(client: TestClient, db: Session)
 
 
 # ---------------------------------------------------------------------------
-# P2 — duplicate detection + review (§13–15)
+# P2, duplicate detection + review (§13–15)
 # ---------------------------------------------------------------------------
 
 
@@ -357,7 +357,7 @@ def test_lifecycle_is_isolated_per_organization(client: TestClient, db: Session)
         == 404
     )
 
-    # And org A's action still works — proving the 404 was isolation, not a bad id.
+    # And org A's action still works, proving the 404 was isolation, not a bad id.
     assert (
         client.post(
             f"/people/{person_id}/membership/suspend", headers=org_a.headers, json={}

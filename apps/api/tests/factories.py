@@ -114,7 +114,7 @@ def add_actor(
 
 def link_login_email(db: Session, *, person: Person, email: str) -> None:
     """Simulate the email a person has verified sign-in with (as Google OIDC's
-    ``jit_provision`` would record it) — the surface invite acceptance checks
+    ``jit_provision`` would record it), the surface invite acceptance checks
     for "wrong account" rejection (§23), independent of the auth adapter used
     to reach the request (dev header in tests, session cookie in prod)."""
     account = AuthAccount(person_id=person.id, provider="google", status=AuthAccountStatus.ACTIVE)

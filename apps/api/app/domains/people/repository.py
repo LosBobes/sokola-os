@@ -60,7 +60,7 @@ def list_org_people(
 
 def get_org_person(db: Session, organization_id: str, person_id: str) -> Person | None:
     """A person is visible only through an active membership in the active org.
-    Membership *status* (active/suspended/ended) does not affect visibility — a
+    Membership *status* (active/suspended/ended) does not affect visibility, a
     suspended member is still administrable."""
     stmt = (
         select(Person)
@@ -93,7 +93,7 @@ def get_membership(
 
 
 def count_active_owners(db: Session, organization_id: str) -> int:
-    """Active OWNER role assignments in this org — the protected-last-owner set."""
+    """Active OWNER role assignments in this org, the protected-last-owner set."""
     stmt = select(func.count()).select_from(RoleAssignment).where(
         RoleAssignment.organization_id == organization_id,
         RoleAssignment.role_code == RoleCode.OWNER,
@@ -186,7 +186,7 @@ def child_primary_contacts(
 
 def list_duplicate_clusters(db: Session, organization_id: str) -> list[tuple[str, str]]:
     """Normalized (given, family) name keys that more than one active member in
-    this org shares — the likely-duplicate buckets (§13)."""
+    this org shares, the likely-duplicate buckets (§13)."""
     given = func.lower(func.trim(Person.given_name))
     family = func.lower(func.trim(Person.family_name))
     stmt = (

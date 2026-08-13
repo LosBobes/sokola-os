@@ -22,7 +22,7 @@ apps/web/cypress/videos/
 *.local
 
 # Local-filesystem document storage backend (runtime cache, not source of
-# truth — see apps/api/app/domains/documents/storage.py)
+# truth, see apps/api/app/domains/documents/storage.py)
 apps/api/var/
 
 # OS

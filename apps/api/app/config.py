@@ -33,7 +33,7 @@ class Settings(BaseSettings):
 
     # --- Document storage. Local filesystem only in this increment (no object
     # store credentials available); relative paths resolve against the process
-    # cwd (apps/api in dev/CI). Gitignored — a runtime cache, not source of
+    # cwd (apps/api in dev/CI). Gitignored, a runtime cache, not source of
     # truth (the `document` table row is). See app/domains/documents/storage.py
     # for the interface a future S3/GCS backend would implement instead. ---
     documents_storage_dir: str = "var/documents"
@@ -50,6 +50,15 @@ class Settings(BaseSettings):
     oidc_redirect_url: str = "http://localhost:5173/api/auth/google/callback"
     # Where the browser lands after a successful login.
     web_post_login_url: str = "http://localhost:5173/"
+
+    # --- Email + password login. On by default: a user can register and sign
+    # in with just an email and password, no external provider or email link. ---
+    password_auth_enabled: bool = True
+    # Server-side pepper folded into every password hash (see
+    # app.security.password). Held only in the environment, never in the DB.
+    # Change it outside local, and note that changing it invalidates every
+    # existing password hash (users must reset), so rotate deliberately.
+    password_pepper: str = "dev-insecure-password-pepper-change-me"
 
     @property
     def is_production_like(self) -> bool:

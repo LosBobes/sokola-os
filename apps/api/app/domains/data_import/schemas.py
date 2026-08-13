@@ -27,7 +27,7 @@ class ImportBatchResponse(BaseModel):
 
 class ImportRowPreviewResult(BaseModel):
     """One row's dry-run outcome. ``valid`` and ``duplicate_person_ids`` are
-    independent — a row can be valid AND look like an existing person; the
+    independent, a row can be valid AND look like an existing person; the
     caller decides whether that's acceptable (v1 never blocks on it)."""
 
     row_number: int

@@ -1,5 +1,8 @@
-"""Test fixtures. Integration tests run against a real PostgreSQL (the same
-throwaway container used in dev). Each test starts from a truncated schema."""
+"""Test fixtures. Integration tests run against a real PostgreSQL, the same
+throwaway container used in dev, but a DEDICATED `sokola_test` database within
+it, never the `sokola` database dev actually works in. Each test starts from a
+truncated schema, so pointing this at a shared database would destroy live
+data on every single test run (it did once, see git history)."""
 
 from __future__ import annotations
 
@@ -8,9 +11,13 @@ import os
 # Must be set before importing any app module that reads settings / builds the engine.
 os.environ.setdefault("SOKOLA_ENVIRONMENT", "test")
 os.environ.setdefault(
-    "SOKOLA_DATABASE_URL", "postgresql+psycopg://sokola:sokola@localhost:55432/sokola"
+    "SOKOLA_DATABASE_URL", "postgresql+psycopg://sokola:sokola@localhost:55432/sokola_test"
 )
 os.environ.setdefault("SOKOLA_ALLOW_INSECURE_DEV_AUTH", "true")
+# Tests must not silently inherit real Google credentials from a developer's
+# local .env, pin these off so google_enabled is deterministic.
+os.environ.setdefault("SOKOLA_GOOGLE_CLIENT_ID", "")
+os.environ.setdefault("SOKOLA_GOOGLE_CLIENT_SECRET", "")
 
 from collections.abc import Iterator  # noqa: E402
 

@@ -112,7 +112,7 @@ def void_payment(
     """PRD 07 P2. Reverses a recorded payment: the amount it applied is
     subtracted back out of the charge's ``amount_paid_minor`` and the charge's
     status is recomputed from what remains. A CANCELLED charge stays
-    CANCELLED — cancellation is terminal regardless of the ledger."""
+    CANCELLED, cancellation is terminal regardless of the ledger."""
     params = {"payment_id": payment_id, **req.model_dump()}
     guard = None
     if idempotency_key:

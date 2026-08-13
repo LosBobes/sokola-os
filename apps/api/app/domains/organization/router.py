@@ -55,7 +55,7 @@ def get_current_organization(db: DbDep, context: ContextDep) -> OrganizationResp
     responses={409: {"description": "Already deactivated."}},
 )
 def deactivate_organization(db: DbDep, context: RolesContext) -> OrganizationResponse:
-    """§31 — deactivate the caller's active school. Locks out every future
+    """§31, deactivate the caller's active school. Locks out every future
     context resolution against it; see ``reactivateOrganization``."""
     return service.deactivate_organization(db, context)
 
@@ -73,7 +73,7 @@ def deactivate_organization(db: DbDep, context: RolesContext) -> OrganizationRes
 def reactivate_organization(
     organization_id: str, db: DbDep, principal: PrincipalDep
 ) -> OrganizationResponse:
-    """§31 — a deactivated school cannot be reached through the normal
+    """§31, a deactivated school cannot be reached through the normal
     context-selection path (a deactivated org is rejected at context
     resolution), so this authenticates on the principal alone and checks
     ownership of the named school directly."""

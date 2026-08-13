@@ -45,7 +45,7 @@ def group_recipient_ids(db: Session, group_id: str) -> list[str]:
 def list_inbox(
     db: Session, organization_id: str, person_id: str, params: PageParams
 ) -> tuple[list[Notification], int]:
-    """A person's own inbox — always scoped to both the caller's tenant and
+    """A person's own inbox, always scoped to both the caller's tenant and
     their own ``person_id``; nothing here is reachable cross-person."""
     base = select(Notification).where(
         Notification.organization_id == organization_id,

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from tests.factories import add_actor, bootstrap_actor, make_person
 
 # ---------------------------------------------------------------------------
-# M3 — assign / list / permission-change / suspend / revoke
+# M3, assign / list / permission-change / suspend / revoke
 # ---------------------------------------------------------------------------
 
 
@@ -74,7 +74,7 @@ def test_update_granted_areas_restricts_and_clears(client: TestClient, db: Sessi
     assert restrict.status_code == 200
     assert restrict.json()["granted_areas"] == ["BILLING"]
 
-    # An area outside the role's default is rejected — a restriction can only
+    # An area outside the role's default is rejected, a restriction can only
     # narrow, never escalate (§19.2/§25.5).
     escalate = client.patch(
         f"/roles/{admin.assignment.id}/granted-areas",
@@ -96,7 +96,7 @@ def test_restricted_admin_cannot_grant_areas_beyond_their_own(
     client: TestClient, db: Session
 ) -> None:
     # An ADMIN restricted to just ROLES+BILLING must not be able to launder
-    # that into broader access — for anyone, including themselves — by
+    # that into broader access, for anyone including themselves, by
     # granting a wider set than they themselves effectively hold (§19.2/§25.5).
     staff = bootstrap_actor(db)
     restricted_admin = add_actor(
@@ -135,7 +135,7 @@ def test_restricted_admin_cannot_grant_areas_beyond_their_own(
     )
     assert narrow.status_code == 200
 
-    # Same bound applies to inviting a new staff member — an unrestricted
+    # Same bound applies to inviting a new staff member, an unrestricted
     # ADMIN invite (granted_areas omitted) would exceed what this restricted
     # actor itself holds.
     invite_escalate = client.post(
@@ -209,7 +209,7 @@ def test_list_role_assignments(client: TestClient, db: Session) -> None:
 
 
 # ---------------------------------------------------------------------------
-# M8 — trainer scoped to a group, direct assignment path
+# M8, trainer scoped to a group, direct assignment path
 # ---------------------------------------------------------------------------
 
 
@@ -252,7 +252,7 @@ def test_assign_role_scope_must_reference_a_real_group_in_this_org(
 
 
 # ---------------------------------------------------------------------------
-# M4 — protected last owner
+# M4, protected last owner
 # ---------------------------------------------------------------------------
 
 
@@ -283,13 +283,13 @@ def test_second_owner_can_be_revoked_but_not_the_last(client: TestClient, db: Se
     )
     assert first.status_code == 200
 
-    # Now only one active owner remains — it is protected.
+    # Now only one active owner remains, it is protected.
     second = client.post(f"/roles/{staff.assignment.id}/revoke", headers=staff.headers, json={})
     assert second.status_code == 409
 
 
 # ---------------------------------------------------------------------------
-# M5 — ownership add/transfer
+# M5, ownership add/transfer
 # ---------------------------------------------------------------------------
 
 
@@ -313,7 +313,7 @@ def test_transfer_ownership_adds_and_revokes_previous(client: TestClient, db: Se
     assert body["new_owner"]["status"] == "ACTIVE"
     assert body["revoked_owner"]["status"] == "REVOKED"
 
-    # The school never had zero owners — this never trips the last-owner guard,
+    # The school never had zero owners, this never trips the last-owner guard,
     # because the new owner was granted before the old one was revoked.
     remaining = client.get("/roles", headers=successor.headers).json()["items"]
     owners = [r for r in remaining if r["role_code"] == "OWNER" and r["status"] == "ACTIVE"]
@@ -335,7 +335,7 @@ def test_transfer_ownership_add_only_keeps_both_owners(client: TestClient, db: S
     assert resp.status_code == 200
     assert resp.json()["revoked_owner"] is None
 
-    # Both are now active owners — neither is the sole one, so both are
+    # Both are now active owners, neither is the sole one, so both are
     # individually revocable.
     ok = client.post(f"/roles/{staff.assignment.id}/revoke", headers=staff.headers, json={})
     assert ok.status_code == 200
@@ -389,7 +389,7 @@ def test_role_admin_does_not_cross_tenants(client: TestClient, db: Session) -> N
 
 
 # ---------------------------------------------------------------------------
-# P1 — deactivate/reactivate school
+# P1, deactivate/reactivate school
 # ---------------------------------------------------------------------------
 
 
@@ -402,7 +402,7 @@ def test_deactivate_locks_out_context_then_owner_reactivates(
     assert deactivated.status_code == 200
     assert deactivated.json()["id"] == staff.organization.id
 
-    # The context is now unreachable — even for the same owner.
+    # The context is now unreachable, even for the same owner.
     blocked = client.get("/organizations/current", headers=staff.headers)
     assert blocked.status_code == 403
 

@@ -99,7 +99,7 @@ def post_run(
     idempotency_key: str | None,
 ) -> BillingRunResponse:
     """Journey 5. Post charges from the reviewed preview. If the roster changed
-    since the preview, the recomputed hash won't match and posting is refused —
+    since the preview, the recomputed hash won't match and posting is refused , 
     the manager must review the new preview."""
     params = req.model_dump()
     guard = None
@@ -113,7 +113,7 @@ def post_run(
     items, total, currency, current_hash = _compute(db, context, req)
     if current_hash != req.preview_hash:
         raise ConflictError(
-            "Obračun je zastareo — spisak članova se promenio. Pregledajte ponovo.",
+            "Obračun je zastareo. Spisak članova se promenio, pregledajte ponovo.",
             details={"code": "PREVIEW_STALE"},
         )
     if not items:
@@ -180,7 +180,7 @@ def cancel_charge(
     idempotency_key: str | None,
 ) -> ChargeResponse:
     """PRD 07 P1. A charge is only cancellable while it hasn't been settled
-    (PAID) or already cancelled — a partially-paid charge can still be
+    (PAID) or already cancelled, a partially-paid charge can still be
     cancelled (e.g. waiving the remainder); voiding the payments already
     applied to it is a separate operation (PRD 07 P2)."""
     params = {"charge_id": charge_id, **req.model_dump()}

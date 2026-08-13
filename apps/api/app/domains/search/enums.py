@@ -4,7 +4,7 @@ import enum
 
 
 class SearchResultType(enum.StrEnum):
-    """Which entity a search result came from — drives icon/link choice client-side."""
+    """Which entity a search result came from, drives icon/link choice client-side."""
 
     PERSON = "PERSON"
     GROUP = "GROUP"

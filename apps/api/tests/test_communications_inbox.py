@@ -178,7 +178,7 @@ def test_event_registration_notifies_registrant_once(client: TestClient, db: Ses
     _drain_outbox()
 
     # The parent is both the registrant and the child's guardian, but the
-    # recipient set is deduplicated — exactly one notification, not two.
+    # recipient set is deduplicated, exactly one notification, not two.
     parent_inbox = client.get("/communications/inbox", headers=parent.headers).json()
     assert parent_inbox["total"] == 1
     assert parent_inbox["items"][0]["event_type"] == "event.registered"

@@ -17,7 +17,7 @@ class GroupMembershipEndReason(enum.StrEnum):
 
 class GroupMembershipStatus(enum.StrEnum):
     """Mirrors :class:`app.domains.organization.enums.MembershipStatus` at group
-    scope. ``ENDED`` is terminal — re-joining creates a brand-new membership row,
+    scope. ``ENDED`` is terminal, re-joining creates a brand-new membership row,
     never a revived one (the unique constraint on ``(group_id, person_id)`` would
     otherwise collide with history)."""
 

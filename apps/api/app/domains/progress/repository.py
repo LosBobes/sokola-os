@@ -14,7 +14,7 @@ def get_org_person(db: DbSession, organization_id: str, person_id: str) -> Perso
     """A person is visible only through an active membership in this org.
 
     This mirrors ``people.repository.get_org_person`` exactly, duplicated
-    rather than imported — the architecture gate allows domains to share
+    rather than imported, the architecture gate allows domains to share
     ``models`` but never another domain's ``repository``.
     """
     stmt = (

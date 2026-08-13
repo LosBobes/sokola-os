@@ -59,7 +59,7 @@ def list_my_contexts(db: DbDep, principal: PrincipalDep) -> list[ContextSummary]
 def send_invitation(
     body: CreateInvitationRequest, db: DbDep, context: RolesContext
 ) -> InvitationCreatedResponse:
-    """Send an invitation. The raw token is returned exactly once — only its
+    """Send an invitation. The raw token is returned exactly once, only its
     hash is ever persisted."""
     return service.send_invitation(db, context, body)
 
@@ -119,7 +119,7 @@ def reissue_invitation(
 def accept_invitation(
     body: AcceptInvitationRequest, db: DbDep, principal: PrincipalDep
 ) -> AcceptInvitationResponse:
-    """Accept an invitation as the already-authenticated caller — the same path
+    """Accept an invitation as the already-authenticated caller, the same path
     for a brand-new sign-up and an existing person (§21/§22); no active context
     is required since acceptance is exactly how one is obtained."""
     return service.accept_invitation(db, principal, body)

@@ -47,7 +47,7 @@ def list_rows(db: Session, batch_id: str) -> list[ImportRow]:
 
 
 def find_group_by_name(db: Session, organization_id: str, name: str) -> Group | None:
-    """Case/whitespace-insensitive lookup — import never creates groups, only
+    """Case/whitespace-insensitive lookup, import never creates groups, only
     links rows to ones that already exist in this org (§ import v1 scope)."""
     stmt = select(Group).where(
         Group.organization_id == organization_id,
@@ -61,7 +61,7 @@ def find_local_code_owner(
     db: Session, organization_id: str, local_member_code: str
 ) -> OrganizationMembership | None:
     """An existing member in this org already holding ``local_member_code``
-    (§9) — mirrors ``app.domains.people.repository.find_local_code_owner``,
+    (§9), mirrors ``app.domains.people.repository.find_local_code_owner``,
     minus the ``exclude_person_id`` (import rows describe brand-new people, so
     there is no existing membership row of their own to exclude)."""
     stmt = select(OrganizationMembership).where(
@@ -78,7 +78,7 @@ def find_duplicate_people(
     """People already in THIS organization whose name matches (case-insensitive).
 
     Mirrors the shape of ``app.domains.people.repository.find_duplicate_
-    candidates`` (added in #6 / ``GET /people/duplicates``) — reimplemented
+    candidates`` (added in #6 / ``GET /people/duplicates``), reimplemented
     here directly against the shared Person/OrganizationMembership models
     rather than importing the people domain's repository, which the
     architecture gate forbids across domains.

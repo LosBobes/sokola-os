@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from app.common.base import Base  # noqa: F401
 
-# Domain models — imported for their side effect of registering tables on
+# Domain models, imported for their side effect of registering tables on
 # Base.metadata. Appended increment by increment.
 from app.domains.attendance import models as _attendance_models  # noqa: F401
 from app.domains.billing import models as _billing_models  # noqa: F401

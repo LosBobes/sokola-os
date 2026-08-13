@@ -1,7 +1,7 @@
 """Identity & access enums.
 
 ``RoleCode`` is a **closed access-template facade**. It expresses what a person is
-allowed to do inside one organization — never a profile, credential, or job-title
+allowed to do inside one organization, never a profile, credential, or job-title
 taxonomy. New capabilities do not get new role codes; they get policy rules.
 """
 
@@ -57,7 +57,7 @@ class AuthAccountStatus(enum.StrEnum):
 
 
 class AuthIdentifierType(enum.StrEnum):
-    SUBJECT = "SUBJECT"  # external OIDC subject — the authoritative link
+    SUBJECT = "SUBJECT"  # external OIDC subject, the authoritative link
     EMAIL = "EMAIL"
     PHONE = "PHONE"
 

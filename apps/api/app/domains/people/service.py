@@ -41,7 +41,7 @@ def create_provisional_person(
     """Journey 8. Create a provisional person and attach them to the active org.
 
     If a same-named member already exists, refuse with a 409 that lists the
-    candidates — unless the caller has explicitly confirmed the duplicate with a
+    candidates, unless the caller has explicitly confirmed the duplicate with a
     written reason.
     """
     candidates = repository.find_duplicate_candidates(
@@ -109,7 +109,7 @@ def get_person(db: Session, context: RequestContext, person_id: str) -> PersonRe
 
 
 # ---------------------------------------------------------------------------
-# Membership lifecycle (§16/§19/§20/§21) — end / suspend / resume
+# Membership lifecycle (§16/§19/§20/§21), end / suspend / resume
 # ---------------------------------------------------------------------------
 
 
@@ -119,13 +119,13 @@ def _load_member(
     membership = repository.get_membership(db, context.organization_id, person_id)
     person = repository.get_org_person(db, context.organization_id, person_id)
     if membership is None or person is None:
-        # Foreign or nonexistent resource returns the same error — never leak.
+        # Foreign or nonexistent resource returns the same error, never leak.
         raise NotFoundError("Osoba nije pronađena.")
     return membership, person
 
 
 def _guard_not_last_owner(db: Session, organization_id: str, person_id: str) -> None:
-    """§22 — never strip the school of its last remaining active owner."""
+    """§22, never strip the school of its last remaining active owner."""
     if (
         repository.is_active_owner(db, organization_id, person_id)
         and repository.count_active_owners(db, organization_id) <= 1
@@ -219,7 +219,7 @@ def resume_membership(
 
 
 # ---------------------------------------------------------------------------
-# School-local member data (§8/§9/§10) — local code + admin note
+# School-local member data (§8/§9/§10), local code + admin note
 # ---------------------------------------------------------------------------
 
 
@@ -496,14 +496,14 @@ def decide_merge_review(
             action="person.merge_dismissed",
             entity_type="person_merge_record",
             entity_id=review.id,
-            summary="Predmet spajanja je odbačen — osobe su različite.",
+            summary="Predmet spajanja je odbačen: osobe su različite.",
             organization_id=context.organization_id,
             actor_person_id=context.person_id,
         )
         db.commit()
         return MergeReviewResponse.model_validate(review)
 
-    # MERGE — conservative: mark the source merged and end its org membership.
+    # MERGE, conservative: mark the source merged and end its org membership.
     # Repointing of the source's relationships/payments is a deliberate follow-up.
     source = repository.get_org_person(db, context.organization_id, review.source_person_id)
     target = repository.get_org_person(db, context.organization_id, review.target_person_id)

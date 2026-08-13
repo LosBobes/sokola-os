@@ -90,7 +90,7 @@ def test_cannot_add_person_from_another_org(client: TestClient, db: Session) -> 
 
 
 # ---------------------------------------------------------------------------
-# M1 — pricing (group list price + per-member discount)
+# M1, pricing (group list price + per-member discount)
 # ---------------------------------------------------------------------------
 
 
@@ -173,7 +173,7 @@ def test_membership_discount_rejects_negative(client: TestClient, db: Session) -
 
 
 # ---------------------------------------------------------------------------
-# M2 — enrollment lifecycle (suspend / resume / end)
+# M2, enrollment lifecycle (suspend / resume / end)
 # ---------------------------------------------------------------------------
 
 
@@ -284,7 +284,7 @@ def test_membership_lifecycle_rejects_foreign_group_or_membership(
 
 
 # ---------------------------------------------------------------------------
-# M4 — program/location link
+# M4, program/location link
 # ---------------------------------------------------------------------------
 
 

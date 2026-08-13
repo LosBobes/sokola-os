@@ -1,24 +1,24 @@
-"""Guided school onboarding (PRD 02 §24/§25, PRD 01 §13) — the Wave 1 capstone.
+"""Guided school onboarding (PRD 02 §24/§25, PRD 01 §13), the Wave 1 capstone.
 
 Design note (documented per the issue's "your call" points):
 
 * Locations/rooms/programs are NOT duplicated behind onboarding-specific create
   endpoints. Structure setup during onboarding is just using the structure
-  domain's own ``POST /locations`` / ``/rooms`` / ``/programs`` — this service
+  domain's own ``POST /locations`` / ``/rooms`` / ``/programs``, this service
   only *reports* whether at least one active row of each exists for the school,
   read live off ``app.domains.structure.models`` (models may cross domains;
-  service/repository/router may not — see ``scripts/check_architecture.py``).
+  service/repository/router may not, see ``scripts/check_architecture.py``).
 * The "first invite" step is likewise read live: at least one invitation has
   ever been sent for the school. During ``IN_PREPARATION`` that can only be a
-  co-owner (OWNER) invite — see
-  ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding`` —
+  co-owner (OWNER) invite, see
+  ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding`` , 
   so in practice this step tracks the first-owner invite path (§13/M3).
 * ``school profile`` is satisfied the moment the organization exists (name/
   type/timezone are required at ``POST /organizations``), so it is always
   reported complete.
 * Activation's minimum bar is "at least one active location" (per the issue).
   Rooms/programs/first-invite remain informational progress, not activation
-  blockers — a school can activate having only set up its address.
+  blockers, a school can activate having only set up its address.
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ def _get_or_create_progress(db: Session, organization_id: str) -> OnboardingProg
 def _first_active_completed_at(
     db: Session, model: type[Any], organization_id: str
 ) -> dt.datetime | None:
-    """The earliest ``created_at`` among the org's ACTIVE rows of ``model`` —
+    """The earliest ``created_at`` among the org's ACTIVE rows of ``model`` , 
     i.e. when this step first became true. ``None`` if none exist (yet)."""
     return db.execute(
         select(func.min(model.created_at)).where(

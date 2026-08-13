@@ -63,7 +63,7 @@ class Notification(Base, TimestampMixin):
     ``source_message_id`` is the id of the :class:`OutboxMessage
     <app.platform.outbox.models.OutboxMessage>` that produced this row. Outbox
     delivery is at-least-once, so the (``source_message_id``, ``person_id``)
-    pair is the idempotency key a handler checks before inserting — the same
+    pair is the idempotency key a handler checks before inserting, the same
     event redelivered to the same person must never duplicate their inbox item.
 
     See :class:`app.domains.communications.enums.NotificationDeliveryStatus`

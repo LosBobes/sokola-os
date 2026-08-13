@@ -1,7 +1,7 @@
 [project]
 name = "sokola-api"
 version = "0.1.0"
-description = "SOKOLA OS P0 API — FastAPI modular monolith"
+description = "SOKOLA OS P0 API: a FastAPI modular monolith"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
@@ -42,7 +42,7 @@ src = ["app", "tests"]
 select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
 ignore = [
     "B008",   # FastAPI Depends() in defaults is idiomatic
-    "UP046",  # keep Generic[T] for Pydantic models — widely supported and explicit
+    "UP046",  # keep Generic[T] for Pydantic models, widely supported and explicit
     "UP047",  # keep classic TypeVar for helper generics
 ]
 

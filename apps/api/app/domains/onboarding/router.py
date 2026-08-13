@@ -11,7 +11,7 @@ from app.security.permissions import PermissionArea, require_permission
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
-# Activation changes the school's lifecycle — organization-management authority.
+# Activation changes the school's lifecycle, organization-management authority.
 _org_admin = require_permission(PermissionArea.ORGANIZATION)
 OrgAdminContext = Annotated[ContextDep, Depends(_org_admin)]
 
@@ -23,7 +23,7 @@ OrgAdminContext = Annotated[ContextDep, Depends(_org_admin)]
 )
 def get_progress(db: DbDep, context: ContextDep) -> OnboardingProgressResponse:
     """Per-step guided-onboarding progress for the caller's active school
-    (PRD 02 §24/§25) — what's done and what's left, including whether
+    (PRD 02 §24/§25), what's done and what's left, including whether
     activation is currently possible."""
     return service.get_progress(db, context)
 

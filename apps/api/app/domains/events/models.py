@@ -20,7 +20,7 @@ from app.domains.events.enums import (
 
 class Event(Base, TimestampMixin, RecordStatusMixin):
     """A light event: a thing children can be registered for. (The full Events ERP
-    — venues, ticketing, POS — is explicitly out of P0 scope.)"""
+    (venues, ticketing, POS) is explicitly out of P0 scope.)"""
 
     __tablename__ = "event"
 

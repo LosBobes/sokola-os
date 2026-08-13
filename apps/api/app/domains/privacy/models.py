@@ -19,7 +19,7 @@ from app.domains.privacy.enums import (
 class ConsentRecord(Base, TimestampMixin):
     """One person's consent for one processing purpose, in one organization.
 
-    Consents are never deleted or edited in place — withdrawal sets
+    Consents are never deleted or edited in place, withdrawal sets
     ``revoked_at`` and the row stays as evidence of what was once granted and
     when it stopped applying.
     """
@@ -49,7 +49,7 @@ class DataSubjectRequest(Base, TimestampMixin):
 
     v1 fulfilment is deliberately conservative: staff mark a request
     FULFILLED/REJECTED with a note (``decision_note``). No automated data
-    export or erasure runs off this row — that is a larger, separate effort
+    export or erasure runs off this row, that is a larger, separate effort
     (see the PR description's scope cuts).
     """
 
@@ -81,7 +81,7 @@ class DataSubjectRequest(Base, TimestampMixin):
 class RetentionPeriod(Base, TimestampMixin, RecordStatusMixin):
     """How long one category of data is kept, per organization.
 
-    Data model only — no automated expiry/purge job runs against this yet;
+    Data model only, no automated expiry/purge job runs against this yet;
     that is a follow-up (see the PR description's scope cuts).
     """
 

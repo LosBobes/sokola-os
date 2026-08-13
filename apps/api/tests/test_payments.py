@@ -89,7 +89,7 @@ def test_payment_is_idempotent(client: TestClient, db: Session) -> None:
 
 
 # ---------------------------------------------------------------------------
-# P2 — payment void/refund: reverses amount_paid_minor and recomputes status.
+# P2, payment void/refund: reverses amount_paid_minor and recomputes status.
 # ---------------------------------------------------------------------------
 
 

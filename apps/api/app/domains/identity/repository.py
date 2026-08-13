@@ -50,7 +50,7 @@ def list_active_contexts(db: Session, person_id: str) -> list[tuple[RoleAssignme
 
 
 # ---------------------------------------------------------------------------
-# Organization membership (visibility check only — full lifecycle is owned by
+# Organization membership (visibility check only, full lifecycle is owned by
 # the people domain; this domain only needs to know "is this person in the
 # org" and "open a membership on acceptance").
 # ---------------------------------------------------------------------------
@@ -176,7 +176,7 @@ def list_org_assignments(
 
 
 def count_active_owners(db: Session, organization_id: str) -> int:
-    """Active OWNER role assignments in this org — the protected-last-owner set."""
+    """Active OWNER role assignments in this org, the protected-last-owner set."""
     stmt = select(func.count()).select_from(RoleAssignment).where(
         RoleAssignment.organization_id == organization_id,
         RoleAssignment.role_code == RoleCode.OWNER,
@@ -198,7 +198,7 @@ def has_active_owner_assignment(db: Session, organization_id: str, person_id: st
 
 
 # ---------------------------------------------------------------------------
-# Guardian access (PARENT invitation acceptance — §19.4/19.5)
+# Guardian access (PARENT invitation acceptance, §19.4/19.5)
 # ---------------------------------------------------------------------------
 
 

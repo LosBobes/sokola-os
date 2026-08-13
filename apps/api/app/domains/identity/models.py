@@ -38,7 +38,9 @@ class Person(Base, TimestampMixin, RecordStatusMixin):
 
 
 class AuthAccount(Base, TimestampMixin):
-    """Links a Person to an external identity provider. The only auth authority."""
+    """A Person's credentials and their link to any identity provider. The only
+    auth authority: both sign-in methods (password and Google) resolve to
+    exactly one of these rows per person."""
 
     __tablename__ = "auth_account"
 
@@ -50,11 +52,17 @@ class AuthAccount(Base, TimestampMixin):
     status: Mapped[AuthAccountStatus] = mapped_column(
         enum_type(AuthAccountStatus), nullable=False, default=AuthAccountStatus.ACTIVE
     )
+    # Local email+password credential (scrypt hash, see app.security.password).
+    # NULL for accounts that authenticate only via Google, the two are not
+    # mutually exclusive: an account can carry a password AND a linked OIDC
+    # subject for the same person.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class AuthIdentifier(Base, TimestampMixin):
     """A resolvable external identifier (OIDC subject / email / phone) for lookup.
-    We store links, never local password hashes or reset tokens."""
+    Identifiers are lookup keys only, any password hash lives on the
+    :class:`AuthAccount`, never here."""
 
     __tablename__ = "auth_identifier"
     __table_args__ = (UniqueConstraint("type", "value", name="uq_auth_identifier"),)
@@ -129,7 +137,7 @@ class Invitation(Base, TimestampMixin):
     """An invitation to claim access. Invitations expire and may be reissued.
 
     ``role_code``/``scope_type``/``scope_ref_id``/``granted_areas`` describe the
-    :class:`RoleAssignment` that acceptance will create — an invitation is an
+    :class:`RoleAssignment` that acceptance will create, an invitation is an
     offer of a specific role, not a blank slate. ``target_child_person_id`` is
     set only for a PARENT invitation (§19.4/19.5): the child the invited
     guardian will get access to.
@@ -170,7 +178,7 @@ class Invitation(Base, TimestampMixin):
 
 
 class PersonMergeRecord(Base, TimestampMixin):
-    """A duplicate-review case, and — once decided — append-only evidence of a
+    """A duplicate-review case, and (once decided) append-only evidence of a
     merge. There is no self-service dedup endpoint; merges are deliberate,
     reviewed operations scoped to the organization that raised them."""
 
@@ -194,7 +202,7 @@ class PersonMergeRecord(Base, TimestampMixin):
 
 class Workspace(Base, TimestampMixin, RecordStatusMixin):
     """Reserved commercial/ownership container. No subscriptions or entitlements
-    in P0 — present so the model is future-shaped, not future-built."""
+    in P0, present so the model is future-shaped, not future-built."""
 
     __tablename__ = "workspace"
 

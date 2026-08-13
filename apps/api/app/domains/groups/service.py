@@ -87,7 +87,7 @@ def list_groups(db: Session, context: RequestContext, params: PageParams) -> Pag
 def update_group(
     db: Session, context: RequestContext, group_id: str, req: UpdateGroupRequest
 ) -> GroupResponse:
-    """M1/M4: sets the group's list price and/or its structure links. Partial —
+    """M1/M4: sets the group's list price and/or its structure links. Partial , 
     only fields present in the request are touched (see UpdateGroupRequest)."""
     group = repository.get_org_group(db, context.organization_id, group_id)
     if group is None:
@@ -170,7 +170,7 @@ def list_members(
 
 
 # ---------------------------------------------------------------------------
-# Membership lifecycle (PRD 04 M2) — suspend / resume / end
+# Membership lifecycle (PRD 04 M2), suspend / resume / end
 # ---------------------------------------------------------------------------
 
 
@@ -182,7 +182,7 @@ def _load_group_membership(
         raise NotFoundError("Grupa nije pronađena.")
     found = repository.get_org_membership(db, context.organization_id, group_id, membership_id)
     if found is None:
-        # Foreign or nonexistent membership id returns the same error — never leak.
+        # Foreign or nonexistent membership id returns the same error, never leak.
         raise NotFoundError("Član grupe nije pronađen.")
     membership, person = found
     return group, membership, person

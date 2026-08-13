@@ -8,7 +8,7 @@ class ImportBatchStatus(enum.StrEnum):
 
     ``PENDING`` -> rows are staged, not yet validated. ``PREVIEWED`` -> every
     row has been checked (dry-run) and the batch may be committed. ``COMMITTED``
-    is terminal: a batch can be committed at most once (§ import v1 — no
+    is terminal: a batch can be committed at most once (§ import v1, no
     rollback, see service module docstring).
     """
 

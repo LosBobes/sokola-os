@@ -58,7 +58,7 @@ def publish_announcement(
 def list_inbox(
     db: DbDep, context: ContextDep, params: Annotated[PageParams, Depends(page_params)]
 ) -> Page[NotificationResponse]:
-    """M3. Every authenticated person has an inbox — no COMMUNICATIONS
+    """M3. Every authenticated person has an inbox, no COMMUNICATIONS
     permission required, since a person always sees only their own items."""
     return service.list_inbox(db, context, params)
 

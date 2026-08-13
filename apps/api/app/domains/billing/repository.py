@@ -38,7 +38,7 @@ def active_group_members_with_discount(
     db: Session, group_id: str
 ) -> list[tuple[Person, int]]:
     """Same roster as :func:`active_group_people`, paired with each member's
-    per-membership discount — the pricing source for :func:`billing.service.
+    per-membership discount, the pricing source for :func:`billing.service.
     _compute` when no explicit ``amount_minor`` override is supplied."""
     stmt = (
         select(Person, GroupMembership.discount_minor)
@@ -89,7 +89,7 @@ def list_charges(
 
 
 # ---------------------------------------------------------------------------
-# Debts / dugovanja — aggregated outstanding balance. A charge's own
+# Debts / dugovanja, aggregated outstanding balance. A charge's own
 # ``amount_due_minor - amount_paid_minor`` is never negative (payments are
 # rejected past the outstanding balance), and CANCELLED charges never owe
 # anything, so both queries below simply exclude CANCELLED and sum the rest.
@@ -101,7 +101,7 @@ _OUTSTANDING = Charge.amount_due_minor - Charge.amount_paid_minor
 def person_debts(
     db: Session, organization_id: str, params: PageParams
 ) -> tuple[list[tuple[str, str, str, int, int]], int]:
-    """Per-person outstanding balance, grouped by (person, currency) — worst
+    """Per-person outstanding balance, grouped by (person, currency), worst
     debtor first. Rows: (person_id, display_name, currency, outstanding_minor,
     open_charge_count)."""
     base = (

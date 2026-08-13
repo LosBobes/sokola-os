@@ -1,11 +1,11 @@
 """Read-only aggregate queries backing the reporting domain.
 
-This domain owns no tables of its own — everything here is a live aggregate
+This domain owns no tables of its own, everything here is a live aggregate
 over other domains' rows. Per the architecture gate, only *models* (never
 another domain's ``service``/``repository``/``router``) may be imported across
 a domain boundary, so every query below is written against the source domains'
 SQLAlchemy models directly. Every query is filtered by ``organization_id`` (or,
-for join tables, transitively via a tenant-scoped join) — reports are
+for join tables, transitively via a tenant-scoped join), reports are
 read-only, but tenant isolation is never relaxed.
 """
 

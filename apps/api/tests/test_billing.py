@@ -89,7 +89,7 @@ def test_stale_preview_is_refused(client: TestClient, db: Session) -> None:
 
 
 # ---------------------------------------------------------------------------
-# M1 — pricing source: charge amounts derived from Group.base_monthly_price_
+# M1, pricing source: charge amounts derived from Group.base_monthly_price_
 # minor minus GroupMembership.discount_minor when amount_minor is omitted.
 # ---------------------------------------------------------------------------
 
@@ -194,7 +194,7 @@ def test_explicit_amount_override_still_works(client: TestClient, db: Session) -
 
 
 # ---------------------------------------------------------------------------
-# M2 — debts / dugovanja aggregated view.
+# M2, debts / dugovanja aggregated view.
 # ---------------------------------------------------------------------------
 
 
@@ -266,7 +266,7 @@ def test_debts_view_respects_tenant_isolation(client: TestClient, db: Session) -
 
 
 # ---------------------------------------------------------------------------
-# P1 — charge cancellation.
+# P1, charge cancellation.
 # ---------------------------------------------------------------------------
 
 

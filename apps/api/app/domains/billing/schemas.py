@@ -9,7 +9,7 @@ class BillingPreviewRequest(BaseModel):
     group_id: str
     # Explicit override, applied to every member. Omit to derive each member's
     # amount from Group.base_monthly_price_minor minus GroupMembership.
-    # discount_minor (floored at 0) — the normal, pricing-driven path.
+    # discount_minor (floored at 0), the normal, pricing-driven path.
     amount_minor: int | None = Field(default=None, gt=0)
     description: str = Field(min_length=1, max_length=200)
     period_label: str = Field(min_length=1, max_length=40)
@@ -76,7 +76,7 @@ class PersonDebtItem(BaseModel):
 
 
 class DebtSummaryResponse(BaseModel):
-    """Org-wide roll-up of :class:`PersonDebtItem` — the "dugovanja" total."""
+    """Org-wide roll-up of :class:`PersonDebtItem`, the "dugovanja" total."""
 
     currency: str
     total_outstanding_minor: int

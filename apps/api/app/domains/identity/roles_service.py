@@ -48,7 +48,7 @@ def assign_role(
     db: Session, context: RequestContext, req: AssignRoleRequest
 ) -> RoleAssignmentResponse:
     if req.role_code is RoleCode.OWNER:
-        # Ownership is a controlled action of its own (§14/M5) — granted only
+        # Ownership is a controlled action of its own (§14/M5), granted only
         # through POST /roles/ownership/transfer, never the generic assign path.
         raise BadRequestError(
             "Vlasništvo se dodeljuje isključivo kroz prenos vlasništva (ownership/transfer)."
@@ -166,7 +166,7 @@ def update_granted_areas(
 
 
 def _guard_not_last_owner(db: Session, organization_id: str, assignment: RoleAssignment) -> None:
-    """§14/M4 — never strip the school of its last active owner."""
+    """§14/M4, never strip the school of its last active owner."""
     if (
         assignment.role_code is RoleCode.OWNER
         and repository.count_active_owners(db, organization_id) <= 1
@@ -236,7 +236,7 @@ def revoke_assignment(
 
 
 # ---------------------------------------------------------------------------
-# Ownership add/transfer (§14) — M5
+# Ownership add/transfer (§14), M5
 # ---------------------------------------------------------------------------
 
 

@@ -14,7 +14,7 @@ from app.domains.documents.enums import DocumentType, DocumentVisibility, Retent
 class Document(Base, TimestampMixin, RecordStatusMixin):
     """An uploaded file's metadata. The bytes themselves live behind
     ``app.domains.documents.storage.StorageBackend``, addressed by
-    ``storage_key`` — this row is the only thing any other domain, or the API
+    ``storage_key``, this row is the only thing any other domain, or the API
     surface, ever sees.
 
     ``created_at`` (from ``TimestampMixin``) doubles as "uploaded at": upload is
@@ -34,7 +34,7 @@ class Document(Base, TimestampMixin, RecordStatusMixin):
     owner_person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False
     )
-    # Who the document is *about* — required when visibility is SUBJECT, and the
+    # Who the document is *about*, required when visibility is SUBJECT, and the
     # basis for a guardian's read access to a child's document. Null for
     # STAFF_ONLY documents that aren't about any one person.
     subject_person_id: Mapped[str | None] = mapped_column(

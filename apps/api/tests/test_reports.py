@@ -1,5 +1,5 @@
 """Reporting domain (PRD 13). Every report is a live aggregate over other
-domains' rows — these tests seed billing/payments/attendance/membership data
+domains' rows, these tests seed billing/payments/attendance/membership data
 across TWO organizations and check both the arithmetic and that org B's data
 never leaks into org A's report (and vice versa)."""
 
@@ -161,7 +161,7 @@ def test_overview_report(client: TestClient, db: Session) -> None:
 
     now = dt.datetime.now(tz=dt.UTC)
     current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    # Exactly the period's inclusive lower bound — always <= the real "now" the
+    # Exactly the period's inclusive lower bound, always <= the real "now" the
     # endpoint will see, so it can never land outside "this period" regardless
     # of what time of day/month the test happens to run.
     this_month = current_month_start
@@ -419,7 +419,7 @@ def test_membership_trend_report(client: TestClient, db: Session) -> None:
     body = resp.json()
     assert len(body["trend"]) == 3
     jan_bucket, feb_bucket, mar_bucket = body["trend"]
-    # January bucket: only members who joined strictly before Feb 1 count —
+    # January bucket: only members who joined strictly before Feb 1 count , 
     # p_jan (joined Jan 10). The bootstrap actor joined "now" (well after
     # March), so it never appears in any of these historical buckets.
     assert jan_bucket["active_member_count"] == 1

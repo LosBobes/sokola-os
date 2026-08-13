@@ -26,7 +26,7 @@ def enqueue(
     event_version: int = 1,
 ) -> OutboxMessage:
     """Add an event to the current transaction. The caller commits it together
-    with the business change — never separately."""
+    with the business change, never separately."""
     message = OutboxMessage(
         organization_id=organization_id,
         event_type=event_type,

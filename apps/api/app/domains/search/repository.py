@@ -2,14 +2,14 @@
 
 No local models: this domain only ever reads rows other domains already own.
 Cross-domain imports are limited to those domains' MODELS (always allowed by
-the architecture gate) — never their service/repository/router. Every query
+the architecture gate), never their service/repository/router. Every query
 below filters on ``organization_id`` itself (never relies on a join alone to
 establish tenant scope), because that is the invariant this whole endpoint
 exists to prove.
 
 v1 search is deliberately simple, per the PRD: ``ILIKE '%term%'`` and no search
-index. Ranking is a single case expression — exact-prefix matches (rank 0)
-before other substring matches (rank 1) — then capped to
+index. Ranking is a single case expression, exact-prefix matches (rank 0)
+before other substring matches (rank 1), then capped to
 :data:`RESULTS_PER_TYPE` per entity type so the combined payload stays small
 and fast without full pagination (noted as a v1 limitation, not built here).
 """
@@ -80,7 +80,7 @@ def search_sessions(
     db: Session, organization_id: str, term: str
 ) -> list[tuple[ScheduledSession, Group]]:
     """Sessions matched by their own title or their group's name. Both the
-    session and its group are re-checked against ``organization_id`` — a
+    session and its group are re-checked against ``organization_id``, a
     session's ``group_id`` should always already belong to the same org, but
     this endpoint re-verifies rather than trusting that invariant silently."""
     like = f"%{term}%"

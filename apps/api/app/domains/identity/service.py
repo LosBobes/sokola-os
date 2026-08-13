@@ -72,7 +72,7 @@ def get_me(db: Session, principal: Principal) -> MeResponse:
 
 
 # ---------------------------------------------------------------------------
-# Invitations (§16-24, §19.3-19.5) — M1/M2/M7/M8
+# Invitations (§16-24, §19.3-19.5), M1/M2/M7/M8
 # ---------------------------------------------------------------------------
 
 
@@ -190,7 +190,7 @@ def revoke_invitation(
 def reissue_invitation(
     db: Session, context: RequestContext, invitation_id: str
 ) -> InvitationCreatedResponse:
-    """Void a PENDING/EXPIRED invitation and send a fresh one in its place — a
+    """Void a PENDING/EXPIRED invitation and send a fresh one in its place, a
     new token and a fresh 7-day window, chained via ``reissued_from_invitation_id``."""
     old = repository.get_invitation(db, context.organization_id, invitation_id)
     if old is None:
@@ -251,7 +251,7 @@ def _open_membership(db: Session, organization_id: str, person_id: str) -> None:
         return
     if membership.status is MembershipStatus.ENDED:
         # A deliberate staff invitation re-opens access even though the generic
-        # resume-membership endpoint treats ENDED as terminal (people/service.py) —
+        # resume-membership endpoint treats ENDED as terminal (people/service.py) , 
         # accepting a fresh, explicit invite is a distinct re-grant.
         membership.status = MembershipStatus.ACTIVE
 
@@ -325,7 +325,7 @@ def accept_invitation(
     """Single accept path for both "existing person" and "new person" flows
     (§21/§22): by the time this is called the caller is already authenticated
     (via an existing session or a first-time Google sign-in that just
-    provisioned their Person) — acceptance only needs to link that Person."""
+    provisioned their Person), acceptance only needs to link that Person."""
     invitation = repository.get_invitation_by_token_hash(db, hash_token(req.token))
     if invitation is None:
         raise NotFoundError("Pozivnica nije pronađena ili je nevažeća.")
@@ -339,7 +339,7 @@ def accept_invitation(
     if invitation.status is InvitationStatus.REVOKED:
         raise ConflictError("Pozivnica je opozvana.")
     if invitation.status is InvitationStatus.REISSUED:
-        raise ConflictError("Pozivnica je zamenjena novom — koristite najnoviju.")
+        raise ConflictError("Pozivnica je zamenjena novom, koristite najnoviju.")
     if invitation.status is not InvitationStatus.PENDING:
         raise ConflictError("Pozivnica nije na čekanju.")
 

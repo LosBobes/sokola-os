@@ -1,10 +1,10 @@
 # Production topology for SOKOLA on the shared Hetzner host.
-# Sibling of compose.m0.yml (local dev topology) — same service shape
+# Sibling of compose.m0.yml (local dev topology): same service shape
 # (db + api + worker), plus the `web` tier built as a static SPA behind
 # nginx. See ops/hetzner/deployment-hetzner.md for the full deploy runbook
 # and the add-hetzner-service skill for the shared-host coexistence pattern.
 #
-# Coexistence rules (this server already hosts other apps — do not disturb
+# Coexistence rules (this server already hosts other apps, do not disturb
 # them):
 #   - Only the `web` tier is published, and ONLY on 127.0.0.1:3003, so
 #     nothing here is reachable from the internet except through the host's
@@ -14,7 +14,7 @@
 #     server, so the Compose project name is "sokola": containers are
 #     sokola-*, volumes are sokola_*. No collisions with other services on
 #     the box.
-#   - `db` is SOKOLA's own Postgres, private to this stack — not shared with
+#   - `db` is SOKOLA's own Postgres, private to this stack, not shared with
 #     other apps, and (unlike compose.m0.yml, which publishes 55432 for local
 #     convenience) not published to the host at all.
 #   - Images are built ON THE SERVER from source (`up --build`), same as
@@ -61,16 +61,6 @@ services:
       # existing password hash.
       SOKOLA_PASSWORD_AUTH_ENABLED: "${SOKOLA_PASSWORD_AUTH_ENABLED:-true}"
       SOKOLA_PASSWORD_PEPPER: "${SOKOLA_PASSWORD_PEPPER:?set SOKOLA_PASSWORD_PEPPER in .env, e.g. openssl rand -hex 32}"
-      # Magic-link login. Without SMTP_HOST + SMTP_FROM_EMAIL the API only logs
-      # the link to its own stdout instead of emailing it, which makes
-      # passwordless login unusable for real users — set both in production.
-      SOKOLA_MAGIC_LINK_TTL_MINUTES: "${SOKOLA_MAGIC_LINK_TTL_MINUTES:-15}"
-      SOKOLA_SMTP_HOST: "${SOKOLA_SMTP_HOST:-}"
-      SOKOLA_SMTP_PORT: "${SOKOLA_SMTP_PORT:-587}"
-      SOKOLA_SMTP_USERNAME: "${SOKOLA_SMTP_USERNAME:-}"
-      SOKOLA_SMTP_PASSWORD: "${SOKOLA_SMTP_PASSWORD:-}"
-      SOKOLA_SMTP_FROM_EMAIL: "${SOKOLA_SMTP_FROM_EMAIL:-}"
-      SOKOLA_SMTP_USE_TLS: "${SOKOLA_SMTP_USE_TLS:-true}"
     command: >
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000"
@@ -105,7 +95,7 @@ services:
     restart: unless-stopped
     depends_on:
       - api
-    # Loopback only. SOKOLA owns port 3003 on this host — see
+    # Loopback only. SOKOLA owns port 3003 on this host, see
     # ops/hetzner/Caddyfile and the add-hetzner-service skill's port
     # registry (references/PORT_REGISTRY.md).
     ports:
