@@ -17,7 +17,7 @@ import {
 import { useAsync } from "../../hooks/useAsync";
 
 /*
- * M10 · Komunikacija — manager compose/list screen (#30).
+ * M10 · Komunikacija, manager compose/list screen (#30).
  *
  * Backend today (openapi/sokola-p0-v1.openapi.json) only exposes two
  * communications endpoints:
@@ -26,17 +26,17 @@ import { useAsync } from "../../hooks/useAsync";
  *
  * There is no GET /communications/announcements (list), no draft-save
  * endpoint, and AnnouncementResponse carries no per-recipient delivery
- * status — #15 (communications backend enhancements) has not landed on
+ * status, #15 (communications backend enhancements) has not landed on
  * main yet. Consequences, called out again in the PR description:
  *   - the "Poslato" list below is session-local: it fills up with what
  *     THIS browser tab has published since it was opened, not a durable
  *     server-side list. A page refresh loses it. Once #15 ships a list
  *     endpoint this should load from the server instead.
- *   - "Sačuvaj nacrt" is a disabled stub — there is nowhere to persist a
+ *   - "Sačuvaj nacrt" is a disabled stub, there is nowhere to persist a
  *     draft server-side yet, so only one in-progress compose is tracked,
  *     client-side, at a time.
  *   - no delivery/read status per recipient is shown (no field exists to
- *     show — if/when #15 adds one, surface it on SentDetail below).
+ *     show, if/when #15 adds one, surface it on SentDetail below).
  *   - GET /communications/inbox (parent-facing in-app inbox) is a separate
  *     screen (#34) and is intentionally not built here.
  */
@@ -163,6 +163,7 @@ export function CommunicationsPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Jednosmerna komunikacija"
         title="Komunikacija"
         action={
           <Button onClick={openCompose} data-cy="ann-new">
@@ -213,7 +214,7 @@ export function CommunicationsPage() {
             <div>
               <div style={{ padding: "var(--space-3) var(--space-4) 0" }}>
                 <InlineNotice tone="info">
-                  Nacrti se ne čuvaju na serveru — aktivni nacrt je prikazan dok ga ne objavite ili odustanete.
+                  Nacrti se ne čuvaju na serveru. Aktivni nacrt je prikazan dok ga ne objavite ili odustanete.
                 </InlineNotice>
               </div>
               {composing ? (
@@ -393,7 +394,7 @@ function ComposeDetail({
             type="button"
             variant="secondary"
             disabled
-            title="Uskoro — čuvanje nacrta na serveru dolazi sa #15"
+            title="Uskoro: čuvanje nacrta na serveru dolazi sa #15"
           >
             Sačuvaj nacrt
           </Button>
@@ -445,7 +446,7 @@ function SentDetail({ item }: { item: SentAnnouncement }) {
 
       <div style={{ marginTop: "var(--space-4)" }}>
         <InlineNotice tone="info">
-          Status isporuke po primaocu (dostavljeno/pročitano) još nije dostupan — očekuje se sa #15.
+          Status isporuke po primaocu (dostavljeno/pročitano) još nije dostupan, očekuje se sa #15.
         </InlineNotice>
       </div>
     </div>

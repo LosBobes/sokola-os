@@ -73,7 +73,7 @@ export function TrainerHome() {
   const groups = useAsync(() => api.get<Page<Group>>("/groups"), []);
 
   // Client-side scoping (#3 M8 gap): the schedule endpoint isn't trainer-scoped
-  // yet, so only render sessions this trainer is actually assigned to —
+  // yet, so only render sessions this trainer is actually assigned to , 
   // never show another trainer's roster or termini.
   const mine = useMemo(() => {
     if (!sessions.data || !me) return [];
@@ -90,7 +90,7 @@ export function TrainerHome() {
     useMemo(() => [...new Set(mine.map((s) => s.group_id))], [mine]),
   );
 
-  const groupName = (id: string) => groups.data?.items.find((g) => g.id === id)?.name ?? "—";
+  const groupName = (id: string) => groups.data?.items.find((g) => g.id === id)?.name ?? "-";
   const statusTone = (s: SessionSummary["status"]) =>
     s === "SCHEDULED" ? "success" : s === "COMPLETED" ? "info" : "error";
 
@@ -125,7 +125,7 @@ export function TrainerHome() {
             </span>
           </div>
           <p className="trainer-hero__group">{groupName(next.group_id)}</p>
-          {/* Sessions have no room assignment in the API yet — degrade honestly. */}
+          {/* Sessions have no room assignment in the API yet, degrade honestly. */}
           <p className="trainer-hero__meta">
             {headcounts[next.group_id] != null ? `${headcounts[next.group_id]} učenika · ` : ""}
             do {timeLabel(next.ends_at)}

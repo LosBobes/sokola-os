@@ -44,7 +44,7 @@ function useSessionMeta(sessionId: string | undefined) {
       const group = session ? (groups.items.find((g) => g.id === session.group_id) ?? null) : null;
       return { session, group };
     } catch {
-      // Header context (group/time) is supplementary — never block the
+      // Header context (group/time) is supplementary, never block the
       // core attendance-taking flow on it.
       return { session: null, group: null };
     }
@@ -92,7 +92,7 @@ export function AttendancePage() {
  * an already-recorded exception (EXCUSED/ABSENT) still shows as such, so
  * reopening a session to correct it never silently reverts to present.
  * LATE isn't part of this flow (Prisutan / Odsutan + Opravdano-Neopravdano
- * only) — legacy LATE entries show as an unexcused absence until re-marked.
+ * only), legacy LATE entries show as an unexcused absence until re-marked.
  */
 type LocalStatus = "UNSET" | "PRESENT" | "EXCUSED" | "ABSENT";
 
@@ -176,7 +176,7 @@ function AttendanceForm({
     setError(null);
     const exceptions = sheet.entries.flatMap((e) => {
       const status = statuses[e.person_id] ?? "UNSET";
-      if (status === "UNSET" || status === "PRESENT") return []; // matches the PRESENT default — omit
+      if (status === "UNSET" || status === "PRESENT") return []; // matches the PRESENT default, omit
       return [
         {
           person_id: e.person_id,
@@ -194,7 +194,7 @@ function AttendanceForm({
       setVersion(result.attendance_version);
       setTouched(new Set());
     } catch (err) {
-      setError(err); // manual_recovery/conflict/etc. — never auto-retried
+      setError(err); // manual_recovery/conflict/etc., never auto-retried
     } finally {
       setBusy(false);
       busyRef.current = false;
@@ -205,7 +205,7 @@ function AttendanceForm({
 
   return (
     <div>
-      <PageHeader title="Prisustvo" />
+      <PageHeader eyebrow="Evidencija" title="Prisustvo" />
 
       <header className="attendance-header" data-cy="attendance-header">
         <div>
@@ -313,7 +313,7 @@ function AttendanceRow({
   return (
     <li className="attendance-row" data-cy="attendance-row">
       <div className="attendance-row__name">{entry.display_name}</div>
-      <div className="attendance-row__controls" role="group" aria-label={`Prisustvo — ${entry.display_name}`}>
+      <div className="attendance-row__controls" role="group" aria-label={`Prisustvo za ${entry.display_name}`}>
         <button
           type="button"
           className={cx("attendance-btn attendance-btn--present", status === "PRESENT" && "is-active")}
@@ -335,7 +335,7 @@ function AttendanceRow({
       </div>
 
       {showReason ? (
-        <div className="attendance-row__reason" role="group" aria-label={`Razlog odsustva — ${entry.display_name}`}>
+        <div className="attendance-row__reason" role="group" aria-label={`Razlog odsustva za ${entry.display_name}`}>
           <button
             type="button"
             className={cx("attendance-reason", status === "EXCUSED" && "is-active")}

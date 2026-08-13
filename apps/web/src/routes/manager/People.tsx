@@ -155,7 +155,7 @@ export function PeoplePage() {
           {
             value: "pozivi",
             label: (
-              <span data-cy="tab-pozivi" title="Broj poziva nije dostupan — modul za pozivnice je u pripremi">
+              <span data-cy="tab-pozivi" title="Broj poziva nije dostupan, modul za pozivnice je u pripremi">
                 Pozivi <StatusBadge tone="neutral">–</StatusBadge>
               </span>
             ),
@@ -358,7 +358,7 @@ function Roster({
 function PersonRow({ person, groups }: { person: PersonSummary; groups: GroupRef[] }) {
   return (
     <div className="people-row" data-cy="person-row">
-      <span className="avatar avatar--gold people-row__avatar" aria-hidden="true">
+      <span className="avatar avatar--muted people-row__avatar" aria-hidden="true">
         {initials(person.display_name)}
       </span>
       <span className="people-row__body">
@@ -366,7 +366,7 @@ function PersonRow({ person, groups }: { person: PersonSummary; groups: GroupRef
         <span className="people-row__meta">
           <span>{groups.length > 0 ? groups.map((g) => g.name).join(", ") : "Bez grupe"}</span>
           <span className="people-row__stub" title="Ogranak još nije dostupan u profilu">
-            Ogranak: —
+            Ogranak: -
           </span>
         </span>
       </span>
@@ -464,14 +464,14 @@ function Field({
     <div className={cx("people-detail__field", !value && "people-detail__field--muted")}>
       <span className="people-field-label">{label}</span>
       <span className="people-field-value" title={stubHint}>
-        {loading ? "…" : value ? value : stubHint ? "Uskoro dostupno" : "—"}
+        {loading ? "…" : value ? value : stubHint ? "Uskoro dostupno" : "-"}
       </span>
     </div>
   );
 }
 
 /** Right pane of the split view. Composite profile fields the backend does
- * not expose yet (branch, start date) are stubbed with an explanatory hint —
+ * not expose yet (branch, start date) are stubbed with an explanatory hint , 
  * never fabricated. Membership + guardians are real data from the merged
  * membership (#6) and guardian endpoints. */
 function PersonDetail({ personId, groups }: { personId: string; groups: GroupRef[] }) {
@@ -487,7 +487,7 @@ function PersonDetail({ personId, groups }: { personId: string; groups: GroupRef
   return (
     <div data-cy="person-detail">
       <div className="people-detail__header">
-        <span className="avatar avatar--gold people-detail__avatar" aria-hidden="true">
+        <span className="avatar avatar--muted people-detail__avatar" aria-hidden="true">
           {initials(p.display_name)}
         </span>
         <div>
@@ -633,7 +633,7 @@ function GroupRow({ group, people }: { group: Group; people: PersonSummary[] }) 
 
   return (
     <li className="people-group-item" data-cy="group-item">
-      <strong>{group.name}</strong> — {members.data?.length ?? 0} članova
+      <strong>{group.name}</strong> · {members.data?.length ?? 0} članova
       {error ? <SystemState error={error} /> : null}
       <form onSubmit={add} style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
         <select value={personId} onChange={(e) => setPersonId(e.target.value)} required data-cy="member-select">

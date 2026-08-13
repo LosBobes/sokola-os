@@ -1,7 +1,7 @@
 /*
  * Mobile-first trainer attendance screen (T02 · Trener Prisustvo).
  * Scoped to routes/manager/Attendance.tsx. Consumes only semantic role
- * tokens from styles/design-tokens.css — never a raw hex or ramp value.
+ * tokens from styles/design-tokens.css, never a raw hex or ramp value.
  */
 
 .attendance-header {
@@ -72,7 +72,7 @@
   padding: var(--space-4);
 }
 .attendance-row__name {
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: var(--space-3);
 }
 
@@ -89,7 +89,7 @@
   border: var(--ink-border) solid var(--border-default);
   background: var(--surface-sunken);
   color: var(--text-primary);
-  font-weight: 700;
+  font-weight: 600;
   font-size: var(--text-base);
   transition:
     background var(--duration),
@@ -107,7 +107,7 @@
   color: var(--tone-error-fg);
 }
 
-/* Reason selector — only rendered once Odsutan is chosen. */
+/* Reason selector, only rendered once Odsutan is chosen. */
 .attendance-row__reason {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -164,7 +164,7 @@
   width: 100%;
 }
 
-/* Below 860px the sidebar becomes a fixed bottom tab bar (shell.css) — lift
+/* Below 860px the sidebar becomes a fixed bottom tab bar (shell.css), lift
    the sticky save bar above it so the two never overlap. */
 @media (max-width: 860px) {
   .attendance-footer {

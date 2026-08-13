@@ -9,6 +9,7 @@
 
 export type CanonicalState =
   | "ok"
+  | "unauthenticated"
   | "permission"
   | "conflict"
   | "validation"
@@ -44,6 +45,19 @@ export function setAuthHeaders(personId: string | null, roleAssignmentId: string
   authRoleAssignmentId = roleAssignmentId;
 }
 
+/**
+ * Fired whenever ANY request comes back 401, the session is gone (expired,
+ * or the person behind it no longer exists), not just missing one permission.
+ * The session layer registers a handler that clears local auth state and
+ * bounces the app back to the login screen, instead of every page showing
+ * its own dead-end "no access" error with no way to actually fix it.
+ */
+let onUnauthorized: (() => void) | null = null;
+
+export function setUnauthorizedHandler(fn: (() => void) | null): void {
+  onUnauthorized = fn;
+}
+
 interface RequestOptions {
   body?: unknown;
   idempotencyKey?: string;
@@ -53,14 +67,29 @@ interface RequestOptions {
 
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-/** Read the JS-readable CSRF cookie set by the Google login callback. */
+export const CSRF_COOKIE = "sokola_csrf";
+
+/** Read the JS-readable CSRF cookie set by every login flow. */
 function readCsrfToken(): string | null {
-  const match = document.cookie.match(/(?:^|;\s*)sokola_csrf=([^;]+)/);
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${CSRF_COOKIE}=([^;]+)`));
   return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
+/**
+ * Drop the CSRF cookie locally. The session cookie it pairs with is httpOnly,
+ * so once the server has rejected that session there is nothing else the client
+ * can clear, and leaving this one behind makes the app believe on every
+ * subsequent page load that it still holds a session, which is what turned one
+ * dead cookie into a permanent "your session expired" notice. Logout deletes it
+ * server-side; this covers the case where the session died on its own.
+ */
+export function clearCsrfCookie(): void {
+  document.cookie = `${CSRF_COOKIE}=; path=/; max-age=0`;
+}
+
 function classify(status: number, mutation: boolean): CanonicalState {
-  if (status === 401 || status === 403) return "permission";
+  if (status === 401) return "unauthenticated";
+  if (status === 403) return "permission";
   if (status === 404) return "not_found";
   if (status === 409) return "conflict";
   if (status === 422) return "validation";
@@ -111,6 +140,13 @@ export async function apiRequest<T>(
       code: "HTTP_ERROR",
       message: "Zahtev nije uspeo.",
     };
+    // A 401 from a sign-in attempt means the credentials were wrong, not that a
+    // session died, firing the handler there would raise "your session
+    // expired" on top of a login screen nobody was logged into. `/me` is the
+    // deliberate exception: it IS the session check, and its 401 on page load
+    // is how an expired cookie gets noticed.
+    const isCredentialCheck = path.startsWith("/auth/") && path !== "/auth/config";
+    if (response.status === 401 && !isCredentialCheck) onUnauthorized?.();
     throw new ApiError(response.status, errBody, classify(response.status, opts.mutation ?? false));
   }
   return payload as T;

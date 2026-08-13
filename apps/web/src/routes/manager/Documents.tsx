@@ -12,14 +12,14 @@ import {
 /*
  * M11 · Dokumenti (#31).
  *
- * The documents domain has no backend yet — GET /documents (and friends)
+ * The documents domain has no backend yet, GET /documents (and friends)
  * do not exist in schema.d.ts (tracked separately as #11). Rather than
  * fabricate data or invent an endpoint shape, this screen ships the route,
  * the page chrome, and the layout structure from the design
  * (09_M11_Dokumenti.png: header + upload action, filter row, a
  * name/type/owner/date/visibility list, and a detail pane) with every
  * interactive piece disabled and explained as "uskoro". When #11 lands,
- * this file is the one place to swap the stubs for real `useAsync` calls —
+ * this file is the one place to swap the stubs for real `useAsync` calls , 
  * no other route or shared component needs to change.
  */
 
@@ -29,11 +29,12 @@ export function DocumentsPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Privatna arhiva"
         title="Dokumenti"
         action={
           <Button
             disabled
-            title="Uskoro — dodavanje dokumenata dolazi kada modul dokumenata bude spreman (#11)"
+            title="Uskoro: dodavanje dokumenata dolazi kada modul dokumenata bude spreman (#11)"
             data-cy="doc-upload"
           >
             Dodaj dokument
@@ -55,19 +56,19 @@ export function DocumentsPage() {
             data-cy="doc-search"
           />
         </div>
-        <FilterChip caret disabled title="Uskoro — filter po vlasniku dolazi sa modulom dokumenata (#11)" style={{ opacity: 0.55 }}>
+        <FilterChip caret disabled title="Uskoro: filter po vlasniku dolazi sa modulom dokumenata (#11)" style={{ opacity: 0.55 }}>
           Vlasnik
         </FilterChip>
-        <FilterChip caret disabled title="Uskoro — filter po grupi dolazi sa modulom dokumenata (#11)" style={{ opacity: 0.55 }}>
+        <FilterChip caret disabled title="Uskoro: filter po grupi dolazi sa modulom dokumenata (#11)" style={{ opacity: 0.55 }}>
           Grupa
         </FilterChip>
-        <FilterChip caret disabled title="Uskoro — filter po tipu dolazi sa modulom dokumenata (#11)" style={{ opacity: 0.55 }}>
+        <FilterChip caret disabled title="Uskoro: filter po tipu dolazi sa modulom dokumenata (#11)" style={{ opacity: 0.55 }}>
           Tip
         </FilterChip>
-        <FilterChip caret disabled title="Uskoro — filter po stanju dolazi sa modulom dokumenata (#11)" style={{ opacity: 0.55 }}>
+        <FilterChip caret disabled title="Uskoro: filter po stanju dolazi sa modulom dokumenata (#11)" style={{ opacity: 0.55 }}>
           Stanje
         </FilterChip>
-        <FilterChip caret disabled title="Uskoro — filter po vidljivosti dolazi sa modulom dokumenata (#11)" style={{ opacity: 0.55 }}>
+        <FilterChip caret disabled title="Uskoro: filter po vidljivosti dolazi sa modulom dokumenata (#11)" style={{ opacity: 0.55 }}>
           Vidljivost
         </FilterChip>
       </FilterBar>
@@ -89,7 +90,7 @@ export function DocumentsPage() {
                   <td colSpan={COLUMNS.length + 1}>
                     <EmptyState>
                       Dokumenti uskoro stižu. Ovaj modul (arhiva saglasnosti, ugovora, rasporeda i drugih fajlova
-                      škole i članova) čeka backend #11 — kada bude spreman, lista, filteri i akcije za
+                      škole i članova) čeka backend #11. Kada bude spreman, lista, filteri i akcije za
                       pregled/preuzimanje se popunjavaju ovde bez izmene drugih ekrana.
                     </EmptyState>
                   </td>
@@ -104,7 +105,7 @@ export function DocumentsPage() {
               fontSize: "var(--text-sm)",
             }}
           >
-            Planirano: PDF, JPG i PNG, uz proveru pre dostupnosti — dolazi sa modulom dokumenata.
+            Planirano: PDF, JPG i PNG, uz proveru pre dostupnosti, dolazi sa modulom dokumenata.
           </p>
         </Card>
 

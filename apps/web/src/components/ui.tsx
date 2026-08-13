@@ -95,7 +95,7 @@ export interface CardProps {
 
 /** White raised card (`--surface-raised`), optionally with a built-in
  * section header. Plain `<section className="card">` keeps working
- * unchanged for existing routes — this is an additive, richer entry point. */
+ * unchanged for existing routes, this is an additive, richer entry point. */
 export function Card({
   eyebrow,
   title,
@@ -159,13 +159,15 @@ export interface StatTileProps {
   label: ReactNode;
   value: ReactNode;
   delta?: { label: ReactNode; tone?: "up" | "down" | "neutral" };
+  /** Tints the icon chip (and, for "error", the number). Defaults to info. */
+  tone?: Tone;
   className?: string;
 }
 
 /** Icon + label + big number + delta line, as used on the "Danas" overview. */
-export function StatTile({ icon, label, value, delta, className }: StatTileProps) {
+export function StatTile({ icon, label, value, delta, tone, className }: StatTileProps) {
   return (
-    <div className={cx("stat-tile", className)} data-cy="stat-tile">
+    <div className={cx("stat-tile", tone && `stat-tile--${tone}`, className)} data-cy="stat-tile">
       {icon ? <div className="stat-tile__icon">{icon}</div> : null}
       <div className="stat-tile__body">
         <div className="stat-tile__label">{label}</div>
@@ -329,15 +331,23 @@ export interface CapacityBarProps {
   value: number;
   max: number;
   label?: ReactNode;
+  /**
+   * What "full" means here. For "capacity" (a roster filling up) reaching max
+   * is a warning, so the fill goes amber then red. For "completion" (work
+   * getting done, e.g. attendance recorded) reaching max is the goal, so the
+   * fill stays navy the whole way.
+   */
+  meaning?: "capacity" | "completion";
   className?: string;
 }
 
 /** Group/roster capacity, e.g. "18 od 20". Fill tone shifts from primary
- * green -> amber near capacity -> red once full, computed from value/max. */
-export function CapacityBar({ value, max, label, className }: CapacityBarProps) {
+ * navy to amber near capacity to red once full, computed from value/max. */
+export function CapacityBar({ value, max, label, meaning = "capacity", className }: CapacityBarProps) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
-  const full = max > 0 && value >= max;
-  const near = !full && pct >= 85;
+  const capacity = meaning === "capacity";
+  const full = capacity && max > 0 && value >= max;
+  const near = capacity && !full && pct >= 85;
   return (
     <div className={cx("capacity-bar", className)} data-cy="capacity-bar">
       {label ? <div className="capacity-bar__label">{label}</div> : null}
@@ -372,6 +382,12 @@ export function CapacityBar({ value, max, label, className }: CapacityBarProps) 
 export function SystemState({ error }: { error: unknown }) {
   if (error instanceof ApiError) {
     switch (error.canonical) {
+      case "unauthenticated":
+        return (
+          <InlineNotice tone="warning">
+            Vaša prijava je istekla. Stranica će vas vratiti na prijavu.
+          </InlineNotice>
+        );
       case "permission":
         return (
           <InlineNotice tone="warning">
@@ -387,7 +403,7 @@ export function SystemState({ error }: { error: unknown }) {
       case "manual_recovery":
         return (
           <InlineNotice tone="error">
-            Ishod nije potvrđen. Podaci i prijava su sačuvani — proverite status pre ponovne akcije.
+            Ishod nije potvrđen. Podaci i prijava su sačuvani. Proverite status pre ponovne akcije.
           </InlineNotice>
         );
       default:

@@ -23,7 +23,7 @@ import { useAsync } from "../../hooks/useAsync";
  * M03 · Grupe.
  *
  * The Group model in schema.d.ts today is minimal (id, name, capacity_mode,
- * capacity) — there is no program/ogranak/room/price relation on a group yet
+ * capacity), there is no program/ogranak/room/price relation on a group yet
  * (pricing lands with #7). Rather than invent that data, this screen:
  *  - shows real fields from GET /groups + GET /groups/{id}/members,
  *  - derives "Trener" and "Sledeći termin" from the already-shipped
@@ -228,10 +228,10 @@ export function GroupsPage() {
       {showCreate ? <CreateGroupForm onCreated={afterCreate} onCancel={() => setShowCreate(false)} /> : null}
 
       <FilterBar>
-        <FilterChip caret disabled title="Uskoro — grupe još nisu povezane sa programom" style={{ opacity: 0.55 }}>
+        <FilterChip caret disabled title="Uskoro: grupe još nisu povezane sa programom" style={{ opacity: 0.55 }}>
           Program
         </FilterChip>
-        <FilterChip caret disabled title="Uskoro — grupe još nisu povezane sa ogrankom" style={{ opacity: 0.55 }}>
+        <FilterChip caret disabled title="Uskoro: grupe još nisu povezane sa ogrankom" style={{ opacity: 0.55 }}>
           Ogranak
         </FilterChip>
         <div className="field" style={{ margin: 0, minWidth: 160 }}>
@@ -413,7 +413,7 @@ function GroupCard({
 }) {
   const count = members?.length ?? 0;
   const status = groupStatus(group, count);
-  const trainerLabel = trainerNames.length > 0 ? trainerNames.join(", ") : "—";
+  const trainerLabel = trainerNames.length > 0 ? trainerNames.join(", ") : "-";
 
   return (
     <div
@@ -502,7 +502,7 @@ function GroupDetail({
     seriesForGroup.forEach((s) => s.trainer_person_id && set.add(s.trainer_person_id));
     return Array.from(set);
   }, [seriesForGroup]);
-  const trainerLabel = trainerIds.length > 0 ? trainerIds.map((id) => peopleMap[id] ?? id).join(", ") : "—";
+  const trainerLabel = trainerIds.length > 0 ? trainerIds.map((id) => peopleMap[id] ?? id).join(", ") : "-";
 
   const sortedSessions = useMemo(
     () => [...sessionsForGroup].sort((a, b) => a.starts_at.localeCompare(b.starts_at)),
@@ -710,7 +710,7 @@ function BasicsTab({ group }: { group: Group }) {
         ? `${group.capacity} mesta`
         : "Bez ograničenja",
     ],
-    ["Mesečna cena", "Uskoro — cenovnik grupa dolazi u narednoj fazi (#7)."],
+    ["Mesečna cena", "Uskoro: cenovnik grupa dolazi u narednoj fazi (#7)."],
   ];
   return (
     <div>

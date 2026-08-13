@@ -1,6 +1,6 @@
 /*
  * M12 · Izveštaji.
- * Consumes only semantic role tokens from styles/design-tokens.css — no raw
+ * Consumes only semantic role tokens from styles/design-tokens.css, no raw
  * hex, no --green-/--gold-/--neutral- primitive ramp value.
  */
 
@@ -10,11 +10,23 @@
 }
 
 /* --- Stat tiles: six-up grid, each tile wrapped in a Link -------------- */
+/* Fixed at 3 x 2, not auto-fit: six indicators read as two rows of three, and
+   auto-fit was packing five across with a lone tile stranded underneath. */
 .reports-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
   margin-bottom: var(--space-5);
+}
+@media (max-width: 1080px) {
+  .reports-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .reports-stats {
+    grid-template-columns: 1fr;
+  }
 }
 .reports-stat-link {
   display: block;
@@ -97,7 +109,7 @@
   flex-direction: column;
 }
 .reports-attention-row__title {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-primary);
 }
 .reports-attention-row__subtitle {
@@ -122,7 +134,7 @@
 }
 
 /* ===================================================================== */
-/* Chart — "Prisustvo po nedeljama" (dataviz-skill mark spec)            */
+/* Chart, "Prisustvo po nedeljama" (dataviz-skill mark spec)            */
 /* ===================================================================== */
 
 .reports-chart__head {
@@ -136,29 +148,33 @@
   display: block;
 }
 .reports-chart__grid {
-  stroke: var(--border-default);
+  stroke: var(--border-hairline);
   stroke-width: 1;
 }
 .reports-chart__tick {
-  fill: var(--text-secondary);
+  fill: var(--text-muted);
   font-size: 11px;
 }
+/* No area fill: the brand rule is flat marks only, so the series is a stroked
+   line and its points, with nothing washed underneath. */
 .reports-chart__area {
-  fill: var(--action-primary);
-  fill-opacity: 0.1;
-  stroke: none;
+  display: none;
 }
 .reports-chart__line {
   fill: none;
-  stroke: var(--action-primary);
-  stroke-width: 2;
+  stroke: var(--chart-series);
+  stroke-width: 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 .reports-chart__dot {
-  fill: var(--action-primary);
-  stroke: var(--surface-raised);
+  fill: var(--surface-raised);
+  stroke: var(--chart-series);
   stroke-width: 2;
+}
+.reports-chart__dot--latest {
+  fill: var(--accent-gold);
+  stroke: var(--surface-navy);
 }
 .reports-chart__hit {
   fill: transparent;
@@ -169,7 +185,7 @@
 }
 .reports-chart__endlabel {
   fill: var(--text-primary);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 13px;
 }
 .reports-chart__crosshair {

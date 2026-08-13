@@ -13,7 +13,7 @@ export function RoleHome() {
   if (role === "PARENT") {
     return (
       <div>
-        <PageHeader title={`Dobrodošli — ${org}`} />
+        <PageHeader title={`Dobrodošli · ${org}`} />
         <div className="card">
           <p>Šta je sledeće za vaše dete?</p>
           <Link className="btn btn--primary" to="/dogadjaji" data-cy="home-events">
@@ -31,7 +31,7 @@ export function RoleHome() {
   // STUDENT (and any other role without a dedicated home yet).
   return (
     <div>
-      <PageHeader title={`Danas — ${org}`} />
+      <PageHeader title={`Danas · ${org}`} />
       <div className="card" style={{ display: "grid", gap: "var(--space-3)" }}>
         <p>Brze radnje:</p>
         <Link className="btn btn--secondary" to="/ljudi" data-cy="home-people">

@@ -30,7 +30,7 @@ describe("Tenant-first auth", () => {
             cy.get("[data-cy=tenant-continue]").click();
 
             // Routed to that school's login, which names the tenant.
-            cy.contains(`Prijava — ${school}`).should("exist");
+            cy.contains(`Prijava · ${school}`).should("exist");
             cy.get("[data-cy=access-code]").type(accessId.trim());
             cy.get("[data-cy=do-login]").click();
             cy.get("[data-cy=context-switcher]").should("exist");

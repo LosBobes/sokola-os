@@ -30,7 +30,7 @@ interface Destination {
  * parents/students the family view. Manager also lists Događaji/Izveštaji/Više
  * from the design; Izveštaji has no route yet, so it falls through the
  * router's `*` redirect to home until its screen lands (separate ticket, M2).
- * Više routes to routes/More.tsx (#18, M1) — the account-actions catch-all,
+ * Više routes to routes/More.tsx (#18, M1), the account-actions catch-all,
  * since the primary nav already surfaces every other destination directly.
  */
 const NAV: Record<RoleCode, Destination[]> = {
@@ -88,15 +88,15 @@ function initials(name: string): string {
   return ((first[0] ?? "") + (last[0] ?? "")).toUpperCase();
 }
 
-/* --- Icons: stroke marks that inherit the nav item's colour ---------- */
+/* --- Icons: 24x24 line marks, 1.9px stroke, inheriting the row's colour --- */
 function NavIcon({ name }: { name: IconName }) {
   const p = {
-    width: 22,
-    height: 22,
+    width: 20,
+    height: 20,
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: "currentColor",
-    strokeWidth: 1.8,
+    strokeWidth: 1.9,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
     "aria-hidden": true,
@@ -173,20 +173,37 @@ function NavIcon({ name }: { name: IconName }) {
   }
 }
 
-export function BrandMark() {
-  return (
-    <svg className="brandmark" viewBox="0 0 40 40" aria-hidden focusable="false">
-      <rect className="brandmark__bg" x="1" y="1" width="38" height="38" rx="11" />
-      <path
-        className="brandmark__glyph"
-        d="M20 11.5l7.5 12.5-7.5-3.6-7.5 3.6z"
-      />
-      <path className="brandmark__glyph" d="M20 22.4l4.4 6.1H15.6z" />
-    </svg>
-  );
+/**
+ * The approved SOKOLA OS lockup, served from public/brand.
+ *
+ * These are vector files from Brand Package v1.1.0 and must not be redrawn,
+ * recoloured, retyped, rotated, stretched or wrapped in an extra shape. The
+ * CSS therefore sets ONE dimension (height) and lets the original viewBox
+ * decide the other. Pick the colourway by the surface behind it:
+ *
+ *  - `reverse`  gold symbol + white wordmark, for the navy sidebar
+ *  - `primary`  navy symbol + navy wordmark, for white and canvas surfaces
+ *  - `stacked`  the tall lockup, for login and onboarding
+ */
+export type BrandVariant = "primary" | "reverse" | "stacked";
+
+const BRAND_SRC: Record<BrandVariant, string> = {
+  primary: "/brand/logo-horizontal.svg",
+  reverse: "/brand/logo-reverse-on-navy.svg",
+  stacked: "/brand/logo-stacked.svg",
+};
+
+export function BrandMark({
+  variant = "primary",
+  className = "brandmark",
+}: {
+  variant?: BrandVariant;
+  className?: string;
+}) {
+  return <img className={className} src={BRAND_SRC[variant]} alt="SOKOLA OS" />;
 }
 
-/** Organisation switcher — the active school. Kept as a native <select> so the
+/** Organisation switcher, the active school. Kept as a native <select> so the
  *  existing [data-cy=context-switcher] contract and keyboard behaviour hold. */
 function ContextSwitcher() {
   const { me, activeContext, chooseContext } = useSession();
@@ -216,7 +233,7 @@ function ContextSwitcher() {
   );
 }
 
-/** Top-bar account menu — mirrors the sidebar chip, and is the sign-out path on
+/** Top-bar account menu, mirrors the sidebar chip, and is the sign-out path on
  *  mobile where the sidebar collapses. The canonical [data-cy=sign-out] lives on
  *  the always-visible sidebar chip, so this menu item stays unmarked. */
 function UserMenu({ name, role }: { name: string; role: string }) {
@@ -280,7 +297,7 @@ function UserMenu({ name, role }: { name: string; role: string }) {
  *  Izveštaji is the first to be taller than one viewport): the default
  *  focus() scroll-into-view aligns a too-tall <main> to the viewport top,
  *  which pushes it *behind* the sticky topbar (`.topbar` reserves ~69px
- *  in flow but stays pinned on top) — hiding the page's own <h1> on load.
+ *  in flow but stays pinned on top), hiding the page's own <h1> on load.
  *  Shorter existing pages never hit this because they already fit within
  *  one viewport, so no scroll was ever triggered. Focus still moves to
  *  main for screen readers; only the (incorrect) visual scroll is dropped. */
@@ -309,8 +326,7 @@ export function ProductShell({ children }: { children: ReactNode }) {
 
       <aside className="sidebar">
         <div className="sidebar__brand">
-          <BrandMark />
-          <span className="sidebar__word">SOKOLA</span>
+          <BrandMark variant="reverse" />
         </div>
         <p className="sidebar__eyebrow">Operativni sistem</p>
 
@@ -430,10 +446,30 @@ export function ProductShell({ children }: { children: ReactNode }) {
   );
 }
 
-export function PageHeader({ title, action }: { title: string; action?: ReactNode }) {
+/**
+ * Page header: uppercase eyebrow, 38px title, one supporting line, and the
+ * page's primary action pinned top-right. `eyebrow` and `subtitle` are
+ * optional, so the existing `<PageHeader title=… action=… />` calls keep
+ * rendering exactly as before.
+ */
+export function PageHeader({
+  eyebrow,
+  title,
+  subtitle,
+  action,
+}: {
+  eyebrow?: ReactNode;
+  title: string;
+  subtitle?: ReactNode;
+  action?: ReactNode;
+}) {
   return (
     <header className="pageheader">
-      <h1>{title}</h1>
+      <div className="pageheader__text">
+        {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
+        <h1>{title}</h1>
+        {subtitle ? <p className="pageheader__subtitle">{subtitle}</p> : null}
+      </div>
       {action}
     </header>
   );

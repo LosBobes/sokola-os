@@ -43,6 +43,7 @@ export interface TenantPublic {
 
 export interface AuthConfig {
   google_enabled: boolean;
+  password_enabled: boolean;
   dev_auth_enabled: boolean;
 }
 

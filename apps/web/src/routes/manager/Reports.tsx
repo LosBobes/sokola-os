@@ -22,12 +22,12 @@ import "./Reports.css";
 /*
  * M12 · Izveštaji.
  *
- * The reporting read-model (#12/#13 "Izveštaji" domain) has not landed —
+ * The reporting read-model (#12/#13 "Izveštaji" domain) has not landed , 
  * schema.d.ts has no /reports, /dashboard or /aggregate* path, and the
  * issue itself says so ("Blocked on backend: reporting domain does not
  * exist"). Per plan, this screen therefore:
  *
- *  - renders all SIX stat tiles as an honest "Uskoro" pending state — never
+ *  - renders all SIX stat tiles as an honest "Uskoro" pending state, never
  *    an invented number. Each still links to the closest existing real
  *    screen today (Ljudi/Raspored/Finansije), so "poreklo svakog broja"
  *    (the origin of every number) is clear even while the value is pending.
@@ -38,13 +38,13 @@ import "./Reports.css";
  *  - leaves the "Prisustvo po nedeljama" line chart wired to the dataviz
  *    skill's mark spec (2px line, 8px ringed end-marker, hairline grid,
  *    single-series → no legend box, hover crosshair + tooltip) but fed
- *    `points={null}` — a weekly attendance series would require re-deriving
+ *    `points={null}`, a weekly attendance series would require re-deriving
  *    business logic (what counts as "present") client-side across many
  *    weeks of sessions, which belongs in the read-model backend, not here.
  *    It renders a clear "grafikon uskoro" note instead of fabricating points.
  *  - keeps the Ogranak/Program/Grupa/Trener scope chips and "Izvezi CSV" as
  *    disabled/"Uskoro" stubs (no backend support for those filters/export
- *    yet); the Danas/Ovaj mesec period control IS real — it drives the
+ *    yet); the Danas/Ovaj mesec period control IS real, it drives the
  *    session query the "Traži pažnju" + completion numbers use.
  */
 
@@ -70,7 +70,7 @@ interface AttendanceCompletion {
 }
 
 /** Real, derived (never fabricated) attendance-completion rollup for the
- *  already-finished sessions in the selected period — same technique as
+ *  already-finished sessions in the selected period, same technique as
  *  ManagerHome.useAttendanceRollup, generalised beyond "today". */
 function useAttendanceCompletion(sessions: SessionSummary[] | null): AttendanceCompletion {
   const [state, setState] = useState<AttendanceCompletion>({
@@ -214,7 +214,7 @@ export function ReportsPage() {
   const charges = useAsync(() => api.get<Page<Charge>>("/charges?limit=100"), []);
   const completion = useAttendanceCompletion(sessions.data);
 
-  const groupName = (id: string) => groups.data?.items.find((g) => g.id === id)?.name ?? "—";
+  const groupName = (id: string) => groups.data?.items.find((g) => g.id === id)?.name ?? "-";
   const distinctGroups = new Set(completion.unconfirmed.map((s) => s.group_id)).size;
   const firstUnconfirmed = completion.unconfirmed[0];
 
@@ -232,11 +232,12 @@ export function ReportsPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Operativni uvid"
         title="Izveštaji"
         action={
           <Button
             disabled
-            title="Uskoro — izvoz dolazi sa izveštajnim modelom (#12)"
+            title="Uskoro: izvoz dolazi sa izveštajnim modelom (#12)"
             data-cy="reports-export-csv"
           >
             Izvezi CSV
@@ -255,22 +256,22 @@ export function ReportsPage() {
             { value: "month", label: "Ovaj mesec" },
           ]}
         />
-        <FilterChip caret disabled title="Uskoro — filter po ogranku (izveštajni backend #12)" style={{ opacity: 0.55 }}>
+        <FilterChip caret disabled title="Uskoro: filter po ogranku (izveštajni backend #12)" style={{ opacity: 0.55 }}>
           Centralni ogranak
         </FilterChip>
-        <FilterChip caret disabled title="Uskoro — filter po programu (izveštajni backend #12)" style={{ opacity: 0.55 }}>
+        <FilterChip caret disabled title="Uskoro: filter po programu (izveštajni backend #12)" style={{ opacity: 0.55 }}>
           Svi programi
         </FilterChip>
-        <FilterChip caret disabled title="Uskoro — filter po grupi (izveštajni backend #12)" style={{ opacity: 0.55 }}>
+        <FilterChip caret disabled title="Uskoro: filter po grupi (izveštajni backend #12)" style={{ opacity: 0.55 }}>
           Sve grupe
         </FilterChip>
-        <FilterChip caret disabled title="Uskoro — filter po treneru (izveštajni backend #12)" style={{ opacity: 0.55 }}>
+        <FilterChip caret disabled title="Uskoro: filter po treneru (izveštajni backend #12)" style={{ opacity: 0.55 }}>
           Svi treneri
         </FilterChip>
       </FilterBar>
 
       <EmptyState>
-        Izveštajni backend (#12 Izveštaji) još ne postoji — šest pokazatelja ispod čeka prave agregate i
+        Izveštajni backend (#12 Izveštaji) još ne postoji. Šest pokazatelja ispod čeka prave agregate i
         prikazano je bez izmišljenih brojeva. Lista „Traži pažnju“ i traka evidencije već koriste stvarne
         podatke iz Rasporeda i Finansija za izabrani period.
       </EmptyState>
@@ -347,6 +348,7 @@ export function ReportsPage() {
               <EmptyState>Nema završenih termina {range.label} da bi se izračunala evidencija.</EmptyState>
             ) : (
               <CapacityBar
+                meaning="completion"
                 value={completion.recorded}
                 max={completion.finished}
                 label={
@@ -402,14 +404,14 @@ function AttentionRow({
 }
 
 /* ===================================================================== */
-/* Line chart — "Prisustvo po nedeljama"                                 */
+/* Line chart, "Prisustvo po nedeljama"                                 */
 /*                                                                       */
 /* Built to the dataviz skill's spec (2px line, ≥8px ringed end-marker,  */
 /* hairline recessive grid, single series → no legend box, hover         */
-/* crosshair + tooltip, direct end-label only — never a number on every  */
+/* crosshair + tooltip, direct end-label only, never a number on every  */
 /* point), recolored to this app's green/gold semantic tokens instead of */
 /* the skill's default placeholder palette. `points` is intentionally    */
-/* `null` today (see file header) — this component is ready to receive  */
+/* `null` today (see file header), this component is ready to receive  */
 /* real weekly {label, pct} points the moment the reports backend ships. */
 /* ===================================================================== */
 
@@ -430,7 +432,7 @@ function AttendanceTrendChart({ points }: { points: WeekPoint[] | null }) {
           <line x1="0" y1="140" x2="600" y2="140" />
         </svg>
         <p>
-          Grafikon uskoro — čeka nedeljne agregate prisustva iz izveštajnog backenda (#12). Prikazujemo
+          Grafikon uskoro: čeka nedeljne agregate prisustva iz izveštajnog backenda (#12). Prikazujemo
           prazno stanje umesto izmišljenih tačaka.
         </p>
       </div>
@@ -486,7 +488,19 @@ function AttendanceTrendChart({ points }: { points: WeekPoint[] | null }) {
             onFocus={() => setHover(i)}
           >
             <circle className="reports-chart__hit" cx={xFor(i)} cy={yFor(p.pct)} r={12} />
-            <circle className="reports-chart__dot" cx={xFor(i)} cy={yFor(p.pct)} r={4} />
+            {/* The latest week is the single gold data point on this screen:
+                bigger, gold-filled, navy-stroked. Every earlier week is a
+                plain white dot, so the eye lands on "where we are now". */}
+            <circle
+              className={
+                i === points.length - 1
+                  ? "reports-chart__dot reports-chart__dot--latest"
+                  : "reports-chart__dot"
+              }
+              cx={xFor(i)}
+              cy={yFor(p.pct)}
+              r={i === points.length - 1 ? 5.5 : 4}
+            />
           </g>
         ))}
         <text className="reports-chart__endlabel" x={xFor(points.length - 1)} y={yFor(last.pct) - 10} textAnchor="end">

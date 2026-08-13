@@ -25,8 +25,8 @@ import "./Money.css";
  *
  * schema.d.ts today only exposes: GET /charges (person_id/limit/offset),
  * POST /charges/{id}/payments, POST /billing/runs(/preview). The richer
- * finance surface referenced by #29 — POST /charges/{id}/cancel,
- * POST /payments/{id}/void, and a debts/aggregate endpoint — is not on
+ * finance surface referenced by #29, POST /charges/{id}/cancel,
+ * POST /payments/{id}/void, and a debts/aggregate endpoint, is not on
  * main yet (tracked in #9). This screen:
  *  - wires the billing-run preview→post and payment-recording flows that
  *    DO exist,
@@ -37,7 +37,7 @@ import "./Money.css";
  *    real server-computed aggregate,
  *  - and disables the "Period" filter chip (ChargeResponse carries no
  *    period_label yet, so charges can't honestly be filtered by billing
- *    period) — same "uskoro" degradation pattern used on Grupe/Raspored
+ *    period), same "uskoro" degradation pattern used on Grupe/Raspored
  *    for fields the backend doesn't expose yet.
  */
 
@@ -50,8 +50,11 @@ const STATUS_LABEL: Record<ChargeStatus, string> = {
   CANCELLED: "Otkazano",
 };
 
-const STATUS_TONE: Record<ChargeStatus, "success" | "warning" | "info" | "neutral"> = {
-  OPEN: "info",
+// OPEN is labelled "Dospelo" (due), so it carries the danger tone: an info-blue
+// badge next to a red outstanding amount read as two different verdicts on the
+// same row.
+const STATUS_TONE: Record<ChargeStatus, "success" | "warning" | "error" | "neutral"> = {
+  OPEN: "error",
   PARTIALLY_PAID: "warning",
   PAID: "success",
   CANCELLED: "neutral",
@@ -98,7 +101,7 @@ export function MoneyPage() {
     return list;
   }, [items, statusFilter, search, peopleMap]);
 
-  // Client-side debts summary — see file header comment. Not a substitute
+  // Client-side debts summary, see file header comment. Not a substitute
   // for a real aggregate endpoint (pagination/limit means this only covers
   // the loaded page; the API caps limit at 100, today's practical ceiling).
   const summary = useMemo(() => {
@@ -129,6 +132,7 @@ export function MoneyPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Mesečni obračun"
         title="Finansije"
         action={
           <Button onClick={scrollToForm} data-cy="money-new-run">
@@ -141,17 +145,17 @@ export function MoneyPage() {
       </p>
 
       <div className="money-summary" aria-label="Pregled dugovanja">
-        <StatTile label="Ukupno zaduženo" value={charges.data ? formatMinor(summary.totalDue, currency) : "—"} />
+        <StatTile label="Ukupno zaduženo" value={charges.data ? formatMinor(summary.totalDue, currency) : "-"} />
         <StatTile
           label="Evidentirane uplate"
-          value={charges.data ? formatMinor(summary.totalPaid, currency) : "—"}
+          value={charges.data ? formatMinor(summary.totalPaid, currency) : "-"}
         />
         <StatTile
           label="Otvoreno dugovanje"
-          value={charges.data ? formatMinor(summary.outstanding, currency) : "—"}
-          delta={{ label: "Približno — čeka agregat iz #9", tone: "neutral" }}
+          value={charges.data ? formatMinor(summary.outstanding, currency) : "-"}
+          delta={{ label: "Približno, čeka agregat iz #9", tone: "neutral" }}
         />
-        <StatTile label="Članovi sa dugom" value={charges.data ? summary.debtorCount : "—"} />
+        <StatTile label="Članovi sa dugom" value={charges.data ? summary.debtorCount : "-"} />
       </div>
 
       <div ref={formRef}>
@@ -173,7 +177,7 @@ export function MoneyPage() {
           <FilterChip
             caret
             disabled
-            title="Uskoro — zaduženja još ne nose podatak o periodu obračuna (čeka #9)"
+            title="Uskoro: zaduženja još ne nose podatak o periodu obračuna (čeka #9)"
             style={{ opacity: 0.55 }}
           >
             Period
@@ -476,7 +480,7 @@ function PaymentDialog({
         </select>
       </div>
       {/* Payment cancellation/void has no backing endpoint yet
-          (POST /payments/{id}/void — see #9); once it lands this dialog's
+          (POST /payments/{id}/void, see #9); once it lands this dialog's
           history view is the natural place to wire it. */}
     </ConfirmDialog>
   );

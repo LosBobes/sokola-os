@@ -4,10 +4,10 @@ import { Button, Card } from "../components/ui";
 import "./More.css";
 
 /*
- * M1 "Više" — the overflow destination every role's primary nav already
+ * M1 "Više", the overflow destination every role's primary nav already
  * points at (sidebar/tab-bar). Since NAV in shell.tsx already surfaces every
  * role's operational screens as top-level links, there's nothing left to
- * "overflow" here — so this page is the account-actions catch-all: who you
+ * "overflow" here, so this page is the account-actions catch-all: who you
  * are, switching school/role, signing out, and where to get help.
  */
 export function MorePage() {
@@ -22,7 +22,7 @@ export function MorePage() {
 
   return (
     <div className="more-page">
-      <PageHeader title="Više" />
+      <PageHeader eyebrow="Nalog i podešavanja" title="Više" />
 
       <Card
         eyebrow="Nalog"
@@ -41,7 +41,7 @@ export function MorePage() {
         <Card
           eyebrow="Kontekst"
           title="Škole i uloge"
-          subtitle="Aktivna škola i uloga je označena — izaberite drugu za prebacivanje."
+          subtitle="Aktivna škola i uloga je označena. Izaberite drugu za prebacivanje."
           className="more-page__card"
         >
           <ul className="more-page__list">

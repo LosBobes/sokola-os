@@ -1,5 +1,5 @@
 /*
- * Parent · Finansije (P03) — brand row, child selector, balance hero, and
+ * Parent · Finansije (P03), brand row, child selector, balance hero, and
  * obligation rows. Consumes only semantic role tokens from
  * styles/design-tokens.css, same discipline as home.css/shell.css.
  */
@@ -55,10 +55,10 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   background: var(--accent-gold-soft);
   color: var(--tone-warning-fg);
-  font-weight: 700;
+  font-weight: 600;
   flex: none;
 }
 .money-childpicker__name {
@@ -104,43 +104,53 @@
 }
 
 /* --- Balance hero ------------------------------------------------------*/
+/* A navy card, not a primary-action surface: this is the one dark block on the
+   parent's page, carrying the single figure that matters. It stays navy in
+   both themes (unlike --action-primary, which flips to gold in dark), so the
+   white amount and the gold eyebrow always have their intended ground. */
 .money-hero {
-  background: var(--action-primary-gradient);
-  color: var(--text-on-action);
+  background: var(--surface-navy);
+  color: var(--text-on-navy);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
-  box-shadow: var(--shadow-lg);
   margin-bottom: var(--space-5);
 }
 .money-hero__eyebrow {
-  font-size: var(--text-sm);
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--text-on-action) 78%, transparent);
+  color: var(--accent-gold);
 }
 .money-hero__amount {
   font-family: var(--font-display);
   font-weight: var(--font-weight-display);
-  font-size: var(--text-xl);
-  margin: var(--space-1) 0 var(--space-4);
+  font-size: var(--text-h2);
+  letter-spacing: var(--tracking-tight);
+  margin: var(--space-2) 0 var(--space-4);
 }
 .money-hero__stats {
   display: flex;
-  gap: var(--space-5);
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
+/* Each figure sits in its own raised navy tile, the way the design splits
+   "Otvorene obaveze" from "Sledeće dospeće". */
 .money-hero__stat {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
+  flex: 1 1 140px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-navy-tile);
 }
 .money-hero__stat-label {
-  font-size: var(--text-sm);
-  color: color-mix(in srgb, var(--text-on-action) 82%, transparent);
+  font-size: var(--text-xs);
+  color: var(--text-on-navy-muted);
 }
 .money-hero__stat-value {
-  font-weight: 700;
+  font-weight: 600;
   font-size: var(--text-lg);
 }
 

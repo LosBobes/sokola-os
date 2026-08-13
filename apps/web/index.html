@@ -4,28 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SOKOLA OS</title>
+    <meta name="description" content="Operativni sistem za sportske klubove, plesne i druge škole." />
+    <!-- Deep Navy. Paints the mobile browser chrome and the PWA splash. -->
+    <meta name="theme-color" content="#081A3A" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/icons/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- Inter is the only live UI typeface. 400 body, 500, 600 titles/labels/
+         buttons; nothing heavier is used. Cormorant Garamond is self-hosted in
+         styles/fonts.css and reserved for display lines at 40px and above. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
-    <!-- Hand-drawn edge filters: feTurbulence + feDisplacementMap wobble the
-         ink borders (applied to pseudo-elements so text stays crisp). -->
-    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
-      <defs>
-        <filter id="wobble">
-          <feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" result="n" />
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="4" />
-        </filter>
-        <filter id="wobble-strong">
-          <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" result="n" />
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="6" />
-        </filter>
-      </defs>
-    </svg>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

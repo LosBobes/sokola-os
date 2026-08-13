@@ -75,6 +75,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/password/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Password Login */
+        post: operations["loginWithPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Password Register */
+        post: operations["registerWithPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/billing/debts": {
         parameters: {
             query?: never;
@@ -290,7 +324,7 @@ export interface paths {
         };
         /**
          * List Inbox
-         * @description M3. Every authenticated person has an inbox — no COMMUNICATIONS
+         * @description M3. Every authenticated person has an inbox, no COMMUNICATIONS
          *     permission required, since a person always sees only their own items.
          */
         get: operations["listInbox"];
@@ -848,7 +882,7 @@ export interface paths {
         put?: never;
         /**
          * Send Invitation
-         * @description Send an invitation. The raw token is returned exactly once — only its
+         * @description Send an invitation. The raw token is returned exactly once, only its
          *     hash is ever persisted.
          */
         post: operations["sendInvitation"];
@@ -869,7 +903,7 @@ export interface paths {
         put?: never;
         /**
          * Accept Invitation
-         * @description Accept an invitation as the already-authenticated caller — the same path
+         * @description Accept an invitation as the already-authenticated caller, the same path
          *     for a brand-new sign-up and an existing person (§21/§22); no active context
          *     is required since acceptance is exactly how one is obtained.
          */
@@ -1052,7 +1086,7 @@ export interface paths {
         /**
          * Get Progress
          * @description Per-step guided-onboarding progress for the caller's active school
-         *     (PRD 02 §24/§25) — what's done and what's left, including whether
+         *     (PRD 02 §24/§25), what's done and what's left, including whether
          *     activation is currently possible.
          */
         get: operations["getOnboardingProgress"];
@@ -1113,7 +1147,7 @@ export interface paths {
         put?: never;
         /**
          * Deactivate Organization
-         * @description §31 — deactivate the caller's active school. Locks out every future
+         * @description §31, deactivate the caller's active school. Locks out every future
          *     context resolution against it; see ``reactivateOrganization``.
          */
         post: operations["deactivateOrganization"];
@@ -1134,7 +1168,7 @@ export interface paths {
         put?: never;
         /**
          * Reactivate Organization
-         * @description §31 — a deactivated school cannot be reached through the normal
+         * @description §31, a deactivated school cannot be reached through the normal
          *     context-selection path (a deactivated org is rejected at context
          *     resolution), so this authenticates on the principal alone and checks
          *     ownership of the named school directly.
@@ -1866,7 +1900,7 @@ export interface paths {
         };
         /**
          * Search
-         * @description Search is gated on ``ContextDep`` alone — no new permission area. It only
+         * @description Search is gated on ``ContextDep`` alone, no new permission area. It only
          *     ever surfaces rows each sub-query already re-scopes to ``context.
          *     organization_id`` the same way that domain's own list endpoint would (e.g.
          *     ``GET /charges`` is likewise ``ContextDep``-only today, with no per-area
@@ -2004,7 +2038,7 @@ export interface components {
         AttendanceOverrideReasonCode: "LATE_ARRIVAL" | "EARLY_LEAVE" | "EXCUSED_ABSENCE" | "OTHER";
         /**
          * AttendanceProgressNoteInput
-         * @description A progress note (PRD 06 M2) attached to this attendance save. Optional —
+         * @description A progress note (PRD 06 M2) attached to this attendance save. Optional ,
          *     a trainer taking attendance may jot a note about a roster member without
          *     leaving the sheet; equivalent to a standalone POST to
          *     ``/people/{person_id}/progress-notes`` scoped to this session's group.
@@ -2073,6 +2107,8 @@ export interface components {
             dev_auth_enabled: boolean;
             /** Google Enabled */
             google_enabled: boolean;
+            /** Password Enabled */
+            password_enabled: boolean;
         };
         /** BillingPreviewItem */
         BillingPreviewItem: {
@@ -2213,7 +2249,7 @@ export interface components {
         };
         /**
          * ConsentScope
-         * @description What a consent covers — a closed vocabulary of processing purposes a
+         * @description What a consent covers, a closed vocabulary of processing purposes a
          *     person may grant or withdraw, independent of any one domain's own
          *     feature set.
          * @enum {string}
@@ -2388,14 +2424,14 @@ export interface components {
         /**
          * DataCategory
          * @description A category of stored personal data a retention period can be attached
-         *     to. Deliberately domain-agnostic — one category may span several
+         *     to. Deliberately domain-agnostic, one category may span several
          *     domains' tables (e.g. DOCUMENTS covers files across the product).
          * @enum {string}
          */
         DataCategory: "PERSONAL_PROFILE" | "ATTENDANCE_RECORDS" | "BILLING_RECORDS" | "DOCUMENTS" | "COMMUNICATIONS" | "MEDIA";
         /**
          * DebtSummaryResponse
-         * @description Org-wide roll-up of :class:`PersonDebtItem` — the "dugovanja" total.
+         * @description Org-wide roll-up of :class:`PersonDebtItem`, the "dugovanja" total.
          */
         DebtSummaryResponse: {
             /** Currency */
@@ -2407,7 +2443,7 @@ export interface components {
         };
         /**
          * DecideDsarRequest
-         * @description Staff's decision note. Required — a fulfilment/rejection is always
+         * @description Staff's decision note. Required, a fulfilment/rejection is always
          *     attested with a reason (v1 has no automated action to point to instead).
          */
         DecideDsarRequest: {
@@ -2454,18 +2490,18 @@ export interface components {
          * DocumentType
          * @description GENERAL is any uploaded file (photo, form, certificate, ...). CONTRACT is
          *     a subtype that carries an acknowledgement (electronic "I have read/agree")
-         *     state — see ``acknowledged_at``/``acknowledged_by_person_id`` on the model.
+         *     state, see ``acknowledged_at``/``acknowledged_by_person_id`` on the model.
          * @enum {string}
          */
         DocumentType: "GENERAL" | "CONTRACT";
         /**
          * DocumentVisibility
-         * @description Who — beyond staff, who can always reach anything in their own tenant via
-         *     the DOCUMENTS permission — may see this document.
+         * @description Who, beyond staff, who can always reach anything in their own tenant via
+         *     the DOCUMENTS permission, may see this document.
          *
          *     STAFF_ONLY: no one outside staff (e.g. internal admin paperwork).
-         *     SUBJECT: the person named in ``subject_person_id`` may see it, and — when
-         *     that subject is a child — so may any guardian with active
+         *     SUBJECT: the person named in ``subject_person_id`` may see it, and, when
+         *     that subject is a child, so may any guardian with active
          *     ``GuardianOrganizationAccess`` to that child in this organization. This
          *     mirrors how the events domain already resolves "which children can this
          *     parent act for" (see ``app.domains.events.repository.guardian_children``).
@@ -2565,7 +2601,7 @@ export interface components {
         /**
          * FinancialReport
          * @description Billed vs. collected over an explicit date range, plus a breakdown of
-         *     all currently-outstanding debt (not time-scoped — debt is a point-in-time
+         *     all currently-outstanding debt (not time-scoped, debt is a point-in-time
          *     balance, not something that happened "in" the range).
          */
         FinancialReport: {
@@ -2623,7 +2659,7 @@ export interface components {
         /**
          * GroupMembershipStatus
          * @description Mirrors :class:`app.domains.organization.enums.MembershipStatus` at group
-         *     scope. ``ENDED`` is terminal — re-joining creates a brand-new membership row,
+         *     scope. ``ENDED`` is terminal, re-joining creates a brand-new membership row,
          *     never a revived one (the unique constraint on ``(group_id, person_id)`` would
          *     otherwise collide with history).
          * @enum {string}
@@ -2714,7 +2750,7 @@ export interface components {
          *
          *     ``PENDING`` -> rows are staged, not yet validated. ``PREVIEWED`` -> every
          *     row has been checked (dry-run) and the batch may be committed. ``COMMITTED``
-         *     is terminal: a batch can be committed at most once (§ import v1 — no
+         *     is terminal: a batch can be committed at most once (§ import v1, no
          *     rollback, see service module docstring).
          * @enum {string}
          */
@@ -2752,7 +2788,7 @@ export interface components {
         /**
          * ImportRowPreviewResult
          * @description One row's dry-run outcome. ``valid`` and ``duplicate_person_ids`` are
-         *     independent — a row can be valid AND look like an existing person; the
+         *     independent, a row can be valid AND look like an existing person; the
          *     caller decides whether that's acceptable (v1 never blocks on it).
          */
         ImportRowPreviewResult: {
@@ -2775,7 +2811,7 @@ export interface components {
         };
         /**
          * InvitationCreatedResponse
-         * @description Send/reissue response. ``token`` is shown exactly once — only its hash is
+         * @description Send/reissue response. ``token`` is shown exactly once, only its hash is
          *     ever persisted (see ``invite_tokens.py``).
          */
         InvitationCreatedResponse: {
@@ -2915,7 +2951,7 @@ export interface components {
          * MembershipTrendReport
          * @description Monthly-bucketed active-membership growth. Membership rows carry only a
          *     current ``status`` (no historical end date), so each bucket counts
-         *     currently-active memberships that had already joined by the bucket's end —
+         *     currently-active memberships that had already joined by the bucket's end ,
          *     a join-cohort growth curve, not a historical point-in-time snapshot.
          */
         MembershipTrendReport: {
@@ -2962,17 +2998,17 @@ export interface components {
          * NotificationDeliveryStatus
          * @description Delivery state of a single in-app :class:`Notification` row.
          *
-         *     v1 has exactly one channel — the in-app inbox — so ``DELIVERED`` simply
+         *     v1 has exactly one channel (the in-app inbox), so ``DELIVERED`` simply
          *     means the row was committed successfully; there is no external send step
          *     yet (email/push are out of scope, see PRD 08 M4). The states still model a
          *     real state machine so a future channel can slot in without a schema change:
          *
-         *     * ``PENDING`` — the row is being constructed; never observed once committed
+         *     * ``PENDING``, the row is being constructed; never observed once committed
          *       (a handler either finishes and commits as ``DELIVERED``, or the whole
-         *       outbox message fails and retries — see ``app.platform.outbox``).
-         *     * ``DELIVERED`` — the in-app record exists and is visible in the recipient's
+         *       outbox message fails and retries, see ``app.platform.outbox``).
+         *     * ``DELIVERED``, the in-app record exists and is visible in the recipient's
          *       inbox. Terminal for v1.
-         *     * ``FAILED`` — reserved for a future external channel's delivery failure;
+         *     * ``FAILED``, reserved for a future external channel's delivery failure;
          *       unused today because in-app "delivery" cannot partially fail (either the
          *       transaction commits, or the outbox retries the whole event).
          * @enum {string}
@@ -3019,15 +3055,15 @@ export interface components {
          * OnboardingStep
          * @description A step of guided school setup, in the order a new owner walks them.
          *
-         *     ``SCHOOL_PROFILE`` is satisfied by ``POST /organizations`` itself (name/
-         *     type/timezone are required at creation) so it is always complete.
-         *     ``LOCATIONS``/``ROOMS``/``PROGRAMS`` are satisfied by using the structure
-         *     domain's own create endpoints — onboarding does not duplicate them, it only
-         *     reports whether at least one active row exists for the school (see
-         *     ``app.domains.onboarding.service``). ``FIRST_INVITE`` is satisfied by
-         *     sending any invitation (in practice, during onboarding, the co-owner invite
-         *     — see ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).
-         *     ``ACTIVATE`` is the terminal step: leaving "u pripremi".
+         *      ``SCHOOL_PROFILE`` is satisfied by ``POST /organizations`` itself (name/
+         *      type/timezone are required at creation) so it is always complete.
+         *      ``LOCATIONS``/``ROOMS``/``PROGRAMS`` are satisfied by using the structure
+         *      domain's own create endpoints, onboarding does not duplicate them, it only
+         *      reports whether at least one active row exists for the school (see
+         *      ``app.domains.onboarding.service``). ``FIRST_INVITE`` is satisfied by
+         *      sending any invitation (in practice, during onboarding, the co-owner invite
+         *     , see ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).
+         *      ``ACTIVATE`` is the terminal step: leaving "u pripremi".
          * @enum {string}
          */
         OnboardingStep: "SCHOOL_PROFILE" | "LOCATIONS" | "ROOMS" | "PROGRAMS" | "FIRST_INVITE" | "ACTIVATE";
@@ -3042,7 +3078,7 @@ export interface components {
         /**
          * OrganizationLifecycleStatus
          * @description Where a school is in guided onboarding (PRD 02 §24/§25), independent of
-         *     ``record_status`` (which is the soft-delete/deactivation axis — §31).
+         *     ``record_status`` (which is the soft-delete/deactivation axis, §31).
          *
          *     A school created through ``POST /organizations`` starts ``IN_PREPARATION``
          *     ("u pripremi"): the owner may set up structure and invite a co-owner, but
@@ -3291,6 +3327,31 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** PasswordAuthResponse */
+        PasswordAuthResponse: {
+            /** Display Name */
+            display_name: string;
+            /** Person Id */
+            person_id: string;
+        };
+        /** PasswordLoginRequest */
+        PasswordLoginRequest: {
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** PasswordRegisterRequest */
+        PasswordRegisterRequest: {
+            /** Email */
+            email: string;
+            /** Family Name */
+            family_name: string;
+            /** Given Name */
+            given_name: string;
+            /** Password */
+            password: string;
+        };
         /**
          * PaymentMethod
          * @enum {string}
@@ -3402,7 +3463,7 @@ export interface components {
         };
         /**
          * ProgressLevel
-         * @description A coarse, honest read on where a student is — not a graded score. Optional:
+         * @description A coarse, honest read on where a student is, not a graded score. Optional:
          *     many notes are just prose with no level attached.
          * @enum {string}
          */
@@ -3499,7 +3560,7 @@ export interface components {
         /**
          * RetentionPeriod
          * @description A declared retention policy label recorded at upload time. Nothing in this
-         *     increment enforces expiry/deletion against it — it is metadata for a future
+         *     increment enforces expiry/deletion against it, it is metadata for a future
          *     retention job, not a guarantee.
          * @enum {string}
          */
@@ -3629,7 +3690,7 @@ export interface components {
         };
         /**
          * SearchResultType
-         * @description Which entity a search result came from — drives icon/link choice client-side.
+         * @description Which entity a search result came from, drives icon/link choice client-side.
          * @enum {string}
          */
         SearchResultType: "PERSON" | "GROUP" | "SESSION" | "EVENT" | "CHARGE";
@@ -3686,7 +3747,7 @@ export interface components {
         SessionChangeReasonCode: "TIME_CHANGE" | "LOCATION_CHANGE" | "TRAINER_CHANGE" | "OTHER";
         /**
          * SessionDraft
-         * @description The proposed shape of a session — used for both conflict preview and create.
+         * @description The proposed shape of a session, used for both conflict preview and create.
          */
         SessionDraft: {
             /**
@@ -3726,10 +3787,10 @@ export interface components {
          * SessionEditScope
          * @description Calendar-style edit scope for a session that belongs to a series.
          *
-         *     * ``SINGLE`` — change only this one occurrence; the series is untouched.
-         *     * ``THIS_AND_FUTURE`` — change the series template and every scheduled
+         *     * ``SINGLE``, change only this one occurrence; the series is untouched.
+         *     * ``THIS_AND_FUTURE``, change the series template and every scheduled
          *       occurrence from this one forward; past occurrences keep their old values.
-         *     * ``ALL_FUTURE`` — change the series template and every upcoming scheduled
+         *     * ``ALL_FUTURE``, change the series template and every upcoming scheduled
          *       occurrence (from now on), regardless of which occurrence was edited.
          * @enum {string}
          */
@@ -3834,7 +3895,7 @@ export interface components {
         /**
          * SetMembershipDiscountRequest
          * @description Absolute discount in minor currency units against the group's
-         *     ``base_monthly_price_minor`` — see :class:`app.domains.groups.models.
+         *     ``base_monthly_price_minor``, see :class:`app.domains.groups.models.
          *     GroupMembership` for why this is absolute rather than a percentage.
          */
         SetMembershipDiscountRequest: {
@@ -3853,7 +3914,7 @@ export interface components {
         };
         /**
          * TenantPublic
-         * @description Public tenant discovery result — the minimum needed to route a login to
+         * @description Public tenant discovery result, the minimum needed to route a login to
          *     the right school. Reveals no member data.
          */
         TenantPublic: {
@@ -3883,7 +3944,7 @@ export interface components {
         };
         /**
          * UpdateEventRequest
-         * @description Partial update — only fields present in the request body are changed.
+         * @description Partial update, only fields present in the request body are changed.
          *     ``capacity`` may be sent as ``null`` to clear it (pair with switching
          *     ``capacity_mode`` to UNLIMITED); omit a field entirely to leave it untouched.
          *     Only permitted while the event is still upcoming (published/draft and not yet
@@ -3908,7 +3969,7 @@ export interface components {
         };
         /**
          * UpdateGroupRequest
-         * @description Partial update. Only fields present in the request body are changed —
+         * @description Partial update. Only fields present in the request body are changed ,
          *     send ``null`` for ``program_id``/``location_id``/``base_monthly_price_minor``
          *     to clear that link/price, omit a field entirely to leave it untouched.
          */
@@ -4071,6 +4132,72 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    loginWithPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasswordAuthResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    registerWithPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordRegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasswordAuthResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

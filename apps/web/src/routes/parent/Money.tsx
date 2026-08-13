@@ -28,7 +28,7 @@ function cx(...parts: Array<string | false | null | undefined>): string {
 }
 
 /**
- * P03 — Roditelj Finansije. Read-only: no "platio sam" action, no editing.
+ * P03, Roditelj Finansije. Read-only: no "platio sam" action, no editing.
  * The parent only sees totals and status; recording a payment stays a
  * manager-side action (apps/web/src/routes/manager/Money.tsx).
  */
@@ -129,7 +129,7 @@ function ChildSelector({
     };
   }, [open]);
 
-  const name = active?.display_name ?? "—";
+  const name = active?.display_name ?? "-";
 
   return (
     <div className="money-childpicker" ref={ref} data-cy="child-selector">
@@ -195,13 +195,13 @@ function BalanceHero({ state }: { state: ReturnType<typeof useAsync<Page<Charge>
           <div className="money-hero__stat">
             <span className="money-hero__stat-label">Otvorene obaveze</span>
             <span className="money-hero__stat-value" data-cy="money-hero-open-count">
-              {state.loading ? "—" : openCount}
+              {state.loading ? "-" : openCount}
             </span>
           </div>
           <div className="money-hero__stat">
             <span className="money-hero__stat-label">Sledeći rok</span>
             {/* Charges have no due-date field in the API yet (see
-                ChargeResponse in schema.d.ts) — degrade honestly instead of
+                ChargeResponse in schema.d.ts), degrade honestly instead of
                 fabricating a date. */}
             <span className="money-hero__stat-value">Nije dostupno</span>
           </div>
@@ -238,7 +238,7 @@ function ObligationsList({ state }: { state: ReturnType<typeof useAsync<Page<Cha
           <section className="money-oblig-row" key={c.id} data-cy="obligation-row">
             <div className="money-oblig-row__top">
               {/* Charges carry only `description`, no separate period field
-                  in the API yet — shown as the row title. */}
+                  in the API yet, shown as the row title. */}
               <span className="money-oblig-row__title">{c.description}</span>
               <StatusBadge tone={meta.tone}>{meta.label}</StatusBadge>
             </div>
@@ -257,8 +257,8 @@ function ObligationsList({ state }: { state: ReturnType<typeof useAsync<Page<Cha
               </div>
               <div>
                 <span className="money-oblig-row__field-label">Rok</span>
-                {/* No due-date field on ChargeResponse yet — see BalanceHero comment. */}
-                <span className="money-oblig-row__field-value">—</span>
+                {/* No due-date field on ChargeResponse yet, see BalanceHero comment. */}
+                <span className="money-oblig-row__field-value">-</span>
               </div>
             </div>
           </section>
@@ -272,7 +272,7 @@ function PaymentsTab() {
   return (
     <Card title="Uplate">
       {/* The API only exposes POST /charges/{id}/payments (recording a
-          payment) — there is no GET endpoint to list payments yet, so a
+          payment): there is no GET endpoint to list payments yet, so a
           parent-facing payment history can't be built honestly today.
           Documented as a known gap in the PR description. */}
       <InlineNotice tone="info">

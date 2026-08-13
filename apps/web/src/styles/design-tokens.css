@@ -1,169 +1,237 @@
 /*
- * SOKOLA OS design system — professional dark-green + gold.
+ * SOKOLA OS design system v2 - Deep Navy / Light Gold (Brand Package v1.1.0).
  *
- * Green is the primary interactive colour (actions, active state, focus).
- * Gold is the brand mark + a sparing secondary accent (never large text on
- * light surfaces — it fails contrast). Neutrals carry the page and cards.
+ * Deep Navy #081A3A is the chrome, the primary text and the primary action.
+ * Light Gold #F3D58A is a SCARCE accent: the active nav bar, a selected-row
+ * bar, one data point, one number per screen. It is never a large fill on a
+ * light surface, and as text on light it darkens to #8A6913 to stay legible.
+ * Platinum Silver #68778B carries meta text; Canvas #F6F8FC carries the page.
+ *
+ * Brand locks enforced here:
+ *   - Inter is the only live UI typeface (400/500/600), numbers tabular.
+ *   - Cormorant Garamond is logo-only, with the single sanctioned exception of
+ *     display lines at 40px and above (--font-brand-display). Never in UI,
+ *     tables, numbers or buttons - which is why --font-display, the legacy
+ *     alias every heading reads, deliberately stays Inter.
+ *   - No gradients, bevels, glows or 3D effects. All fills are flat, all
+ *     shadows are navy-tinted, never black.
  *
  * Discipline: product components consume only the SEMANTIC ROLE tokens in the
- * second block below (--surface-*, --text-*, --action-*, --tone-*, …). They
- * never read a primitive (--green-600) or a raw hex value directly. The role
+ * second block below (--surface-*, --text-*, --action-*, --tone-*, ...). They
+ * never read a primitive (--navy-600) or a raw hex value directly. The role
  * names are a stable contract; their VALUES change with the theme.
  *
  * Legacy role aliases (--c-*, --accent-blue, --radius-hand*, --shadow-sticker,
- * --font-hand) are preserved by NAME for the shell/base stylesheets that still
- * reference them; their values now point at the green/gold system so the whole
- * app re-skins from one place.
+ * --font-hand) are preserved by NAME for the stylesheets that still reference
+ * them; their values now point at the navy/gold system so the whole app
+ * re-skins from this one file.
  */
 :root {
+  /* Tells the browser this UI honours both schemes, so everything the UA paints
+     itself - form controls, scrollbars, and the Canvas/CanvasText system colours
+     that <dialog> and friends default to - follows the same theme as the tokens
+     below. Without it those stay light-mode while our surfaces go dark. */
+  color-scheme: light dark;
+
   /* ============================================================= */
-  /* PRIMITIVES — raw ramps. Never referenced by components.        */
+  /* PRIMITIVES - raw ramps. Never referenced by components.        */
   /* ============================================================= */
 
-  /* Dark-green ramp — surfaces, primary action, brand */
-  --green-50: #eef6f0;
-  --green-100: #d7ebdc;
-  --green-200: #aed6ba;
-  --green-300: #7bb992;
-  --green-400: #4c9968;
-  --green-500: #2f7d4d;
-  --green-600: #1f6b3f; /* primary action */
-  --green-700: #17532f; /* primary hover / links */
-  --green-800: #103b22;
-  --green-900: #0c2a19; /* deep green-black sidebar */
-  --green-950: #071b10;
+  /* Navy ramp - chrome, primary action, primary text */
+  --navy-1000: #040d1f;
+  --navy-900: #081a3a; /* Deep Navy, brand core */
+  --navy-800: #0c2247;
+  --navy-700: #102a55;
+  --navy-600: #1b3a6b;
+  --navy-500: #2e5088;
+  --navy-300: #7890af;
+  --navy-200: #bfcbdd;
+  --navy-100: #e4e9f2;
+  --navy-50: #eef2f9;
 
-  /* Gold ramp — logo mark + sparing accent */
-  --gold-100: #f7ecc7;
-  --gold-200: #eeda98;
-  --gold-300: #e3c65f;
-  --gold-400: #d4af37; /* brand gold */
-  --gold-500: #b8942a;
-  --gold-600: #937420;
+  /* Gold ramp - accent only, never a large fill on a light surface */
+  --gold-300: #faebc6;
+  --gold-400: #f6dfa6;
+  --gold-500: #f3d58a; /* Light Gold, brand core */
+  --gold-600: #d8b45c;
+  --gold-700: #a6812a;
+  --gold-800: #7a5d18;
+  --gold-text-on-light: #8a6913; /* gold as TEXT on light must darken */
 
-  /* Neutrals — page, cards, borders, text (faint green cast) */
+  /* Neutrals - canvas, cards, meta text */
   --neutral-0: #ffffff;
-  --neutral-50: #f6f8f6;
-  --neutral-100: #eef1ee;
-  --neutral-200: #e1e6e1;
-  --neutral-300: #cdd4ce;
-  --neutral-400: #a7b0a9;
-  --neutral-500: #6c756e;
-  --neutral-600: #515a53;
-  --neutral-700: #3a423d;
-  --neutral-800: #232a26;
-  --neutral-900: #161d19;
+  --neutral-canvas: #f6f8fc;
+  --neutral-platinum: #68778b; /* Platinum Silver */
+  --neutral-slate: #4a5a75;
 
-  /* Status hues (fg = accessible text on the matching soft bg) */
-  --success-100: #d7ecdd;
-  --success-700: #17603a;
-  --warning-100: #fbedca;
-  --warning-700: #8a5a12;
-  --error-100: #fadedb;
-  --error-500: #c0392b;
-  --error-700: #97271b;
-  --info-100: #d9e7f6;
-  --info-700: #245c8f;
+  /* Status hues (fg = accessible text on the matching soft surface) */
+  --success-fg: #0e7a5f;
+  --success-surface: #e4f4ef;
+  --success-border: #b6e0d4;
+  --warning-fg: #8a6410;
+  --warning-surface: #fcf2dc;
+  --warning-border: #efdcaf;
+  --danger-fg: #b02a3b;
+  --danger-surface: #fbe9ec;
+  --danger-border: #f0c6cd;
+  --info-fg: #1c4f91;
+  --info-surface: #e7eef9;
+  --info-border: #c4d6ee;
 
   /* ============================================================= */
-  /* SEMANTIC ROLES — the component-facing contract.               */
+  /* SEMANTIC ROLES - the component-facing contract.               */
   /* ============================================================= */
 
   /* Surfaces */
-  --surface-page: var(--neutral-50); /* light neutral page background */
-  --surface-raised: var(--neutral-0); /* white raised card */
-  --surface-sunken: var(--neutral-100);
-  --surface-sidebar: var(--green-900); /* deep green-black nav (#21) */
-  --surface-sidebar-active: var(--green-700);
+  --surface-page: var(--neutral-canvas);
+  --surface-raised: var(--neutral-0); /* white card */
+  --surface-sunken: var(--navy-50);
+  --surface-inset: var(--neutral-canvas); /* read-only wells inside cards */
+  --surface-gold-tint: #fbf4e2;
+  --surface-navy: var(--navy-900); /* navy summary cards on light pages */
+  --surface-navy-tile: var(--navy-700); /* a raised tile inside one of those */
+  /* A light block sitting ON a navy surface: the inverted call to action in a
+     navy hero. Fixed in both themes, for the same reason --surface-navy is. */
+  --surface-inverse: var(--neutral-0);
+  --surface-inverse-hover: var(--navy-50);
+  --text-on-inverse: var(--navy-900);
+  --surface-sidebar: var(--navy-900);
+  --surface-sidebar-hover: var(--navy-800);
+  --surface-sidebar-active: var(--navy-700);
+  --surface-sidebar-card: var(--navy-800);
 
   /* Borders */
-  --border-default: var(--neutral-200);
-  --border-strong: var(--neutral-300);
+  --border-default: var(--navy-100);
+  --border-hairline: #edf1f7; /* table row rules, lighter than default */
+  --border-strong: #c9d3e2;
+  --border-on-navy: rgba(243, 213, 138, 0.14);
+  --border-on-navy-strong: rgba(243, 213, 138, 0.3);
 
   /* Text */
-  --text-primary: var(--neutral-900);
-  --text-secondary: var(--neutral-500);
-  --text-on-action: var(--neutral-0); /* on green buttons */
-  --text-on-sidebar: #e9f1ea;
-  --text-link: var(--green-700);
+  --text-primary: var(--navy-900);
+  --text-secondary: var(--neutral-slate);
+  --text-muted: var(--neutral-platinum);
+  --text-on-action: var(--neutral-0); /* on navy buttons */
+  /* Text over --surface-navy. Fixed in both themes, because that surface is
+     navy in both themes - unlike --text-on-action, which follows the button. */
+  --text-on-navy: #ffffff;
+  --text-on-navy-muted: var(--navy-200);
+  --text-on-sidebar: #ffffff;
+  --text-on-sidebar-muted: var(--navy-200);
+  --text-on-sidebar-faint: var(--navy-300);
+  --text-gold: var(--gold-text-on-light);
+  --text-link: var(--navy-600);
 
-  /* Actions — green */
-  --action-primary: var(--green-600);
-  --action-primary-hover: var(--green-700);
-  --action-primary-gradient: linear-gradient(180deg, var(--green-500), var(--green-700));
-  --action-surface: var(--green-50);
+  /* Actions - navy on light, gold on dark */
+  --action-primary: var(--navy-900);
+  --action-primary-hover: var(--navy-700);
+  --action-primary-press: var(--navy-1000);
+  /* Flat by brand rule. Kept as a token name so the stylesheets that paint
+     `background: var(--action-primary-gradient)` need no edit; the value is a
+     single colour, never a ramp. */
+  --action-primary-gradient: var(--navy-900);
+  --action-surface: var(--navy-50);
 
   /* Accents */
-  --accent-gold: var(--gold-400);
-  --accent-gold-soft: var(--gold-100);
-  --accent-red: var(--error-500);
+  --accent-gold: var(--gold-500);
+  --accent-gold-soft: var(--surface-gold-tint);
+  --accent-red: var(--danger-fg);
 
   /* Status / badge tones */
-  --tone-success-fg: var(--success-700);
-  --tone-success-bg: var(--success-100);
-  --tone-warning-fg: var(--warning-700);
-  --tone-warning-bg: var(--warning-100);
-  --tone-error-fg: var(--error-700);
-  --tone-error-bg: var(--error-100);
-  --tone-info-fg: var(--info-700);
-  --tone-info-bg: var(--info-100);
+  --tone-success-fg: var(--success-fg);
+  --tone-success-bg: var(--success-surface);
+  --tone-success-border: var(--success-border);
+  --tone-warning-fg: var(--warning-fg);
+  --tone-warning-bg: var(--warning-surface);
+  --tone-warning-border: var(--warning-border);
+  --tone-error-fg: var(--danger-fg);
+  --tone-error-bg: var(--danger-surface);
+  --tone-error-border: var(--danger-border);
+  --tone-info-fg: var(--info-fg);
+  --tone-info-bg: var(--info-surface);
+  --tone-info-border: var(--info-border);
+  --tone-neutral-fg: var(--neutral-platinum);
+  --tone-neutral-bg: var(--navy-50);
+  --tone-neutral-border: #dce3ee;
 
-  /* Focus — green ring */
-  --focus-ring: 0 0 0 3px rgba(31, 107, 63, 0.4);
+  /* Data marks - the series stroke is navy-600, a step lighter than the
+     chrome so a line over a white card is not mistaken for a border. */
+  --chart-series: var(--navy-600);
 
-  /* ---- Legacy role aliases (kept by NAME; values now green/gold) ---- */
-  --accent-blue: var(--green-700); /* interactive/links & brand text */
+  /* Focus - navy ring on light, gold on dark */
+  --focus-ring: 0 0 0 3px rgba(27, 58, 107, 0.18);
+  --focus-border: var(--navy-600);
+
+  /* ---- Legacy role aliases (kept by NAME; values now navy/gold) ---- */
+  --accent-blue: var(--navy-600); /* interactive/links & brand text */
   --c-paper: var(--surface-page);
-  --c-paper-2: var(--green-50);
-  --c-ink: var(--neutral-900);
-  --c-ink-soft: var(--neutral-500);
-  --c-yellow: var(--gold-400); /* brand mark / active nav */
-  --c-yellow-soft: var(--gold-100);
-  --c-red: var(--error-500);
-  --c-red-soft: var(--error-100);
-  --c-blue: var(--green-600);
-  --c-blue-soft: var(--green-100);
-  --c-green: var(--green-500);
-  --c-green-soft: var(--green-100);
+  --c-paper-2: var(--navy-50);
+  --c-ink: var(--navy-900);
+  --c-ink-soft: var(--neutral-platinum);
+  --c-yellow: var(--gold-500); /* brand mark / active nav */
+  --c-yellow-soft: var(--surface-gold-tint);
+  --c-red: var(--danger-fg);
+  --c-red-soft: var(--danger-surface);
+  --c-blue: var(--navy-900);
+  --c-blue-soft: var(--navy-50);
+  --c-green: var(--success-fg);
+  --c-green-soft: var(--success-surface);
 
   /* ============================================================= */
-  /* Typography — modern sans, strong display weight               */
+  /* Typography - Inter only, numbers tabular                      */
   /* ============================================================= */
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
   --font-hand: var(--font-sans); /* legacy alias: body font */
-  --font-display: var(--font-sans); /* legacy alias: titles (heavy weight) */
-  --font-weight-display: 800;
+  --font-display: var(--font-sans); /* legacy alias: UI titles - stays Inter */
+  /* The one sanctioned Cormorant use: display lines at 40px and above. */
+  --font-brand-display: "Cormorant Garamond", Georgia, serif;
+  --font-weight-display: 600;
 
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.75rem;
+  /* Scale: 11 / 13 / 15 / 17 / 20 / 28 / 38 / 56 */
+  --text-xs: 0.6875rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-title: 1.25rem;
+  --text-xl: 1.75rem; /* legacy alias for the h2 / big-number size */
+  --text-h2: 1.75rem;
+  --text-h1: 2.375rem;
+  --text-display: 3.5rem;
 
-  /* Spacing */
+  --tracking-tight: -0.015em;
+  --tracking-label: 0.12em;
+
+  /* Spacing - 4px base */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 48px;
+  --space-9: 64px;
 
-  /* Radii — rounded, not hand-drawn */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  /* Radii - 8 / 12 controls / 14 chips / 20 cards / pill */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-chip: 14px;
+  --radius-lg: 20px;
   --radius-pill: 999px;
   --radius-hand: var(--radius-md); /* legacy alias */
   --radius-hand-2: var(--radius-sm); /* legacy alias */
 
-  /* Borders & shadows — soft, professional */
+  /* Borders & depth - navy-tinted, never black */
   --ink-border: 1px; /* legacy alias: hairline border width */
-  --shadow-sm: 0 1px 2px rgba(12, 42, 25, 0.08);
-  --shadow-md: 0 6px 16px rgba(12, 42, 25, 0.1);
-  --shadow-lg: 0 12px 32px rgba(12, 42, 25, 0.14);
+  --shadow-sm: 0 2px 6px -2px rgba(8, 26, 58, 0.1);
+  --shadow-md: 0 9px 26px -14px rgba(8, 26, 58, 0.16);
+  --shadow-lg: 0 18px 44px -20px rgba(8, 26, 58, 0.2);
+  --shadow-frame: 0 22px 56px -24px rgba(8, 26, 58, 0.28);
   --shadow-sticker: var(--shadow-md); /* legacy alias: card/button shadow */
 
   --target-min: 44px;
-  --duration: 160ms;
+  --duration: 120ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -172,30 +240,69 @@
   }
 }
 
-/* Optional dark theme parity — deep green-black content surfaces. */
+/* ===================================================================== */
+/* Dark theme - navy canvas, gold primary action.                        */
+/* Written once as a custom-property block and applied from both the OS   */
+/* preference and an explicit [data-theme="dark"], so a future in-app     */
+/* toggle needs no second copy of the values.                            */
+/* ===================================================================== */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --surface-page: var(--green-950);
-    --surface-raised: var(--green-900);
-    --surface-sunken: var(--green-800);
-    --border-default: rgba(233, 241, 234, 0.12);
-    --border-strong: rgba(233, 241, 234, 0.22);
-    --text-primary: #e9f1ea;
-    --text-secondary: #9db3a4;
-    --text-link: var(--gold-300);
-    --action-primary: var(--green-500);
-    --action-primary-hover: var(--green-400);
-    --focus-ring: 0 0 0 3px rgba(76, 153, 104, 0.5);
+  :root:not([data-theme="light"]) {
+    --surface-page: var(--navy-1000);
+    --surface-raised: var(--navy-800);
+    --surface-sunken: var(--navy-900);
+    --surface-inset: var(--navy-900);
+    --surface-gold-tint: rgba(243, 213, 138, 0.1);
 
-    --accent-blue: var(--gold-300);
+    --border-default: rgba(243, 213, 138, 0.14);
+    --border-hairline: rgba(228, 233, 242, 0.08);
+    --border-strong: rgba(243, 213, 138, 0.3);
+
+    --text-primary: var(--navy-50);
+    --text-secondary: var(--navy-200);
+    --text-muted: var(--navy-300);
+    --text-gold: var(--gold-500);
+    --text-link: var(--gold-500);
+    --text-on-action: var(--navy-900); /* navy label on the gold button */
+
+    --action-primary: var(--gold-500);
+    --action-primary-hover: var(--gold-400);
+    --action-primary-press: var(--gold-600);
+    --action-primary-gradient: var(--gold-500);
+    --action-surface: rgba(243, 213, 138, 0.14);
+
+    --success-fg: #4fd1a5;
+    --success-surface: rgba(79, 209, 165, 0.14);
+    --success-border: rgba(79, 209, 165, 0.3);
+    --warning-fg: var(--gold-500);
+    --warning-surface: rgba(243, 213, 138, 0.14);
+    --warning-border: rgba(243, 213, 138, 0.3);
+    --danger-fg: #f2899b;
+    --danger-surface: rgba(242, 137, 155, 0.14);
+    --danger-border: rgba(242, 137, 155, 0.3);
+    --info-fg: #84b4f0;
+    --info-surface: rgba(132, 180, 240, 0.14);
+    --info-border: rgba(132, 180, 240, 0.3);
+    --tone-neutral-fg: var(--navy-200);
+    --tone-neutral-bg: rgba(191, 203, 221, 0.12);
+    --tone-neutral-border: rgba(191, 203, 221, 0.22);
+
+    --chart-series: var(--navy-200);
+
+    --focus-ring: 0 0 0 3px rgba(243, 213, 138, 0.28);
+    --focus-border: var(--gold-500);
+
+    --accent-blue: var(--gold-500);
     --c-paper: var(--surface-page);
-    --c-paper-2: var(--green-800);
-    --c-ink: #e9f1ea;
-    --c-ink-soft: #9db3a4;
-    --c-blue-soft: rgba(76, 153, 104, 0.22);
+    --c-paper-2: var(--navy-900);
+    --c-ink: var(--navy-50);
+    --c-ink-soft: var(--navy-300);
+    --c-blue: var(--gold-500);
+    --c-blue-soft: rgba(243, 213, 138, 0.14);
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45);
-    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 22px 56px -24px rgba(0, 0, 0, 0.7);
+    --shadow-frame: 0 26px 64px -28px rgba(0, 0, 0, 0.75);
   }
 }

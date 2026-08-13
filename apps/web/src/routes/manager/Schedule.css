@@ -1,14 +1,17 @@
 /*
- * M04 Raspored — schedule week grid.
+ * M04 Raspored, schedule week grid.
  *
  * Consumes only the SEMANTIC ROLE tokens from styles/design-tokens.css, same
  * discipline as components/ui.css. Session blocks cycle through the small set
- * of tone tokens (primary green / gold / info / warning) rather than
+ * of tone tokens (primary navy / gold / info / warning) rather than
  * inventing a new categorical palette.
  */
 
+/* No negative top margin any more: .pageheader dropped its own margin-bottom
+   when .shell__main took over the page's vertical rhythm, so pulling up here
+   would drag the line into the h1's descenders. */
 .schedule-subtitle {
-  margin: calc(-1 * var(--space-3)) 0 var(--space-4);
+  margin: 0 0 var(--space-3);
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
@@ -28,7 +31,7 @@
   gap: var(--space-2);
 }
 .schedule-nav__label {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-primary);
   min-width: 160px;
   text-align: center;
@@ -118,7 +121,7 @@
 }
 .schedule-grid__weekday {
   font-size: var(--text-sm);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--text-secondary);
 }
@@ -129,7 +132,7 @@
   color: var(--text-primary);
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -198,7 +201,7 @@
   transform: translateY(-1px);
 }
 .session-block__title {
-  font-weight: 700;
+  font-weight: 600;
   font-size: var(--text-sm);
   white-space: nowrap;
   overflow: hidden;

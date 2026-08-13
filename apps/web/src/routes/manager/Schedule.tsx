@@ -30,12 +30,12 @@ import { useAsync } from "../../hooks/useAsync";
 import "./Schedule.css";
 
 /* ===================================================================== */
-/* Date helpers — plain Date math, browser-local time (matches the rest  */
+/* Date helpers, plain Date math, browser-local time (matches the rest  */
 /* of the app: existing routes format timestamps with toLocaleString and */
 /* never convert to the organization's declared timezone explicitly).    */
 /* ===================================================================== */
 
-const RANGE_DAYS = 90; // "Spisak" rolling window — same horizon the page used before.
+const RANGE_DAYS = 90; // "Spisak" rolling window, same horizon the page used before.
 const HOUR_PX = 56;
 const DEFAULT_START_HOUR = 8;
 const DEFAULT_END_HOUR = 20;
@@ -220,6 +220,7 @@ export function SchedulePage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Termini"
         title="Raspored"
         action={
           <button
@@ -571,7 +572,7 @@ function SessionListView({
               <td>
                 {fmtDayLabel(new Date(s.starts_at))}, {fmtTime(s.starts_at)}–{fmtTime(s.ends_at)}
               </td>
-              <td>{s.trainer_person_id ? (peopleMap.get(s.trainer_person_id) ?? "Nepoznat") : "—"}</td>
+              <td>{s.trainer_person_id ? (peopleMap.get(s.trainer_person_id) ?? "Nepoznat") : "-"}</td>
               <td>
                 <StatusBadge tone={statusTone(s.status)}>{STATUS_LABEL[s.status]}</StatusBadge>
               </td>
@@ -601,7 +602,7 @@ function SessionListView({
 }
 
 /* ===================================================================== */
-/* Novi termin — create form (data-cy hooks preserved from the prior UI) */
+/* Novi termin, create form (data-cy hooks preserved from the prior UI) */
 /* ===================================================================== */
 
 function NewSessionCard({
@@ -863,7 +864,7 @@ function SessionDetailDialog({
           <dl className="session-dialog__facts">
             <div>
               <dt>Grupa</dt>
-              <dd>{group?.name ?? "—"}</dd>
+              <dd>{group?.name ?? "-"}</dd>
             </div>
             <div>
               <dt>Trener</dt>
@@ -1047,7 +1048,7 @@ function SessionDetailDialog({
 }
 
 /* ===================================================================== */
-/* Small inline icons (stroke, currentColor — matches shell.tsx style)   */
+/* Small inline icons (stroke, currentColor, matches shell.tsx style)   */
 /* ===================================================================== */
 
 function PlusIcon(): ReactNode {

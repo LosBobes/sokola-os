@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { api, setAuthHeaders } from "../api/client";
+import { ApiError, api, setAuthHeaders } from "../api/client";
 import { NoTenantAccessError, useSession } from "../auth/session";
-import { SystemState } from "../components/ui";
+import { BrandMark } from "../components/shell";
+import { InlineNotice, SegmentedControl, SystemState } from "../components/ui";
 import type { AuthConfig, Organization, TenantPublic } from "../api/types";
+import "./Entry.css";
 
 interface DevIdentityResponse {
   person_id: string;
@@ -23,6 +25,20 @@ function GoogleIcon() {
   );
 }
 
+/**
+ * Error line for the credential forms. On the sign-in screen a 401 means the
+ * email or password was wrong, not that a session expired, SystemState's
+ * generic "Vaša prijava je istekla" copy would be actively misleading (there was
+ * no session to expire), so show what the server actually said. Everything else
+ * still goes through the canonical states.
+ */
+function CredentialError({ error }: { error: unknown }) {
+  if (error instanceof ApiError && error.status === 401) {
+    return <InlineNotice tone="error">{error.message}</InlineNotice>;
+  }
+  return <SystemState error={error} />;
+}
+
 function GoogleButton({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -38,17 +54,153 @@ function GoogleButton({ onClick }: { onClick: () => void }) {
 }
 
 /**
- * Unauthenticated entry. Login is tenant-first: you name the school (its code),
- * get routed to that tenant's login, then authenticate into it. Creating a new
- * school is a separate path. In production the identity step is an OIDC redirect;
- * here it's the dev access code (a person id).
+ * Email + password: the default sign-in. On success the session cookie is set
+ * and the app re-renders itself (existing role → the school; brand-new account
+ * → CreateSchool), so there's nothing to do here beyond surfacing errors.
+ *
+ *  - "signin": email + password.
+ *  - "signup": email + password + name, registers a new account, then signs in.
+ *
+ * `organizationId` (signin only) pre-selects that school once `/me` loads,
+ * mirroring `signInWithGoogle(organizationId)`.
+ */
+function PasswordForm({
+  mode,
+  organizationId,
+}: {
+  mode: "signin" | "signup";
+  organizationId?: string;
+}) {
+  const { signInWithPassword, registerWithPassword } = useSession();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [given, setGiven] = useState("");
+  const [family, setFamily] = useState("");
+  const [error, setError] = useState<unknown>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      if (mode === "signup") {
+        await registerWithPassword({
+          email: email.trim(),
+          password,
+          givenName: given.trim(),
+          familyName: family.trim(),
+        });
+      } else {
+        await signInWithPassword(email.trim(), password, organizationId);
+      }
+      // On success the session is set and <App> re-renders into the shell.
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} data-cy="password-form" style={{ display: "grid", gap: "var(--space-2)" }}>
+      {error ? <CredentialError error={error} /> : null}
+      {mode === "signup" ? (
+        <>
+          <div className="field">
+            <label htmlFor="pw-given">Ime</label>
+            <input
+              id="pw-given"
+              value={given}
+              onChange={(e) => setGiven(e.target.value)}
+              required
+              data-cy="password-given"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="pw-family">Prezime</label>
+            <input
+              id="pw-family"
+              value={family}
+              onChange={(e) => setFamily(e.target.value)}
+              required
+              data-cy="password-family"
+            />
+          </div>
+        </>
+      ) : null}
+      <div className="field">
+        <label htmlFor="pw-email">Mejl adresa</label>
+        <input
+          id="pw-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          autoComplete="email"
+          data-cy="password-email"
+        />
+      </div>
+      <div className="field">
+        <label htmlFor="pw-password">Lozinka</label>
+        <input
+          id="pw-password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          minLength={mode === "signup" ? 8 : undefined}
+          autoComplete={mode === "signup" ? "new-password" : "current-password"}
+          data-cy="password-password"
+        />
+        {mode === "signup" ? (
+          <small style={{ color: "var(--text-secondary)" }}>Najmanje 8 karaktera.</small>
+        ) : null}
+      </div>
+      <button className="btn btn--primary" type="submit" disabled={busy} data-cy="password-submit">
+        {mode === "signup" ? "Registruj se" : "Prijava"}
+      </button>
+    </form>
+  );
+}
+
+/**
+ * The email side of sign-in. Password is the only email method; when password
+ * auth is switched off server-side there is nothing to render here, and Google
+ * (or the dev adapter) is the way in.
+ */
+function EmailAuth({
+  mode,
+  organizationId,
+  passwordEnabled,
+}: {
+  mode: "signin" | "signup";
+  organizationId?: string;
+  passwordEnabled: boolean;
+}) {
+  if (!passwordEnabled) return null;
+  return <PasswordForm mode={mode} organizationId={organizationId} />;
+}
+
+/**
+ * Unauthenticated entry. Email+password is the default sign-in in every
+ * environment, with Google beside it where it's configured. Signing up needs
+ * no school code: a new account authenticates first and then lands in
+ * CreateSchool, because a person exists before any organization does. Naming a school up front (`login-code`) stays available for people
+ * joining an existing one. The old raw-ID dev flow only remains reachable when
+ * Google isn't configured (`showDevAuth`), which keeps it alive for Cypress/CI
+ * without showing it to a real user.
  */
 export function Entry({ initialMessage }: { initialMessage?: string }) {
   const { signInWithGoogle } = useSession();
   const [view, setView] = useState<View>("landing");
   const [tenant, setTenant] = useState<TenantPublic | null>(null);
   const [created, setCreated] = useState<{ slug: string; personId: string } | null>(null);
-  const [config, setConfig] = useState<AuthConfig>({ google_enabled: false, dev_auth_enabled: true });
+  const [config, setConfig] = useState<AuthConfig>({
+    google_enabled: false,
+    password_enabled: true,
+    dev_auth_enabled: true,
+  });
   const [loginFailed, setLoginFailed] = useState(false);
 
   useEffect(() => {
@@ -67,54 +219,84 @@ export function Entry({ initialMessage }: { initialMessage?: string }) {
     }
   }, []);
 
-  return (
-    <div style={{ maxWidth: 460, margin: "8vh auto" }}>
-      <div className="card">
-        <h1>🐦 SOKOLA OS</h1>
-        {loginFailed ? (
-          <p className="notice notice--warning" data-cy="login-failed">
-            Prijava Google nalogom trenutno nije uspela. Pokušajte ponovo.
-          </p>
-        ) : null}
-        {initialMessage && view === "landing" ? (
-          <p className="notice notice--info">{initialMessage}</p>
-        ) : null}
+  const showDevAuth = config.dev_auth_enabled && !config.google_enabled;
 
-        {view === "landing" && (
-          <Landing
-            google={config.google_enabled}
-            onGoogle={() => signInWithGoogle()}
-            onLogin={() => setView("login-code")}
-            onRegister={() => setView("register")}
-          />
-        )}
-        {view === "login-code" && (
-          <FindTenant
-            onFound={(t) => {
-              setTenant(t);
-              setView("login-id");
-            }}
-            onBack={() => setView("landing")}
-          />
-        )}
-        {view === "login-id" && tenant && (
-          <TenantLogin
-            tenant={tenant}
-            config={config}
-            onGoogle={() => signInWithGoogle(tenant.organization_id)}
-            onBack={() => setView("login-code")}
-          />
-        )}
-        {view === "register" && (
-          <Register
-            onCreated={(slug, personId) => {
-              setCreated({ slug, personId });
-              setView("registered");
-            }}
-            onBack={() => setView("landing")}
-          />
-        )}
-        {view === "registered" && created && <Registered slug={created.slug} personId={created.personId} />}
+  return (
+    <div className="entry">
+      {/* Left: the brand panel. Purely decorative, hidden on narrow viewports
+          so the phone gets the full width for the form. */}
+      <aside className="entry__panel" aria-hidden>
+        <BrandMark variant="reverse" className="entry__logo" />
+        <p className="entry__eyebrow">Operativni sistem škole</p>
+        <p className="display-line entry__display">
+          Sve obaveze.
+          <br />
+          Bez iznenađenja.
+        </p>
+        <p className="entry__lede">
+          Članovi, raspored, finansije, komunikacija i dokumenti jedne škole na jednom mestu, sa
+          jasnim poreklom svakog broja.
+        </p>
+      </aside>
+
+      <div className="entry__main">
+        <div className="card entry__card">
+          <BrandMark variant="stacked" className="entry__cardlogo" />
+          <h1 className="entry__title">Prijava u sistem</h1>
+          <p className="entry__sub">Nastavite nalogom kojim vas je škola dodala.</p>
+          {loginFailed ? (
+            <p className="notice notice--warning" data-cy="login-failed">
+              Prijava trenutno nije uspela. Pokušajte ponovo.
+            </p>
+          ) : null}
+          {initialMessage && view === "landing" ? (
+            <p className="notice notice--info">{initialMessage}</p>
+          ) : null}
+
+          {view === "landing" && (
+            <Landing
+              google={config.google_enabled}
+              passwordEnabled={config.password_enabled}
+              showDevAuth={showDevAuth}
+              onGoogle={() => signInWithGoogle()}
+              onLogin={() => setView("login-code")}
+              onRegister={() => setView("register")}
+            />
+          )}
+          {view === "login-code" && (
+            <FindTenant
+              onFound={(t) => {
+                setTenant(t);
+                setView("login-id");
+              }}
+              onBack={() => setView("landing")}
+            />
+          )}
+          {view === "login-id" && tenant && (
+            <TenantLogin
+              tenant={tenant}
+              config={config}
+              showDevAuth={showDevAuth}
+              onGoogle={() => signInWithGoogle(tenant.organization_id)}
+              onBack={() => setView("login-code")}
+            />
+          )}
+          {view === "register" && showDevAuth && (
+            <Register
+              onCreated={(slug, personId) => {
+                setCreated({ slug, personId });
+                setView("registered");
+              }}
+              onBack={() => setView("landing")}
+            />
+          )}
+          {view === "registered" && created && (
+            <Registered slug={created.slug} personId={created.personId} />
+          )}
+        </div>
+        <p className="entry__footnote">
+          mySOKOLA je pristup za roditelje. Škola vas dodaje; nalog se ne otvara sam.
+        </p>
       </div>
     </div>
   );
@@ -124,23 +306,40 @@ function Landing({
   onLogin,
   onRegister,
   google,
+  passwordEnabled,
+  showDevAuth,
   onGoogle,
 }: {
   onLogin: () => void;
   onRegister: () => void;
   google: boolean;
+  passwordEnabled: boolean;
+  showDevAuth: boolean;
   onGoogle: () => void;
 }) {
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   return (
     <div style={{ display: "grid", gap: "var(--space-3)" }}>
       <p>Platforma za vođenje sportskih klubova, plesnih i drugih škola.</p>
       {google ? <GoogleButton onClick={onGoogle} /> : null}
-      <button className="btn btn--primary" onClick={onLogin} data-cy="go-login">
+      <SegmentedControl
+        ariaLabel="Prijava ili registracija"
+        value={mode}
+        onChange={setMode}
+        options={[
+          { value: "signin", label: "Već imam nalog" },
+          { value: "signup", label: "Prvi put sam ovde" },
+        ]}
+      />
+      <EmailAuth mode={mode} passwordEnabled={passwordEnabled} />
+      <button className="btn btn--secondary" onClick={onLogin} data-cy="go-login">
         Prijavi se u školu
       </button>
-      <button className="btn btn--secondary" onClick={onRegister} data-cy="go-register">
-        Osnuj novu školu
-      </button>
+      {showDevAuth ? (
+        <button className="btn btn--secondary" onClick={onRegister} data-cy="go-register">
+          Osnuj novu školu
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -186,11 +385,13 @@ function FindTenant({ onFound, onBack }: { onFound: (t: TenantPublic) => void; o
 function TenantLogin({
   tenant,
   config,
+  showDevAuth,
   onGoogle,
   onBack,
 }: {
   tenant: TenantPublic;
   config: AuthConfig;
+  showDevAuth: boolean;
   onGoogle: () => void;
   onBack: () => void;
 }) {
@@ -215,7 +416,7 @@ function TenantLogin({
 
   return (
     <div>
-      <h2 style={{ margin: "0 0 var(--space-2)" }}>Prijava — {tenant.name}</h2>
+      <h2 style={{ margin: "0 0 var(--space-2)" }}>Prijava · {tenant.name}</h2>
       {error instanceof NoTenantAccessError ? (
         <div className="notice notice--warning" data-cy="login-error">
           Nemate ulogu u ovoj školi.
@@ -232,13 +433,19 @@ function TenantLogin({
         </div>
       ) : null}
 
-      {config.dev_auth_enabled ? (
+      <EmailAuth
+        mode="signin"
+        organizationId={tenant.organization_id}
+        passwordEnabled={config.password_enabled}
+      />
+
+      {showDevAuth ? (
         <form onSubmit={submit}>
           <div className="field">
             <label htmlFor="pid">Pristupni kôd</label>
             <input id="pid" value={personId} onChange={(e) => setPersonId(e.target.value)} required data-cy="access-code" />
             <small style={{ color: "var(--text-secondary)" }}>
-              Privremeni razvojni način prijave — unesite ID osobe iz registracije.
+              Privremeni razvojni način prijave: unesite ID osobe iz registracije.
             </small>
           </div>
           <button className="btn btn--primary" type="submit" disabled={busy} data-cy="do-login">

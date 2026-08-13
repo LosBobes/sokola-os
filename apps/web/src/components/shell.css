@@ -1,11 +1,12 @@
 /* =====================================================================
-   App shell — deep green-black sidebar + light content, gold brand mark.
-   Consumes only semantic role tokens from design-tokens.css.
+   App shell v2 - 250px Deep Navy sidebar + white topbar over a canvas page.
+   Gold appears exactly once per screen here: the 3px bar on the active nav
+   row. Consumes only semantic role tokens from styles/design-tokens.css.
    ===================================================================== */
 
 .shell {
   display: grid;
-  grid-template-columns: 264px 1fr;
+  grid-template-columns: 250px 1fr;
   min-height: 100vh;
   background: var(--surface-page);
 }
@@ -18,57 +19,38 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-5) var(--space-3) var(--space-3);
+  padding: var(--space-5) 18px 22px;
   color: var(--text-on-sidebar);
-  background:
-    linear-gradient(
-      180deg,
-      var(--surface-sidebar),
-      color-mix(in srgb, var(--surface-sidebar-active) 26%, var(--surface-sidebar))
-    );
-  border-right: var(--ink-border) solid color-mix(in srgb, var(--text-on-sidebar) 8%, transparent);
+  /* Flat fill. The brand forbids gradients, so the sidebar is one navy. */
+  background: var(--surface-sidebar);
 }
 
 .sidebar__brand {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: 0 var(--space-2);
+  padding: 0 var(--space-1);
 }
+/* The lockup is an approved vector; only ONE dimension is set so the original
+   viewBox proportions are never stretched. */
 .brandmark {
-  width: 40px;
-  height: 40px;
-  flex: none;
-  filter: drop-shadow(var(--shadow-sm));
-}
-.brandmark__bg {
-  fill: var(--accent-gold);
-}
-.brandmark__glyph {
-  fill: var(--surface-sidebar);
-}
-.sidebar__word {
-  font-family: var(--font-display);
-  font-weight: var(--font-weight-display);
-  font-size: var(--text-lg);
-  letter-spacing: 0.02em;
-  color: var(--text-on-sidebar);
+  height: 38px;
+  width: auto;
+  display: block;
 }
 .sidebar__eyebrow {
-  margin: 0 0 var(--space-2);
-  padding: 0 var(--space-2);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  margin: 0 0 var(--space-3);
+  padding: 34px var(--space-1) 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--text-on-sidebar) 55%, transparent);
+  color: var(--text-on-sidebar-faint);
 }
 
 .sidebar__nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   overflow-y: auto;
 }
 
@@ -77,20 +59,21 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: var(--target-min);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  min-height: 47px;
+  padding: 0 14px;
+  border-radius: 13px;
   text-decoration: none;
-  color: color-mix(in srgb, var(--text-on-sidebar) 72%, transparent);
+  color: var(--text-on-sidebar-muted);
   font-weight: 600;
   transition:
-    background var(--duration),
-    color var(--duration);
+    background var(--duration) ease,
+    color var(--duration) ease;
 }
 .navlink__icon {
   display: inline-flex;
   flex: none;
-  color: inherit;
+  color: var(--text-on-sidebar-faint);
+  transition: color var(--duration) ease;
 }
 .navlink__text {
   display: flex;
@@ -99,65 +82,65 @@
   line-height: 1.2;
 }
 .navlink__label {
-  font-size: var(--text-base);
-}
-.navlink__hint {
-  font-weight: 400;
   font-size: var(--text-sm);
-  color: color-mix(in srgb, var(--text-on-sidebar) 48%, transparent);
+}
+/* The hint is a second line the design does not carry on desktop rows; it
+   stays in the DOM for the collapsed and screen-reader cases below. */
+.navlink__hint {
+  display: none;
 }
 .navlink:hover {
   color: var(--text-on-sidebar);
-  background: color-mix(in srgb, var(--text-on-sidebar) 9%, transparent);
+  background: var(--surface-sidebar-hover);
   text-decoration: none;
 }
 .navlink[aria-current="page"] {
-  color: var(--text-on-action);
-  background: var(--action-primary-gradient);
-  box-shadow: var(--shadow-md);
+  color: var(--text-on-sidebar);
+  background: var(--surface-sidebar-active);
 }
-.navlink[aria-current="page"] .navlink__hint {
-  color: color-mix(in srgb, var(--text-on-action) 72%, transparent);
+.navlink[aria-current="page"] .navlink__icon {
+  color: var(--accent-gold);
 }
-/* Gold active indicator — sparing brand accent on the selected item. */
+/* The primary scarce-gold use: a 3px bar flush to the row's left edge. */
 .navlink[aria-current="page"]::before {
   content: "";
   position: absolute;
-  left: 6px;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 0;
+  top: 13px;
+  bottom: 13px;
   width: 3px;
-  height: 46%;
-  border-radius: var(--radius-pill);
+  border-radius: 2px;
   background: var(--accent-gold);
 }
 
-/* --- Sidebar user chip --------------------------------------------- */
+/* --- Sidebar user card ---------------------------------------------- */
 .sidebar__user {
   margin-top: auto;
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--text-on-sidebar) 7%, transparent);
+  padding: 14px;
+  border: var(--ink-border) solid var(--border-on-navy);
+  border-radius: var(--radius-chip);
+  background: var(--surface-sidebar-card);
 }
 .sidebar__userid {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 .sidebar__userid strong {
   font-size: var(--text-sm);
+  font-weight: 600;
   color: var(--text-on-sidebar);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .sidebar__userid span {
-  font-size: 0.78rem;
-  color: color-mix(in srgb, var(--text-on-sidebar) 55%, transparent);
+  font-size: var(--text-xs);
+  color: var(--text-on-sidebar-faint);
 }
 .sidebar__logout {
   margin-left: auto;
@@ -165,42 +148,52 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: color-mix(in srgb, var(--text-on-sidebar) 70%, transparent);
+  color: var(--text-on-sidebar-faint);
   transition:
-    background var(--duration),
-    color var(--duration);
+    background var(--duration) ease,
+    color var(--duration) ease;
 }
 .sidebar__logout:hover {
-  background: color-mix(in srgb, var(--text-on-sidebar) 12%, transparent);
+  background: var(--surface-sidebar-active);
   color: var(--text-on-sidebar);
 }
 
 /* --- Avatars -------------------------------------------------------- */
+/* Squircles, not circles: radius 12 at 36-44px, matching the design's chips. */
 .avatar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-pill);
-  font-weight: 700;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
   font-size: var(--text-sm);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
 }
+/* Gold fill is for navy surfaces only. On a light surface the brand caps gold
+   at an accent, so person chips out in the app use the muted variant below. */
 .avatar--gold {
   background: var(--accent-gold);
-  color: var(--surface-sidebar);
+  color: var(--navy-900);
+}
+.avatar--muted {
+  background: var(--surface-sunken);
+  color: var(--navy-600);
 }
 .avatar--user {
+  width: var(--target-min);
+  height: var(--target-min);
   border: none;
-  background: var(--action-primary-gradient);
-  color: var(--text-on-action);
+  border-radius: var(--radius-chip);
+  background: var(--surface-navy);
+  color: var(--accent-gold);
   cursor: pointer;
 }
 
@@ -218,20 +211,25 @@
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
-  backdrop-filter: blur(8px);
+  gap: var(--space-4);
+  height: 79px;
+  flex: none;
+  padding: 0 var(--space-6);
+  /* Opaque white, no blur: the design's chrome is flat and the content scrolls
+     under a solid edge. */
+  background: var(--surface-raised);
   border-bottom: var(--ink-border) solid var(--border-default);
 }
 
+/* Org switcher pill: 44px tall, radius 14, initial chip + native select. */
 .orgswitcher {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 4px var(--space-2) 4px 4px;
+  height: var(--target-min);
+  padding: 0 var(--space-3) 0 var(--space-2);
   border: var(--ink-border) solid var(--border-default);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-chip);
   background: var(--surface-raised);
   box-shadow: var(--shadow-sm);
 }
@@ -240,26 +238,28 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-pill);
-  background: var(--action-surface);
-  color: var(--action-primary);
-  font-weight: 700;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--surface-sunken);
+  color: var(--navy-600);
+  font-weight: 600;
   font-size: var(--text-sm);
 }
 .orgswitcher__label {
   display: flex;
 }
 .orgswitcher select {
-  min-height: 32px;
-  padding: 0 calc(var(--space-5) + var(--space-1)) 0 0;
+  min-height: 30px;
+  padding: 0 var(--space-5) 0 0;
   border: none;
   background-color: transparent;
   box-shadow: none;
   font-weight: 600;
+  font-size: var(--text-sm);
   color: var(--text-primary);
-  background-position: right var(--space-1) center;
+  background-position: right 0 center;
+  background-size: 16px 16px;
   max-width: 40vw;
 }
 .orgswitcher select:focus {
@@ -268,29 +268,31 @@
 
 .topbar__search {
   position: relative;
-  flex: 1;
-  max-width: 460px;
-  margin: 0 auto;
+  width: 238px;
+  flex: none;
+  margin-left: auto;
   display: flex;
   align-items: center;
 }
 .topbar__searchicon {
   position: absolute;
   left: var(--space-3);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   pointer-events: none;
 }
 .topbar__search input {
   width: 100%;
-  min-height: 42px;
-  padding: var(--space-2) var(--space-3) var(--space-2) calc(var(--space-6) + var(--space-1));
+  height: var(--target-min);
+  padding: 0 var(--space-3) 0 var(--space-7);
   border: var(--ink-border) solid var(--border-default);
-  border-radius: var(--radius-pill);
-  background: var(--surface-sunken);
+  border-radius: var(--radius-chip);
+  background: var(--surface-page);
   color: var(--text-primary);
+  font: inherit;
+  font-size: var(--text-sm);
 }
 .topbar__search input::placeholder {
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 .topbar__search input:disabled {
   cursor: not-allowed;
@@ -300,7 +302,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-left: auto;
 }
 .iconbtn {
   position: relative;
@@ -310,24 +311,23 @@
   width: var(--target-min);
   height: var(--target-min);
   border: var(--ink-border) solid var(--border-default);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-chip);
   background: var(--surface-raised);
   color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--duration);
+  transition: background var(--duration) ease;
 }
 .iconbtn:hover {
-  box-shadow: var(--shadow-md);
+  background: var(--surface-sunken);
 }
 .iconbtn__dot {
   position: absolute;
-  top: 9px;
-  right: 10px;
-  width: 8px;
-  height: 8px;
+  top: 11px;
+  right: 12px;
+  width: 7px;
+  height: 7px;
   border-radius: var(--radius-pill);
-  background: var(--accent-red);
-  border: 2px solid var(--surface-raised);
+  background: var(--tone-error-fg);
+  border: 1.5px solid var(--surface-raised);
 }
 
 /* --- Account menu --------------------------------------------------- */
@@ -338,10 +338,10 @@
   position: absolute;
   top: calc(100% + var(--space-2));
   right: 0;
-  min-width: 200px;
+  min-width: 210px;
   padding: var(--space-2);
   border: var(--ink-border) solid var(--border-default);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-chip);
   background: var(--surface-raised);
   box-shadow: var(--shadow-lg);
   z-index: 30;
@@ -351,15 +351,16 @@
   flex-direction: column;
   gap: 2px;
   padding: var(--space-2) var(--space-3);
-  border-bottom: var(--ink-border) solid var(--border-default);
+  border-bottom: var(--ink-border) solid var(--border-hairline);
   margin-bottom: var(--space-1);
 }
 .usermenu__id strong {
   font-size: var(--text-sm);
+  font-weight: 600;
 }
 .usermenu__id span {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 .usermenu__item {
   width: 100%;
@@ -370,34 +371,95 @@
   background: transparent;
   color: var(--text-primary);
   font-weight: 600;
+  font-size: var(--text-sm);
 }
 .usermenu__item:hover {
   background: var(--surface-sunken);
 }
 
 /* --- Main content --------------------------------------------------- */
+/* <main> takes focus on every route change (see RouteAnnouncer) so screen
+   readers land on the new page. It is not an interactive control, so it must
+   not paint the focus ring the global :focus-visible rule would give it. */
+.shell__main:focus-visible {
+  box-shadow: none;
+}
 .shell__main {
   flex: 1;
-  padding: var(--space-5);
+  padding: 34px var(--space-6);
   width: 100%;
-  max-width: 1180px;
+  max-width: 1320px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
 }
 
 /* --- Page header ---------------------------------------------------- */
 .pageheader {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-5);
-  gap: var(--space-3);
+  align-items: flex-end;
+  gap: var(--space-4);
   flex-wrap: wrap;
 }
+.pageheader__text {
+  min-width: 0;
+}
 .pageheader h1 {
-  margin: 0;
+  margin: var(--space-2) 0 0;
+}
+.pageheader__subtitle {
+  margin: var(--space-2) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+}
+/* .shell__main owns the vertical rhythm now, so the header no longer adds a
+   margin of its own; every child is spaced by the column gap. */
+
+/* --- Responsive ------------------------------------------------------ */
+/* Between 861 and 1180px the sidebar collapses to a 72px icon rail: labels go,
+   icons and the active gold bar stay. */
+@media (max-width: 1180px) and (min-width: 861px) {
+  .shell {
+    grid-template-columns: 72px 1fr;
+  }
+  .sidebar {
+    padding: var(--space-5) var(--space-3) var(--space-4);
+    align-items: center;
+  }
+  .brandmark {
+    height: 30px;
+  }
+  .sidebar__brand {
+    justify-content: center;
+    overflow: hidden;
+  }
+  .sidebar__eyebrow,
+  .navlink__text,
+  .sidebar__userid {
+    display: none;
+  }
+  .sidebar__nav {
+    align-self: stretch;
+  }
+  .navlink {
+    justify-content: center;
+    padding: 0;
+  }
+  .sidebar__user {
+    padding: var(--space-2);
+    justify-content: center;
+  }
+  .sidebar__logout {
+    margin-left: 0;
+  }
+  .shell__main {
+    padding: var(--space-5) var(--space-5);
+  }
 }
 
-/* --- Responsive: sidebar collapses to a bottom tab bar -------------- */
+/* Below 861px the rail becomes a bottom tab bar. */
 @media (max-width: 860px) {
   .shell {
     grid-template-columns: 1fr;
@@ -410,12 +472,10 @@
     right: 0;
     height: auto;
     flex-direction: row;
-    gap: 0;
-    padding: var(--space-1);
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--space-1));
-    border-right: none;
-    border-top: var(--ink-border) solid
-      color-mix(in srgb, var(--text-on-sidebar) 12%, transparent);
+    padding: var(--space-2) 18px;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--space-2));
+    background: var(--surface-raised);
+    border-top: var(--ink-border) solid var(--border-default);
     z-index: 20;
   }
   .sidebar__brand,
@@ -426,55 +486,73 @@
   .sidebar__nav {
     flex: 1;
     flex-direction: row;
-    justify-content: space-around;
+    justify-content: space-between;
     gap: 0;
     overflow: visible;
   }
   .navlink {
     flex: 1;
     flex-direction: column;
-    gap: 2px;
+    justify-content: center;
+    gap: var(--space-1);
     min-width: 0;
-    padding: var(--space-1);
+    min-height: 0;
+    padding: var(--space-2) 0 0;
     text-align: center;
-    box-shadow: none;
+    color: var(--text-muted);
+    background: transparent;
   }
-  .navlink__hint {
-    display: none;
+  .navlink__icon {
+    color: inherit;
   }
   .navlink__label {
-    font-size: 0.72rem;
-    font-weight: 600;
+    font-size: 10px;
+    font-weight: 500;
   }
-  /* Bottom bar: active item reads as gold text/icon, not a full pill. */
-  .navlink[aria-current="page"] {
-    color: var(--accent-gold);
+  .navlink:hover {
+    color: var(--text-primary);
     background: transparent;
-    box-shadow: none;
+  }
+  /* Tab bar: the active item is navy text plus a 26x3 gold bar above the icon,
+     never a filled pill. */
+  .navlink[aria-current="page"] {
+    color: var(--text-primary);
+    background: transparent;
+  }
+  .navlink[aria-current="page"] .navlink__icon {
+    color: var(--text-primary);
+  }
+  .navlink[aria-current="page"] .navlink__label {
+    font-weight: 600;
   }
   .navlink[aria-current="page"]::before {
     left: 50%;
-    top: 2px;
+    top: 0;
+    bottom: auto;
     transform: translateX(-50%);
-    width: 22px;
+    width: 26px;
     height: 3px;
   }
 
   .topbar {
-    padding: var(--space-2) var(--space-3);
+    height: auto;
+    padding: var(--space-3) var(--space-4);
     flex-wrap: wrap;
+    gap: var(--space-2);
   }
   .topbar__search {
     order: 3;
-    flex-basis: 100%;
-    max-width: none;
-    margin: 0;
+    width: 100%;
+    margin-left: 0;
   }
   .orgswitcher select {
     max-width: 46vw;
   }
+  .topbar__actions {
+    margin-left: auto;
+  }
   .shell__main {
-    padding: var(--space-4);
-    padding-bottom: calc(var(--target-min) + var(--space-5));
+    padding: var(--space-5) var(--space-4);
+    padding-bottom: calc(var(--target-min) + var(--space-6));
   }
 }

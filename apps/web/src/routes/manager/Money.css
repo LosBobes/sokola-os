@@ -1,8 +1,8 @@
 /*
- * Finansije (Money) page — M05. Page-specific layout glue only; reusable
+ * Finansije (Money) page, M05. Page-specific layout glue only; reusable
  * primitives (Card, StatTile, FilterBar, StatusBadge, table.data) live in
  * components/ui.css / styles/base.css. Consumes semantic role tokens
- * exclusively (see styles/design-tokens.css) — never a raw hex or a
+ * exclusively (see styles/design-tokens.css), never a raw hex or a
  * --green-/--gold-/--neutral- primitive ramp value.
  */
 
@@ -34,11 +34,11 @@
 }
 .money-amount--debt {
   color: var(--tone-error-fg);
-  font-weight: 700;
+  font-weight: 600;
 }
 .money-amount--clear {
   color: var(--tone-success-fg);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .money-cell-actions {

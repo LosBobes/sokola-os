@@ -105,9 +105,9 @@ export function ManagerHome() {
   );
   const attendance = useAttendanceRollup(sessions.data);
 
-  const groupName = (id: string) => groups.data?.items.find((g) => g.id === id)?.name ?? "—";
+  const groupName = (id: string) => groups.data?.items.find((g) => g.id === id)?.name ?? "-";
   const trainerName = (id: string | null | undefined) =>
-    id ? (people.data?.items.find((p) => p.id === id)?.display_name ?? "—") : "—";
+    id ? (people.data?.items.find((p) => p.id === id)?.display_name ?? "-") : "-";
   const statusTone = (s: SessionSummary["status"]) =>
     s === "SCHEDULED" ? "success" : s === "COMPLETED" ? "info" : "error";
 
@@ -129,7 +129,7 @@ export function ManagerHome() {
     <div>
       <header className="home-header">
         <span className="section-header__eyebrow">{dateLabel()}</span>
-        <h1>Šta danas traži vašu pažnju?{firstName ? ` — ${firstName}` : ""}</h1>
+        <h1>Šta danas traži vašu pažnju?{firstName ? `, ${firstName}` : ""}</h1>
         <p className="home-subtitle">{subtitle}</p>
       </header>
 
@@ -215,8 +215,8 @@ export function ManagerHome() {
                     </td>
                     <td>{groupName(s.group_id)}</td>
                     <td>{trainerName(s.trainer_person_id)}</td>
-                    {/* Sessions have no room assignment in the API yet — degrade honestly. */}
-                    <td className="home-room-cell">—</td>
+                    {/* Sessions have no room assignment in the API yet, degrade honestly. */}
+                    <td className="home-room-cell">-</td>
                     <td>
                       <StatusBadge tone={statusTone(s.status)}>{s.status}</StatusBadge>
                     </td>
@@ -252,12 +252,12 @@ export function ManagerHome() {
       </Card>
 
       <section className="home-stats" aria-label="Pregled">
-        <StatTile label="Aktivni članovi" value={people.data ? people.data.total : "—"} />
+        <StatTile label="Aktivni članovi" value={people.data ? people.data.total : "-"} />
         <StatTile
           label="Završeno prisustvo %"
-          value={attendance.pct !== null ? `${attendance.pct}%` : "—"}
+          value={attendance.pct !== null ? `${attendance.pct}%` : "-"}
         />
-        <StatTile label="Dospele obaveze" value={charges.data ? openCharges.length : "—"} />
+        <StatTile label="Dospele obaveze" value={charges.data ? openCharges.length : "-"} />
       </section>
     </div>
   );

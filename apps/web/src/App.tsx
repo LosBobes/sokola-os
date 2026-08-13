@@ -3,6 +3,7 @@ import { useSession } from "./auth/session";
 import { ProductShell } from "./components/shell";
 import { LoadingState } from "./components/ui";
 import { Entry } from "./routes/Entry";
+import { CreateSchool } from "./routes/CreateSchool";
 import { RoleHome } from "./routes/RoleHome";
 import { PeoplePage } from "./routes/manager/People";
 import { GroupsPage } from "./routes/manager/Groups";
@@ -18,14 +19,16 @@ import { MorePage } from "./routes/More";
 import { ParentNotificationsPage } from "./routes/parent/Notifications";
 
 export function App() {
-  const { me, activeContext, loading } = useSession();
+  const { me, activeContext, loading, sessionExpired } = useSession();
 
   if (loading) return <LoadingState label="Učitavanje sesije…" />;
-  if (!me) return <Entry />;
-  if (!activeContext)
+  if (!me)
     return (
-      <Entry initialMessage="Vaš nalog nema aktivnu ulogu ni u jednoj školi. Osnujte školu ili se prijavite kodom škole." />
+      <Entry
+        initialMessage={sessionExpired ? "Vaša prijava je istekla. Prijavite se ponovo." : undefined}
+      />
     );
+  if (!activeContext) return <CreateSchool />;
 
   return (
     <ProductShell>
