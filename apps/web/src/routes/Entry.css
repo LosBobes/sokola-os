@@ -26,9 +26,11 @@
   background: var(--surface-navy);
   color: var(--text-on-navy);
 }
+/* The entry screen is where the brand does its work, so the lockup is the
+   largest thing on it. Sized in relative units so it scales with the viewport
+   rather than sitting at one fixed width on every screen. */
 .entry__logo {
-  width: 280px;
-  max-width: 100%;
+  width: min(360px, 100%);
   height: auto;
   margin-bottom: var(--space-6);
 }
@@ -71,11 +73,13 @@
   flex-direction: column;
   gap: var(--space-3);
 }
+/* Shown only when the navy brand panel is dropped (below 960px), so on a phone
+   this IS the entry screen's brand moment and carries a bit more weight. */
 .entry__cardlogo {
-  width: 132px;
+  width: min(180px, 60%);
   height: auto;
   align-self: center;
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 .entry__title {
   margin: 0;

@@ -20,6 +20,22 @@ interface Destination {
   label: string;
   hint: string;
   icon: IconName;
+  /*
+   * Whether this destination survives into the mobile tab bar.
+   *
+   * A phone tab bar fits four items plus "Više" before the icons and their
+   * labels start colliding, and the manager surface has eight. Rather than
+   * shrink everything until nothing is legible, the non-primary destinations
+   * drop out of the bar (CSS hides them below 861px) and are reached through
+   * Više, which lists exactly the ones the bar left out. Defaults to true, so
+   * a role with a short nav needs to say nothing.
+   */
+  primary?: boolean;
+}
+
+/** The destinations a role's mobile tab bar hides behind "Više". */
+export function overflowDestinations(role: RoleCode): Destination[] {
+  return (NAV[role] ?? []).filter((d) => d.primary === false);
 }
 
 /*
@@ -61,11 +77,21 @@ function managerNav(): Destination[] {
   return [
     { to: "/", label: "Danas", hint: "Pregled dana", icon: "danas" },
     { to: "/ljudi", label: "Ljudi i grupe", hint: "Članovi", icon: "ljudi" },
-    { to: "/raspored", label: "Raspored", hint: "Termini", icon: "raspored" },
+    { to: "/raspored", label: "Raspored", hint: "Termini i događaji", icon: "raspored" },
     { to: "/finansije", label: "Finansije", hint: "Zaduženja i uplate", icon: "finansije" },
-    { to: "/komunikacija", label: "Komunikacija", hint: "Obaveštenja", icon: "komunikacija" },
-    { to: "/dogadjaji", label: "Događaji", hint: "Prijave", icon: "dogadjaji" },
-    { to: "/izvestaji", label: "Izveštaji", hint: "Uvidi", icon: "izvestaji" },
+    // Below the fold on a phone; reachable through Više (see Destination.primary).
+    {
+      to: "/komunikacija",
+      label: "Komunikacija",
+      // Not "Obaveštenja": this is what the school SENDS to parents and
+      // trainers. Personal/system notifications are a separate thing and get
+      // their own name, so the two never share a label.
+      hint: "Objave i poruke",
+      icon: "komunikacija",
+      primary: false,
+    },
+    { to: "/dogadjaji", label: "Događaji", hint: "Prijave", icon: "dogadjaji", primary: false },
+    { to: "/izvestaji", label: "Izveštaji", hint: "Uvidi", icon: "izvestaji", primary: false },
     { to: "/vise", label: "Više", hint: "Ostalo", icon: "vise" },
   ];
 }
@@ -336,7 +362,7 @@ export function ProductShell({ children }: { children: ReactNode }) {
               key={d.to}
               to={d.to}
               end={d.to === "/"}
-              className="navlink"
+              className={d.primary === false ? "navlink navlink--overflow" : "navlink"}
               data-cy={`nav-${d.to}`}
             >
               <span className="navlink__icon">
@@ -415,24 +441,15 @@ export function ProductShell({ children }: { children: ReactNode }) {
             />
           </div>
           <div className="topbar__actions">
-            <button type="button" className="iconbtn" aria-label="Obaveštenja">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-                focusable="false"
-              >
-                <path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z" />
-                <path d="M10 20a2 2 0 0 0 4 0" />
-              </svg>
-              <span className="iconbtn__dot" aria-hidden />
-            </button>
+            {/*
+              The "Obaveštenja" bell is deliberately absent until there is an
+              inbox behind it. It rendered an unread dot and did nothing when
+              clicked, which reads as a broken control rather than an
+              unfinished one, and taught people to ignore it before it ever
+              worked. When personal/system notifications land, the bell comes
+              back here , and it keeps that name, distinct from Komunikacija
+              (what the school sends to parents and trainers).
+            */}
             <UserMenu name={name} role={roleLabel} />
           </div>
         </header>

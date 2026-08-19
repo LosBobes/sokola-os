@@ -46,9 +46,29 @@
   box-shadow: var(--shadow-sm);
   border-color: var(--border-strong);
 }
+/* An overflow nav row is a link, so it gets the same affordance as the
+   context-switch buttons rather than the default underlined-text link. */
+.more-page__row--link {
+  text-decoration: none;
+  cursor: pointer;
+  transition: box-shadow var(--duration), border-color var(--duration);
+}
+.more-page__row--link:hover {
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border-strong);
+}
+
+/* The active row is marked three ways at once , border colour, a tinted
+   ground and a heavier label , so it is still obviously the active one
+   without relying on colour perception. */
 .more-page__row--active {
   border-color: var(--action-primary);
+  border-left-width: 3px;
   background: var(--action-surface);
+}
+.more-page__row--active .more-page__row-org {
+  font-weight: 700;
 }
 .more-page__row-org {
   font-weight: 600;

@@ -4,9 +4,21 @@
    row. Consumes only semantic role tokens from styles/design-tokens.css.
    ===================================================================== */
 
+/*
+ * `minmax(0, 1fr)`, not `1fr`.
+ *
+ * A grid track sized `1fr` still has an automatic minimum of its content's
+ * min-content width, so one wide descendant (a table, a form grid, a long
+ * unbroken string) pushes the track past the viewport and the whole PAGE
+ * scrolls sideways. `minmax(0, ...)` lets the track be narrower than its
+ * content, which pushes the overflow down to the element that should own it ,
+ * .table-wrap and .schedule-scroll already scroll themselves. This is the fix
+ * for the desktop horizontal scrollbar; `overflow-x: hidden` on the body would
+ * only have hidden the evidence and clipped the content with it.
+ */
 .shell {
   display: grid;
-  grid-template-columns: 250px 1fr;
+  grid-template-columns: 250px minmax(0, 1fr);
   min-height: 100vh;
   background: var(--surface-page);
 }
@@ -31,9 +43,14 @@
   padding: 0 var(--space-1);
 }
 /* The lockup is an approved vector; only ONE dimension is set so the original
-   viewBox proportions are never stretched. */
+   viewBox proportions are never stretched.
+
+   Inside the product the mark is a wayfinding aid, not the message: the user
+   already knows which app they are in, and every pixel it takes is a pixel the
+   nav does not. It is deliberately smaller here than on the entry screen,
+   where the brand IS the message. */
 .brandmark {
-  height: 38px;
+  height: 30px;
   width: auto;
   display: block;
 }
@@ -94,9 +111,14 @@
   background: var(--surface-sidebar-hover);
   text-decoration: none;
 }
+/* Three signals at once, never colour alone: a tinted ground, the gold bar
+   below, and a heavier label. */
 .navlink[aria-current="page"] {
   color: var(--text-on-sidebar);
   background: var(--surface-sidebar-active);
+}
+.navlink[aria-current="page"] .navlink__label {
+  font-weight: 700;
 }
 .navlink[aria-current="page"] .navlink__icon {
   color: var(--accent-gold);
@@ -393,6 +415,16 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  /* Same reasoning as .shell's minmax(0, 1fr): without this, a wide child
+     stretches the column and the page scrolls sideways instead of the child. */
+  min-width: 0;
+}
+/* Every direct child of the page column is allowed to be narrower than its
+   own content, so an over-wide table scrolls inside its own container rather
+   than widening the page. */
+.shell__main > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* --- Page header ---------------------------------------------------- */
@@ -422,7 +454,7 @@
    icons and the active gold bar stay. */
 @media (max-width: 1180px) and (min-width: 861px) {
   .shell {
-    grid-template-columns: 72px 1fr;
+    grid-template-columns: 72px minmax(0, 1fr);
   }
   .sidebar {
     padding: var(--space-5) var(--space-3) var(--space-4);
@@ -462,7 +494,7 @@
 /* Below 861px the rail becomes a bottom tab bar. */
 @media (max-width: 860px) {
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .sidebar {
     position: fixed;
@@ -489,6 +521,15 @@
     justify-content: space-between;
     gap: 0;
     overflow: visible;
+  }
+  /*
+   * The destinations the tab bar cannot fit. Eight items across a phone made
+   * the icons and their labels overlap; four plus "Više" leaves each item a
+   * real touch target. What is hidden here is listed on the Više page, so
+   * nothing becomes unreachable , see Destination.primary in shell.tsx.
+   */
+  .navlink--overflow {
+    display: none;
   }
   .navlink {
     flex: 1;
@@ -522,8 +563,10 @@
   .navlink[aria-current="page"] .navlink__icon {
     color: var(--text-primary);
   }
+  /* Weight and a gold bar carry the active state alongside colour, so the
+     current tab is identifiable without relying on colour perception. */
   .navlink[aria-current="page"] .navlink__label {
-    font-weight: 600;
+    font-weight: 700;
   }
   .navlink[aria-current="page"]::before {
     left: 50%;

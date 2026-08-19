@@ -8,6 +8,8 @@ import type {
   Page,
   PersonResponse,
   PersonSummary,
+  GroupMemberRole,
+  OrgMemberType,
 } from "../../api/types";
 import { PageHeader } from "../../components/shell";
 import {
@@ -25,6 +27,11 @@ import {
   SystemState,
 } from "../../components/ui";
 import { useAsync } from "../../hooks/useAsync";
+import {
+  GROUP_MEMBER_ROLE_LABEL,
+  ORG_MEMBER_TYPE_HINT,
+  ORG_MEMBER_TYPE_LABEL,
+} from "../../lib/labels";
 import "./People.css";
 
 function cx(...parts: Array<string | false | null | undefined>): string {
@@ -181,6 +188,16 @@ export function PeoplePage() {
 function AddPerson({ onCreated, onClose }: { onCreated: () => void; onClose: () => void }) {
   const [given, setGiven] = useState("");
   const [family, setFamily] = useState("");
+  /*
+   * What this person is to the school, asked at the moment they are added.
+   *
+   * It decides three things at once: whether they appear on attendance sheets,
+   * whether a membership run bills them, and whether they count towards
+   * "Aktivni članovi". Defaulting silently would put every coach and parent
+   * into the member figure and onto the invoice list, so the choice is on the
+   * form with its consequence spelled out under it.
+   */
+  const [memberType, setMemberType] = useState<OrgMemberType>("ATTENDEE");
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
@@ -189,6 +206,7 @@ function AddPerson({ onCreated, onClose }: { onCreated: () => void; onClose: () 
   function reset() {
     setGiven("");
     setFamily("");
+    setMemberType("ATTENDEE");
     setReason("");
     setCandidates(null);
   }
@@ -200,6 +218,7 @@ function AddPerson({ onCreated, onClose }: { onCreated: () => void; onClose: () 
       await api.post<PersonResponse>("/people", {
         given_name: given,
         family_name: family,
+        member_type: memberType,
         allow_possible_duplicate: allowDuplicate,
         duplicate_reason: allowDuplicate ? reason : null,
       });
@@ -240,6 +259,26 @@ function AddPerson({ onCreated, onClose }: { onCreated: () => void; onClose: () 
           <label htmlFor="p-family">Prezime</label>
           <input id="p-family" value={family} onChange={(e) => setFamily(e.target.value)} required data-cy="person-family" />
         </div>
+        <div className="field">
+          <label htmlFor="p-type">Uloga u školi</label>
+          <select
+            id="p-type"
+            value={memberType}
+            onChange={(e) => setMemberType(e.target.value as OrgMemberType)}
+            data-cy="person-member-type"
+          >
+            {(Object.keys(ORG_MEMBER_TYPE_LABEL) as OrgMemberType[]).map((type) => (
+              <option key={type} value={type}>
+                {ORG_MEMBER_TYPE_LABEL[type]}
+              </option>
+            ))}
+          </select>
+          <small className="field__hint">{ORG_MEMBER_TYPE_HINT[memberType]}</small>
+        </div>
+        <p className="field__hint" data-cy="person-account-note">
+          Osoba može postojati u sistemu i bez naloga. Nalog se dodeljuje posebno, pozivnicom,
+          samo ako treba da se prijavljuje u SOKOLA OS.
+        </p>
         <Button type="submit" disabled={busy} data-cy="person-save">
           Sačuvaj osobu
         </Button>
@@ -617,30 +656,67 @@ function Groups({
 function GroupRow({ group, people }: { group: Group; people: PersonSummary[] }) {
   const members = useAsync(() => api.get<GroupMember[]>(`/groups/${group.id}/members`), [group.id]);
   const [personId, setPersonId] = useState("");
+  /*
+   * In what capacity the person joins. Attaching a coach to a group is a
+   * different act from enrolling a child in it, and only the latter is
+   * rostered for attendance and billed, so the form asks rather than assumes.
+   */
+  const [role, setRole] = useState<GroupMemberRole>("MEMBER");
   const [error, setError] = useState<unknown>(null);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     try {
-      await api.post(`/groups/${group.id}/members`, { person_id: personId });
+      await api.post(`/groups/${group.id}/members`, { person_id: personId, role });
       setPersonId("");
+      setRole("MEMBER");
       members.reload();
     } catch (err) {
       setError(err);
     }
   }
 
+  const rows = members.data ?? [];
+  // "N članova" must mean participants; staff attached to the group are not
+  // members of it in the sense anyone counting a group cares about.
+  const participantCount = rows.filter((m) => (m.role ?? "MEMBER") === "MEMBER").length;
+  const staff = rows.filter((m) => (m.role ?? "MEMBER") !== "MEMBER");
+
   return (
     <li className="people-group-item" data-cy="group-item">
-      <strong>{group.name}</strong> · {members.data?.length ?? 0} članova
+      <strong>{group.name}</strong> · {participantCount} članova
+      {staff.length > 0 ? (
+        <span className="people-row__stub"> · {staff.length} u osoblju</span>
+      ) : null}
       {error ? <SystemState error={error} /> : null}
-      <form onSubmit={add} style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
+      {staff.length > 0 ? (
+        <div className="people-chiplist" data-cy="group-staff">
+          {staff.map((m) => (
+            <span className="badge badge--info" key={m.membership_id}>
+              {m.display_name} · {GROUP_MEMBER_ROLE_LABEL[m.role ?? "MEMBER"]}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <form onSubmit={add} className="people-group-add">
         <select value={personId} onChange={(e) => setPersonId(e.target.value)} required data-cy="member-select">
           <option value="">Izaberi osobu…</option>
           {people.map((p) => (
             <option key={p.id} value={p.id}>
               {p.display_name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value as GroupMemberRole)}
+          aria-label="Uloga u grupi"
+          data-cy="member-role"
+        >
+          {(Object.keys(GROUP_MEMBER_ROLE_LABEL) as GroupMemberRole[]).map((r) => (
+            <option key={r} value={r}>
+              {GROUP_MEMBER_ROLE_LABEL[r]}
             </option>
           ))}
         </select>

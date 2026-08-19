@@ -30,9 +30,22 @@ export interface Organization {
   timezone: string;
 }
 
+/** What kind of place a location is. Activities are not only held in halls. */
+export type LocationKind =
+  | "SPORTS_HALL"
+  | "FIELD"
+  | "KINDERGARTEN"
+  | "SCHOOL"
+  | "THEATRE"
+  | "OUTDOOR"
+  | "ONLINE"
+  | "OTHER";
+
 export interface LocationSummary {
   id: string;
   name: string;
+  kind: LocationKind;
+  address?: string | null;
 }
 
 export interface TenantPublic {
@@ -56,10 +69,17 @@ export interface Page<T> {
 
 export type PersonIdentityStatus = "PROVISIONAL" | "CLAIMED" | "VERIFIED" | "MERGED" | "ARCHIVED";
 
+/**
+ * What a person is to the school. Only ATTENDEE counts as an active member,
+ * which is why the roster screens ask for it rather than defaulting silently.
+ */
+export type OrgMemberType = "ATTENDEE" | "STAFF" | "GUARDIAN" | "CONTACT";
+
 export interface PersonSummary {
   id: string;
   display_name: string;
   identity_status: PersonIdentityStatus;
+  member_type: OrgMemberType;
 }
 
 export interface Person {
@@ -77,12 +97,22 @@ export interface Group {
   name: string;
   capacity_mode: "UNLIMITED" | "LIMITED";
   capacity: number | null;
+  program_id?: string | null;
+  location_id?: string | null;
+  base_monthly_price_minor?: number | null;
+  /** Copied onto a new session for this group; overridable per occurrence. */
+  default_trainer_person_id?: string | null;
+  default_location_id?: string | null;
 }
+
+/** In what capacity a person is attached to a group. */
+export type GroupMemberRole = "MEMBER" | "TRAINER" | "ASSISTANT" | "OTHER_STAFF";
 
 export interface GroupMember {
   membership_id: string;
   person_id: string;
   display_name: string;
+  role?: GroupMemberRole;
 }
 
 /* --- Membership (increment #6, merged to main) ------------------------ */
@@ -132,8 +162,48 @@ export interface SessionSummary {
   ends_at: string;
   status: SessionStatus;
   trainer_person_id?: string | null;
+  location_id?: string | null;
   series_id?: string | null;
   cancellation_reason?: SessionCancellationReasonCode | null;
+}
+
+export type SessionSeriesFrequency = "WEEKLY" | "BIWEEKLY" | "MONTHLY";
+
+/** POST /schedule/series body: a recurrence rule ("svake srede u 18:00"). */
+export interface SessionSeriesCreate {
+  group_id: string;
+  trainer_person_id?: string | null;
+  location_id?: string | null;
+  title: string;
+  frequency?: SessionSeriesFrequency;
+  /** 0 = Monday .. 6 = Sunday, matching the API's date.weekday(). */
+  weekdays: number[];
+  start_date: string;
+  local_time: string;
+  duration_minutes: number;
+}
+
+export interface SessionSeriesSummary {
+  id: string;
+  group_id: string;
+  trainer_person_id: string | null;
+  location_id: string | null;
+  title: string;
+  frequency: SessionSeriesFrequency;
+  weekdays: number[];
+  start_date: string;
+  timezone: string;
+  local_time: string;
+  duration_minutes: number;
+}
+
+export interface SeriesGenerateResult {
+  series_id: string;
+  created_count: number;
+  skipped_existing: number;
+  skipped_conflicts: { starts_at: string; reason: string }[];
+  horizon_start: string;
+  horizon_end: string;
 }
 
 /** PATCH /schedule/sessions/{id} body. Any field left undefined is unchanged. */
@@ -142,6 +212,7 @@ export interface SessionEdit {
   duration_minutes?: number | null;
   title?: string | null;
   trainer_person_id?: string | null;
+  location_id?: string | null;
   reason: SessionChangeReasonCode;
   scope: SessionEditScope;
 }
@@ -211,7 +282,33 @@ export interface Charge {
   currency: string;
   amount_due_minor: number;
   amount_paid_minor: number;
+  /** ISO date. Null when nobody set a deadline for this charge. */
+  due_date?: string | null;
+  payment_reference?: string | null;
   status: ChargeStatus;
+}
+
+/**
+ * Payment-slip data for one charge, including the NBS IPS QR payload.
+ *
+ * Scanning the QR only pre-fills the payer's banking app. It does not move
+ * money and it does not tell SOKOLA OS anything: the charge stays open until
+ * the school checks its account and records the payment by hand.
+ */
+export interface PaymentSlip {
+  charge_id: string;
+  payee_name: string;
+  payee_address: string | null;
+  payee_city: string | null;
+  account_number: string;
+  payer_name: string;
+  currency: string;
+  amount_minor: number;
+  purpose: string;
+  payment_code: string;
+  reference_number: string;
+  due_date: string | null;
+  ips_qr_payload: string;
 }
 
 export interface Payment {
@@ -226,13 +323,30 @@ export interface Payment {
   charge_amount_paid_minor: number;
 }
 
+export type EventType =
+  | "TRAINING_CAMP"
+  | "PREPARATION"
+  | "COMPETITION"
+  | "PERFORMANCE"
+  | "WORKSHOP"
+  | "SOCIAL"
+  | "OTHER";
+
+export type EventStatus = "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
+
 export interface EventItem {
   id: string;
   title: string;
-  type: string;
+  type: EventType;
   category: string;
-  status: string;
+  status: EventStatus;
   starts_at: string;
+  ends_at?: string | null;
+  location_id?: string | null;
+  /** Free-text detail one structured location cannot hold (multi-venue camps). */
+  location_note?: string | null;
+  responsible_person_id?: string | null;
+  description?: string | null;
   capacity_mode: "UNLIMITED" | "LIMITED";
   capacity: number | null;
 }
@@ -254,4 +368,26 @@ export interface Announcement {
   title: string;
   status: string;
   recipient_count: number;
+}
+
+
+/**
+ * GET /reports/overview , the school's health right now.
+ *
+ * `active_member_count` is the authoritative "Aktivni članovi" figure: active
+ * ATTENDEE memberships only, so owners, trainers, guardians and contacts are
+ * excluded. Screens must read it from here rather than counting /people.
+ */
+export interface OverviewReport {
+  period_start: string;
+  period_end: string;
+  currency: string;
+  active_member_count: number;
+  billed_total_minor: number;
+  collected_total_minor: number;
+  outstanding_debt_total_minor: number;
+  attendance_window_days: number;
+  attendance_recorded_count: number;
+  attendance_present_count: number;
+  attendance_rate: number;
 }

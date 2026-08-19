@@ -211,6 +211,33 @@ select {
   font-weight: 600;
   font-size: var(--text-sm);
 }
+/* A quiet line under a control explaining where its value came from, or what
+   choosing it will do. Never carries an error; .field-error does that. */
+.field__hint {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+/* A checkbox with its label on one line, at a full touch target. */
+.checkfield {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--target-min);
+  margin-bottom: var(--space-3);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.checkfield input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  accent-color: var(--action-primary);
+  cursor: pointer;
+}
 
 /* --- Cards ---------------------------------------------------------- */
 .card {

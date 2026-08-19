@@ -188,16 +188,25 @@
   --font-brand-display: "Cormorant Garamond", Georgia, serif;
   --font-weight-display: 600;
 
-  /* Scale: 11 / 13 / 15 / 17 / 20 / 28 / 38 / 56 */
-  --text-xs: 0.6875rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.9375rem;
-  --text-lg: 1.0625rem;
-  --text-title: 1.25rem;
-  --text-xl: 1.75rem; /* legacy alias for the h2 / big-number size */
-  --text-h2: 1.75rem;
-  --text-h1: 2.375rem;
-  --text-display: 3.5rem;
+  /*
+   * Scale: 12 / 14 / 16 / 18 / 22 / 30 / 40 / 60.
+   *
+   * One step up from the original 11/13/15 ramp. The old base of 15px meant
+   * table cells and form labels rendered at 13px and 11px , below the 16px a
+   * phone needs to avoid zoom-on-focus, and small enough that a coach reading
+   * a roster at arm's length on a gym floor had to squint. Body text is now
+   * 16px and every derived size moves with it, so the whole product gets more
+   * legible from one edit rather than per-screen overrides.
+   */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-title: 1.375rem;
+  --text-xl: 1.875rem; /* legacy alias for the h2 / big-number size */
+  --text-h2: 1.875rem;
+  --text-h1: 2.5rem;
+  --text-display: 3.75rem;
 
   --tracking-tight: -0.015em;
   --tracking-label: 0.12em;

@@ -4,6 +4,7 @@ import type { EventItem, Registration } from "../../api/types";
 import { PageHeader } from "../../components/shell";
 import { EmptyState, InlineNotice, LoadingState, StatusBadge, SystemState } from "../../components/ui";
 import { useAsync } from "../../hooks/useAsync";
+import { formatDateTime } from "../../lib/format";
 
 interface Child {
   person_id: string;
@@ -73,7 +74,7 @@ function EventCard({ event, children }: { event: EventItem; children: Child[] })
   return (
     <section className="card" style={{ marginBottom: "var(--space-4)" }} data-cy="event-card">
       <h2>{event.title}</h2>
-      <p>{new Date(event.starts_at).toLocaleString("sr-Latn")}</p>
+      <p>{formatDateTime(event.starts_at)}</p>
       {error ? <SystemState error={error} /> : null}
 
       {registrations.length === 0 ? (

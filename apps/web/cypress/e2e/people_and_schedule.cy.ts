@@ -39,13 +39,40 @@ describe("Manager: people, groups, schedule, attendance", () => {
     cy.get("[data-cy=session-row]").should("have.length.at.least", 1);
 
     // --- Journey 2: record attendance (exceptions only + version) ---
+    // Attendance has exactly two marks, Prisutan and Odsutan; there is no
+    // excused/unexcused follow-up question any more.
     cy.get("[data-cy=session-attendance]").first().click();
     cy.get("[data-cy=attendance-row]").should("have.length", 1);
-    // Mark the sole roster member Odsutan; the reason selector only appears
-    // once Odsutan is chosen, then pick Neopravdano (unexcused absence).
     cy.get("[data-cy=attendance-row]").find("button[data-cy^=attendance-mark-absent-]").click();
-    cy.get("[data-cy=attendance-row]").find("button[data-cy^=attendance-reason-unexcused-]").click();
+    cy.get("[data-cy=attendance-rate]").contains("0%").should("exist");
     cy.get("[data-cy=attendance-save]").click();
     cy.contains("Sačuvano prisustvo").should("exist");
+  });
+
+  it("schedules a repeating slot and shows events on the same calendar", () => {
+    onboard(`Klub ${uniq()}`);
+
+    // A group to hang the recurrence on.
+    const groupName = `Sreda ${uniq()}`;
+    cy.get("[data-cy='nav-/ljudi']").click();
+    cy.get("[data-cy=group-name]").type(groupName);
+    cy.get("[data-cy=group-save]").click();
+
+    // "Svake srede u 18:00": the rule and its occurrences are one action.
+    cy.get("[data-cy='nav-/raspored']").click();
+    cy.get("[data-cy=session-group]").select(groupName);
+    cy.get("[data-cy=session-start]").type("2026-09-02T18:00");
+    cy.get("[data-cy=session-repeats]").check();
+    cy.get("[data-cy=session-weekday-2]").click();
+    cy.get("[data-cy=session-weeks]").clear().type("3");
+    cy.get("[data-cy=session-save]").click();
+    cy.get("[data-cy=series-result]").should("exist");
+    cy.get("[data-cy=session-row]").should("have.length.at.least", 3);
+
+    // Editing an occurrence offers the three calendar scopes.
+    cy.get("[data-cy=session-detail-open]").first().click();
+    cy.get("[data-cy=session-edit-open]").click();
+    cy.get("[data-cy=session-edit-scope]").should("exist");
+    cy.get("[data-cy=session-edit-scope] option").should("have.length", 3);
   });
 });

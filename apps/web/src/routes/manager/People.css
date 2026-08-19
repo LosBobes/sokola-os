@@ -198,3 +198,17 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Adding someone to a group: who, in what capacity, and the button. Wraps to
+   one control per line on a phone rather than squeezing three onto one. */
+.people-group-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.people-group-add select {
+  flex: 1 1 180px;
+  min-width: 0;
+}

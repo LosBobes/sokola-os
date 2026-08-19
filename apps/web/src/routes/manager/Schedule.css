@@ -223,6 +223,20 @@
   border-left-color: var(--tone-warning-fg);
   background: var(--tone-warning-bg);
 }
+/* An event is not a training slot. It is marked by more than hue , a dashed
+   outline, a star glyph and a tinted ground , so the two kinds stay
+   distinguishable in greyscale and to a colour-blind reader. */
+.session-block--event {
+  border: var(--ink-border) dashed var(--tone-info-border);
+  border-left: 3px solid var(--tone-info-fg);
+  background: var(--tone-info-bg);
+}
+.session-block__glyph {
+  vertical-align: -1px;
+  margin-right: var(--space-1);
+  color: var(--tone-info-fg);
+}
+
 .session-block--cancelled {
   opacity: 0.6;
   border-left-style: dashed;
@@ -278,4 +292,82 @@
   .schedule-nav__range {
     justify-content: center;
   }
+}
+
+
+/* --- Filter menu: the empty case explains itself ------------------------ */
+.filter-menu__empty {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* --- Spisak row actions ------------------------------------------------- */
+.schedule-row-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* --- Recurrence ("ponavlja se svake srede u 18:00") --------------------- */
+.schedule-repeat {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-4);
+  border: var(--ink-border) solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+}
+.schedule-repeat__hint {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.schedule-weekdays {
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  border: none;
+}
+.schedule-weekdays legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.schedule-weekdays__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+/* A selected day is carried by fill, border AND weight, never colour alone. */
+.schedule-weekday {
+  min-width: 52px;
+  min-height: var(--target-min);
+  padding: 0 var(--space-3);
+  border: var(--ink-border) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  transition:
+    background var(--duration) ease,
+    border-color var(--duration) ease,
+    color var(--duration) ease;
+}
+.schedule-weekday:hover {
+  background: var(--surface-sunken);
+}
+.schedule-weekday.is-active {
+  background: var(--action-primary);
+  border-color: var(--action-primary);
+  color: var(--text-on-action);
+  font-weight: 600;
+}
+
+/* --- Detail dialog: the free-text location detail ----------------------- */
+.session-dialog__note {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }

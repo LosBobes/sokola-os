@@ -15,6 +15,7 @@ import {
   SystemState,
 } from "../../components/ui";
 import { useAsync } from "../../hooks/useAsync";
+import { formatDateTime } from "../../lib/format";
 
 /*
  * M10 · Komunikacija, manager compose/list screen (#30).
@@ -58,12 +59,7 @@ function resolveAudienceLabel(sel: string, groups: Group[]): string {
 }
 
 function formatWhen(ms: number): string {
-  return new Date(ms).toLocaleString("sr-Latn", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTime(new Date(ms));
 }
 
 export function CommunicationsPage() {

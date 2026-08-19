@@ -16,7 +16,9 @@ import {
   SystemState,
   TableContainer,
 } from "../../components/ui";
+import { PaymentSlipDialog } from "../../components/PaymentSlipDialog";
 import { useAsync } from "../../hooks/useAsync";
+import { formatDate, formatPeriodLabel, isPastDue, toPeriodLabel } from "../../lib/format";
 import { formatMinor } from "../../lib/money";
 import "./Money.css";
 
@@ -43,22 +45,40 @@ import "./Money.css";
 
 type ChargeStatus = Charge["status"];
 
+/*
+ * An unpaid charge is not automatically an overdue one.
+ *
+ * OPEN used to be labelled "Dospelo" outright, which claimed every unpaid
+ * charge had already fallen due , including one issued this morning for next
+ * month. "Dospelo" now appears only when a due date exists AND has passed, and
+ * never without that date printed beside it, so the word can always be checked
+ * against something.
+ */
 const STATUS_LABEL: Record<ChargeStatus, string> = {
-  OPEN: "Dospelo",
+  OPEN: "Neplaćeno",
   PARTIALLY_PAID: "Delimično plaćeno",
   PAID: "Plaćeno",
   CANCELLED: "Otkazano",
 };
 
-// OPEN is labelled "Dospelo" (due), so it carries the danger tone: an info-blue
-// badge next to a red outstanding amount read as two different verdicts on the
-// same row.
 const STATUS_TONE: Record<ChargeStatus, "success" | "warning" | "error" | "neutral"> = {
-  OPEN: "error",
+  OPEN: "warning",
   PARTIALLY_PAID: "warning",
   PAID: "success",
   CANCELLED: "neutral",
 };
+
+/** The label and tone a charge's status badge actually shows. */
+function chargeStatusView(charge: Charge): {
+  label: string;
+  tone: "success" | "warning" | "error" | "neutral";
+} {
+  const outstanding = charge.status === "OPEN" || charge.status === "PARTIALLY_PAID";
+  if (outstanding && isPastDue(charge.due_date)) {
+    return { label: "Dospelo", tone: "error" };
+  }
+  return { label: STATUS_LABEL[charge.status], tone: STATUS_TONE[charge.status] };
+}
 
 const STATUS_FILTERS: Array<{ value: ChargeStatus | "ALL"; label: string }> = [
   { value: "ALL", label: "Sve" },
@@ -66,11 +86,6 @@ const STATUS_FILTERS: Array<{ value: ChargeStatus | "ALL"; label: string }> = [
   { value: "PARTIALLY_PAID", label: STATUS_LABEL.PARTIALLY_PAID },
   { value: "PAID", label: STATUS_LABEL.PAID },
 ];
-
-function currentPeriodLabel(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
 
 export function MoneyPage() {
   const groups = useAsync(() => api.get<Page<Group>>("/groups"), []);
@@ -83,6 +98,7 @@ export function MoneyPage() {
   );
 
   const [statusFilter, setStatusFilter] = useState<ChargeStatus | "ALL">("ALL");
+  const [overdueOnly, setOverdueOnly] = useState(false);
   const [search, setSearch] = useState("");
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -91,6 +107,11 @@ export function MoneyPage() {
   const filteredItems = useMemo(() => {
     let list = items;
     if (statusFilter !== "ALL") list = list.filter((c) => c.status === statusFilter);
+    if (overdueOnly) {
+      list = list.filter(
+        (c) => (c.status === "OPEN" || c.status === "PARTIALLY_PAID") && isPastDue(c.due_date),
+      );
+    }
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter((c) => {
@@ -99,7 +120,7 @@ export function MoneyPage() {
       });
     }
     return list;
-  }, [items, statusFilter, search, peopleMap]);
+  }, [items, statusFilter, overdueOnly, search, peopleMap]);
 
   // Client-side debts summary, see file header comment. Not a substitute
   // for a real aggregate endpoint (pagination/limit means this only covers
@@ -175,12 +196,11 @@ export function MoneyPage() {
             </FilterChip>
           ))}
           <FilterChip
-            caret
-            disabled
-            title="Uskoro: zaduženja još ne nose podatak o periodu obračuna (čeka #9)"
-            style={{ opacity: 0.55 }}
+            active={overdueOnly}
+            onClick={() => setOverdueOnly((v) => !v)}
+            data-cy="charge-filter-overdue"
           >
-            Period
+            Samo dospelo
           </FilterChip>
           <div className="field" style={{ margin: "0 0 0 auto", minWidth: 220 }}>
             <input
@@ -211,7 +231,8 @@ function BillingRunForm({ groups, onPosted }: { groups: Group[]; onPosted: () =>
   const [groupId, setGroupId] = useState("");
   const [amountMajor, setAmountMajor] = useState(3000);
   const [description, setDescription] = useState("Članarina");
-  const [period, setPeriod] = useState(currentPeriodLabel());
+  const [period, setPeriod] = useState(() => toPeriodLabel(new Date()));
+  const [dueDate, setDueDate] = useState("");
   const [preview, setPreview] = useState<BillingPreview | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
@@ -222,6 +243,9 @@ function BillingRunForm({ groups, onPosted }: { groups: Group[]; onPosted: () =>
       amount_minor: Math.round(amountMajor * 100),
       description,
       period_label: period,
+      // Omitted (not null) when left blank, so the server derives it from the
+      // period label rather than storing "deliberately no due date".
+      ...(dueDate ? { due_date: dueDate } : {}),
     };
   }
 
@@ -301,7 +325,29 @@ function BillingRunForm({ groups, onPosted }: { groups: Group[]; onPosted: () =>
         </div>
         <div className="field" style={{ margin: 0 }}>
           <label htmlFor="b-period">Period</label>
-          <input id="b-period" value={period} onChange={(e) => setPeriod(e.target.value)} data-cy="billing-period" />
+          <input
+            id="b-period"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            data-cy="billing-period"
+          />
+          {/* Stored machine-sortable ("2026-08"), echoed back the way it reads. */}
+          <small className="field__hint" data-cy="billing-period-readable">
+            {formatPeriodLabel(period)}
+          </small>
+        </div>
+        <div className="field" style={{ margin: 0 }}>
+          <label htmlFor="b-due">Datum dospeća</label>
+          <input
+            id="b-due"
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            data-cy="billing-due-date"
+          />
+          <small className="field__hint">
+            Prazno = poslednji dan izabranog meseca.
+          </small>
         </div>
         <Button type="submit" variant="secondary" data-cy="billing-preview">
           Pregledaj obračun
@@ -341,6 +387,7 @@ function ChargeList({
   onPaid: () => void;
 }) {
   const [payFor, setPayFor] = useState<Charge | null>(null);
+  const [slipFor, setSlipFor] = useState<Charge | null>(null);
 
   if (loading) return <LoadingState />;
   if (error) return <SystemState error={error} />;
@@ -350,11 +397,12 @@ function ChargeList({
   return (
     <>
       <TableContainer>
-        <table className="data" data-cy="charge-list">
+        <table className="data money-table" data-cy="charge-list">
           <thead>
             <tr>
               <th>Član</th>
               <th>Opis</th>
+              <th>Dospeva</th>
               <th>Dug</th>
               <th>Plaćeno</th>
               <th>Preostalo</th>
@@ -365,27 +413,46 @@ function ChargeList({
           <tbody>
             {items.map((c) => {
               const remaining = c.amount_due_minor - c.amount_paid_minor;
+              const status = chargeStatusView(c);
+              const settled = c.status === "PAID" || c.status === "CANCELLED";
               return (
                 <tr key={c.id} data-cy="charge-row">
-                  <td>
+                  <td data-label="Član">
                     <div className="money-person">
                       <span className="money-person__name">{peopleMap[c.person_id] ?? "Nepoznat član"}</span>
                     </div>
                   </td>
-                  <td>{c.description}</td>
-                  <td className="money-amount">{formatMinor(c.amount_due_minor, c.currency)}</td>
-                  <td className="money-amount">{formatMinor(c.amount_paid_minor, c.currency)}</td>
-                  <td className={`money-amount ${remaining > 0 ? "money-amount--debt" : "money-amount--clear"}`}>
+                  <td data-label="Opis">{c.description}</td>
+                  <td data-label="Dospeva">{c.due_date ? formatDate(c.due_date) : "-"}</td>
+                  <td className="money-amount" data-label="Dug">
+                    {formatMinor(c.amount_due_minor, c.currency)}
+                  </td>
+                  <td className="money-amount" data-label="Plaćeno">
+                    {formatMinor(c.amount_paid_minor, c.currency)}
+                  </td>
+                  <td
+                    className={`money-amount ${remaining > 0 ? "money-amount--debt" : "money-amount--clear"}`}
+                    data-label="Preostalo"
+                  >
                     {formatMinor(remaining, c.currency)}
                   </td>
-                  <td>
-                    <StatusBadge tone={STATUS_TONE[c.status]}>{STATUS_LABEL[c.status]}</StatusBadge>
+                  <td data-label="Status">
+                    <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
                   </td>
                   <td className="money-cell-actions">
-                    {c.status !== "PAID" && c.status !== "CANCELLED" ? (
-                      <Button variant="secondary" onClick={() => setPayFor(c)} data-cy="charge-pay">
-                        Uplata
-                      </Button>
+                    {!settled ? (
+                      <>
+                        <Button
+                          variant="secondary"
+                          onClick={() => setSlipFor(c)}
+                          data-cy="charge-slip"
+                        >
+                          Uplatnica
+                        </Button>
+                        <Button variant="secondary" onClick={() => setPayFor(c)} data-cy="charge-pay">
+                          Evidentiraj uplatu
+                        </Button>
+                      </>
                     ) : null}
                   </td>
                 </tr>
@@ -404,6 +471,9 @@ function ChargeList({
             onPaid();
           }}
         />
+      ) : null}
+      {slipFor ? (
+        <PaymentSlipDialog chargeId={slipFor.id} onClose={() => setSlipFor(null)} />
       ) : null}
     </>
   );
@@ -456,9 +526,14 @@ function PaymentDialog({
       <SectionHeader
         title={personName}
         subtitle={charge.description}
-        action={<StatusBadge tone={STATUS_TONE[charge.status]}>{STATUS_LABEL[charge.status]}</StatusBadge>}
+        action={
+          <StatusBadge tone={chargeStatusView(charge).tone}>
+            {chargeStatusView(charge).label}
+          </StatusBadge>
+        }
       />
       <p>Preostali dug: {formatMinor(outstanding, charge.currency)}</p>
+      {charge.due_date ? <p>Datum dospeća: {formatDate(charge.due_date)}</p> : null}
       <div className="field">
         <label htmlFor="pay-amount">Iznos (RSD)</label>
         <input

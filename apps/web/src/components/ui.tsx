@@ -2,6 +2,7 @@ import {
   useEffect,
   useRef,
   type ButtonHTMLAttributes,
+  type HTMLAttributes,
   type ReactNode,
 } from "react";
 import { ApiError } from "../api/client";
@@ -136,15 +137,25 @@ export function StatusBadge({ tone, children }: { tone: Tone; children: ReactNod
   );
 }
 
+/*
+ * Extra props are forwarded to the underlying <div>, which is how callers
+ * attach a `data-cy` hook. They previously could not: the component accepted
+ * only `tone` and `children`, so every `data-cy` written on an InlineNotice was
+ * silently dropped and the element was untestable (the attendance "saved"
+ * notice had carried a dead hook for exactly that reason).
+ */
 export function InlineNotice({
   tone,
   children,
-}: {
-  tone: "error" | "info" | "warning";
-  children: ReactNode;
-}) {
+  className,
+  ...rest
+}: { tone: "error" | "info" | "warning" } & HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`notice notice--${tone}`} role={tone === "error" ? "alert" : "status"}>
+    <div
+      className={cx(`notice notice--${tone}`, className)}
+      role={tone === "error" ? "alert" : "status"}
+      {...rest}
+    >
       {children}
     </div>
   );

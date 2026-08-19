@@ -1,0 +1,41 @@
+/*
+ * Grupe page layout glue. Reusable primitives live in components/ui.css;
+ * this file only holds what is specific to this screen.
+ */
+
+/*
+ * "Nova grupa" form. minmax(0, ...) on every track for the same reason the
+ * shell uses it: a grid item's automatic minimum is its content's min-content
+ * width, so a long person or location name in a <select> would otherwise widen
+ * the form past the card and take the page's horizontal scrollbar with it.
+ */
+.group-create-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns:
+    minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr)
+    minmax(0, 1.5fr) minmax(0, 1.5fr);
+  align-items: end;
+}
+/* The explanation and the buttons each take the full width under the fields. */
+.group-create-grid__note {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.group-create-grid__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1180px) {
+  .group-create-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .group-create-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

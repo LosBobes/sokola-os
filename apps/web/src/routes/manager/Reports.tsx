@@ -193,8 +193,20 @@ interface ReportStat {
 const STAT_TILES: ReportStat[] = [
   { key: "members", label: "Aktivni članovi", icon: "people", to: "/ljudi", note: "Uskoro · vidi u Ljudima" },
   { key: "sessions", label: "Održani termini", icon: "calendar", to: "/raspored", note: "Uskoro · vidi u Rasporedu" },
-  { key: "attendance", label: "Prisustvo %", icon: "percent", to: "/raspored", note: "Uskoro · vidi u Rasporedu" },
-  { key: "unrecorded", label: "Nije evidentirano", icon: "warning", to: "/raspored", note: "Uskoro · vidi u Rasporedu" },
+  {
+    key: "attendance",
+    label: "Prisutnih od evidentiranih",
+    icon: "percent",
+    to: "/raspored",
+    note: "Uskoro · vidi u Rasporedu",
+  },
+  {
+    key: "unrecorded",
+    label: "Termini bez evidencije",
+    icon: "warning",
+    to: "/raspored",
+    note: "Uskoro · vidi u Rasporedu",
+  },
   { key: "payments", label: "Evidentirane uplate", icon: "wallet", to: "/finansije", note: "Uskoro · vidi u Finansijama" },
   { key: "debts", label: "Dospela dugovanja", icon: "debt", to: "/finansije", note: "Uskoro · vidi u Finansijama" },
 ];
@@ -353,7 +365,7 @@ export function ReportsPage() {
                 max={completion.finished}
                 label={
                   <>
-                    <span>Evidencija prisustva završena</span>
+                    <span>Završena evidencija prisustva</span>
                     <span>{completionPct}%</span>
                   </>
                 }
