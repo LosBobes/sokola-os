@@ -19,8 +19,18 @@ class CreateEventRequest(BaseModel):
     category: EventCategory = EventCategory.INTERNAL
     starts_at: dt.datetime
     ends_at: dt.datetime | None = None
+    location_id: str | None = None
+    location_note: str | None = Field(default=None, max_length=400)
+    responsible_person_id: str | None = None
+    description: str | None = Field(default=None, max_length=4000)
     capacity_mode: EventCapacityMode = EventCapacityMode.UNLIMITED
     capacity: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def _time_order(self) -> CreateEventRequest:
+        if self.ends_at is not None and self.ends_at < self.starts_at:
+            raise ValueError("ends_at must not be before starts_at")
+        return self
 
 
 class UpdateEventRequest(BaseModel):
@@ -31,7 +41,13 @@ class UpdateEventRequest(BaseModel):
     started)."""
 
     title: str | None = Field(default=None, min_length=1, max_length=200)
+    type: EventType | None = None
     starts_at: dt.datetime | None = None
+    ends_at: dt.datetime | None = None
+    location_id: str | None = None
+    location_note: str | None = Field(default=None, max_length=400)
+    responsible_person_id: str | None = None
+    description: str | None = Field(default=None, max_length=4000)
     capacity_mode: EventCapacityMode | None = None
     capacity: int | None = Field(default=None, ge=1)
 
@@ -51,6 +67,11 @@ class EventResponse(BaseModel):
     category: EventCategory
     status: EventStatus
     starts_at: dt.datetime
+    ends_at: dt.datetime | None
+    location_id: str | None
+    location_note: str | None
+    responsible_person_id: str | None
+    description: str | None
     capacity_mode: EventCapacityMode
     capacity: int | None
 

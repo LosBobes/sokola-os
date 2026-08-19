@@ -9,8 +9,11 @@ from app.common.enums import RecordStatus
 from app.domains.groups.models import Group
 from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
 from app.domains.identity.models import RoleAssignment
+from app.domains.organization.enums import MembershipStatus, OrgMemberType
+from app.domains.organization.models import OrganizationMembership
 from app.domains.scheduling.enums import SessionStatus
 from app.domains.scheduling.models import Session, SessionSeries
+from app.domains.structure.models import Location
 
 
 def get_org_group(db: DbSession, organization_id: str, group_id: str) -> Group | None:
@@ -23,13 +26,38 @@ def get_org_group(db: DbSession, organization_id: str, group_id: str) -> Group |
 
 
 def is_org_trainer(db: DbSession, organization_id: str, person_id: str) -> bool:
-    """A trainer is a person holding an ACTIVE TRAINER role in this organization.
-    Used to keep series/trainer assignment tenant-scoped."""
-    stmt = select(RoleAssignment.id).where(
+    """Whether this person may be put in front of a group in this organization.
+
+    Two independent grounds, because holding an account and being staff are
+    separate facts: an ACTIVE TRAINER *role assignment* (someone who signs in as
+    a trainer), or an ACTIVE organization membership typed ``STAFF`` (a coach
+    the school records but who has no login, which the people domain explicitly
+    allows). Either way the check stays tenant-scoped.
+    """
+    role_stmt = select(RoleAssignment.id).where(
         RoleAssignment.person_id == person_id,
         RoleAssignment.organization_id == organization_id,
         RoleAssignment.role_code == RoleCode.TRAINER,
         RoleAssignment.status == RoleAssignmentStatus.ACTIVE,
+    )
+    if db.execute(role_stmt).first() is not None:
+        return True
+    staff_stmt = select(OrganizationMembership.id).where(
+        OrganizationMembership.person_id == person_id,
+        OrganizationMembership.organization_id == organization_id,
+        OrganizationMembership.member_type == OrgMemberType.STAFF,
+        OrganizationMembership.status == MembershipStatus.ACTIVE,
+        OrganizationMembership.record_status == RecordStatus.ACTIVE,
+    )
+    return db.execute(staff_stmt).first() is not None
+
+
+def is_org_location(db: DbSession, organization_id: str, location_id: str) -> bool:
+    """Whether an active location with this id belongs to the caller's school."""
+    stmt = select(Location.id).where(
+        Location.id == location_id,
+        Location.organization_id == organization_id,
+        Location.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).first() is not None
 

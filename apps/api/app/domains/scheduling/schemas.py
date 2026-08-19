@@ -17,10 +17,18 @@ _MAX_SCHEDULING_FUTURE = dt.timedelta(days=1825)
 
 
 class SessionDraft(BaseModel):
-    """The proposed shape of a session, used for both conflict preview and create."""
+    """The proposed shape of a session, used for both conflict preview and create.
+
+    ``trainer_person_id`` and ``location_id`` are optional *overrides*: omit them
+    and the group's own defaults are copied onto the session (see
+    :func:`app.domains.scheduling.service.create_session`). Send an explicit
+    ``null`` to create the session deliberately unassigned.
+    """
 
     group_id: str
     title: str | None = Field(default=None, max_length=160)
+    trainer_person_id: str | None = None
+    location_id: str | None = None
     starts_at: dt.datetime
     ends_at: dt.datetime
 
@@ -45,6 +53,7 @@ class SessionSummary(BaseModel):
     group_id: str
     series_id: str | None = None
     trainer_person_id: str | None = None
+    location_id: str | None = None
     title: str | None
     starts_at: dt.datetime
     ends_at: dt.datetime
@@ -66,6 +75,7 @@ class SessionSeriesCreate(BaseModel):
 
     group_id: str
     trainer_person_id: str | None = None
+    location_id: str | None = None
     title: str = Field(max_length=160)
     frequency: SessionSeriesFrequency = SessionSeriesFrequency.WEEKLY
     weekdays: list[int] = Field(min_length=1)
@@ -89,6 +99,7 @@ class SessionSeriesSummary(BaseModel):
     id: str
     group_id: str
     trainer_person_id: str | None
+    location_id: str | None
     title: str
     frequency: SessionSeriesFrequency
     weekdays: list[int]
@@ -128,6 +139,7 @@ class SessionEdit(BaseModel):
     reason: SessionChangeReasonCode = SessionChangeReasonCode.OTHER
     title: str | None = Field(default=None, max_length=160)
     trainer_person_id: str | None = None
+    location_id: str | None = None
     local_time: dt.time | None = None
     duration_minutes: int | None = Field(default=None, gt=0, le=24 * 60)
 
@@ -136,6 +148,7 @@ class SessionEdit(BaseModel):
         if (
             self.title is None
             and self.trainer_person_id is None
+            and self.location_id is None
             and self.local_time is None
             and self.duration_minutes is None
         ):

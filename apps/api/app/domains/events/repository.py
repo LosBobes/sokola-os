@@ -9,8 +9,10 @@ from app.common.enums import RecordStatus
 from app.domains.events.enums import EventStatus, RegistrationStatus
 from app.domains.events.models import Event, EventRegistration
 from app.domains.identity.models import Person
+from app.domains.organization.models import OrganizationMembership
 from app.domains.people.enums import GuardianAccessStatus
 from app.domains.people.models import GuardianOrganizationAccess
+from app.domains.structure.models import Location
 
 
 def get_event(
@@ -37,6 +39,52 @@ def list_published(db: Session, organization_id: str) -> list[Event]:
         .order_by(Event.starts_at)
     )
     return list(db.execute(stmt).scalars().all())
+
+
+def list_in_range(
+    db: Session, organization_id: str, start: dt.datetime, end: dt.datetime
+) -> list[Event]:
+    """Every non-archived event starting in ``[start, end)``, whatever its status.
+
+    This is the staff calendar feed, so drafts and cancelled events are included
+    on purpose , a planner needs to see the camp they have not published yet,
+    and the one they called off. The parent-facing :func:`list_published` stays
+    published-only.
+    """
+    stmt = (
+        select(Event)
+        .where(
+            Event.organization_id == organization_id,
+            Event.record_status == RecordStatus.ACTIVE,
+            Event.starts_at >= start,
+            Event.starts_at < end,
+        )
+        .order_by(Event.starts_at)
+    )
+    return list(db.execute(stmt).scalars().all())
+
+
+def is_org_location(db: Session, organization_id: str, location_id: str) -> bool:
+    stmt = select(Location.id).where(
+        Location.id == location_id,
+        Location.organization_id == organization_id,
+        Location.record_status == RecordStatus.ACTIVE,
+    )
+    return db.execute(stmt).first() is not None
+
+
+def is_org_person(db: Session, organization_id: str, person_id: str) -> bool:
+    stmt = (
+        select(OrganizationMembership.id)
+        .join(Person, Person.id == OrganizationMembership.person_id)
+        .where(
+            OrganizationMembership.person_id == person_id,
+            OrganizationMembership.organization_id == organization_id,
+            OrganizationMembership.record_status == RecordStatus.ACTIVE,
+            Person.record_status == RecordStatus.ACTIVE,
+        )
+    )
+    return db.execute(stmt).first() is not None
 
 
 def guardian_children(

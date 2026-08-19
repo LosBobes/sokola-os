@@ -13,6 +13,7 @@ from app.domains.groups.schemas import (
     GroupMemberResponse,
     GroupMembershipTransitionRequest,
     GroupResponse,
+    SetGroupMemberRoleRequest,
     SetMembershipDiscountRequest,
     UpdateGroupRequest,
 )
@@ -64,7 +65,7 @@ def update_group(
 def add_group_member(
     group_id: str, body: AddGroupMemberRequest, db: DbDep, context: StaffContext
 ) -> GroupMemberResponse:
-    return service.add_member(db, context, group_id, body.person_id)
+    return service.add_member(db, context, group_id, body.person_id, body.role)
 
 
 @router.get(
@@ -76,6 +77,22 @@ def list_group_members(
     group_id: str, db: DbDep, context: ContextDep
 ) -> list[GroupMemberResponse]:
     return service.list_members(db, context, group_id)
+
+
+@router.patch(
+    "/groups/{group_id}/members/{membership_id}/role",
+    response_model=GroupMemberResponse,
+    operation_id="setGroupMemberRole",
+    responses={409: {"description": "Membership ended, or the group is full."}},
+)
+def set_group_member_role(
+    group_id: str,
+    membership_id: str,
+    body: SetGroupMemberRoleRequest,
+    db: DbDep,
+    context: StaffContext,
+) -> GroupMemberResponse:
+    return service.set_member_role(db, context, group_id, membership_id, body)
 
 
 @router.post(

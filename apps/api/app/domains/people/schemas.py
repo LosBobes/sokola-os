@@ -5,13 +5,17 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.domains.identity.enums import PersonIdentityStatus, PersonMergeStatus
-from app.domains.organization.enums import MembershipStatus
+from app.domains.organization.enums import MembershipStatus, OrgMemberType
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
 
 
 class CreatePersonRequest(BaseModel):
     given_name: str = Field(min_length=1, max_length=120)
     family_name: str = Field(min_length=1, max_length=120)
+    # What this person is to the school. Defaults to ATTENDEE (polaznik) because
+    # that is who a school adds most often; staff, guardians and plain contacts
+    # are recorded with their own type so they are never counted as members.
+    member_type: OrgMemberType = OrgMemberType.ATTENDEE
     # Safety branch: creating a likely duplicate must be a deliberate, reasoned act.
     allow_possible_duplicate: bool = False
     duplicate_reason: str | None = Field(default=None, max_length=500)
@@ -29,6 +33,7 @@ class PersonSummary(BaseModel):
     id: str
     display_name: str
     identity_status: PersonIdentityStatus
+    member_type: OrgMemberType
 
 
 class PersonResponse(BaseModel):
@@ -57,6 +62,7 @@ class MembershipResponse(BaseModel):
     id: str
     person_id: str
     status: MembershipStatus
+    member_type: OrgMemberType
     local_member_code: str | None
     admin_note: str | None
 
@@ -69,10 +75,15 @@ class MembershipTransitionRequest(BaseModel):
 
 class UpdateMemberDataRequest(BaseModel):
     """School-local member data. Only fields present in the request body are
-    changed; omit a field to leave it untouched, send ``null`` to clear it."""
+    changed; omit a field to leave it untouched, send ``null`` to clear it.
+
+    ``member_type`` is not school-local trivia , moving someone in or out of
+    ATTENDEE changes the school's active-member figure , so it is settable here
+    but never nullable."""
 
     local_member_code: str | None = Field(default=None, max_length=60)
     admin_note: str | None = Field(default=None, max_length=2000)
+    member_type: OrgMemberType | None = None
 
 
 # ---------------------------------------------------------------------------

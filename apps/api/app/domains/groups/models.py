@@ -10,6 +10,7 @@ from app.common.columns import enum_type
 from app.common.ids import new_id
 from app.domains.groups.enums import (
     GroupCapacityMode,
+    GroupMemberRole,
     GroupMembershipEndReason,
     GroupMembershipStatus,
 )
@@ -50,6 +51,17 @@ class Group(Base, TimestampMixin, RecordStatusMixin):
         ForeignKey("structure_location.id", ondelete="SET NULL"), nullable=True
     )
     base_monthly_price_minor: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Defaults a new session for this group inherits (PRD note "grupa kao osnova").
+    # They are a starting value copied onto the session at create time, never a
+    # live link: changing a group's default trainer must not silently rewrite
+    # who led last Tuesday's training. Whoever creates the session may override
+    # both for that occurrence alone.
+    default_trainer_person_id: Mapped[str | None] = mapped_column(
+        ForeignKey("person.id", ondelete="SET NULL"), nullable=True
+    )
+    default_location_id: Mapped[str | None] = mapped_column(
+        ForeignKey("structure_location.id", ondelete="SET NULL"), nullable=True
+    )
 
 
 class GroupMembership(Base, TimestampMixin):
@@ -87,6 +99,11 @@ class GroupMembership(Base, TimestampMixin):
     )
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False
+    )
+    # Participant vs. staff. See :class:`GroupMemberRole`: only MEMBER rows are
+    # rostered for attendance and billed.
+    role: Mapped[GroupMemberRole] = mapped_column(
+        enum_type(GroupMemberRole), nullable=False, default=GroupMemberRole.MEMBER
     )
     joined_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[GroupMembershipStatus] = mapped_column(

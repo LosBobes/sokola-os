@@ -10,6 +10,7 @@ from app.domains.organization.enums import (
     MembershipStatus,
     OrganizationLifecycleStatus,
     OrganizationType,
+    OrgMemberType,
 )
 
 
@@ -37,6 +38,13 @@ class Organization(Base, TimestampMixin, RecordStatusMixin):
         nullable=False,
         default=OrganizationLifecycleStatus.ACTIVE,
     )
+    # Payee details printed on a payment slip (uplatnica) and encoded in its
+    # NBS IPS QR. All nullable: a school can run without them, it simply cannot
+    # produce a slip until they are filled in (the slip endpoint says so
+    # explicitly rather than emitting a half-valid QR).
+    bank_account_number: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    address: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
 
 class OrganizationMembership(Base, TimestampMixin, RecordStatusMixin):
@@ -66,6 +74,10 @@ class OrganizationMembership(Base, TimestampMixin, RecordStatusMixin):
     )
     status: Mapped[MembershipStatus] = mapped_column(
         enum_type(MembershipStatus), nullable=False, default=MembershipStatus.ACTIVE
+    )
+    # Participant / staff / guardian / contact. See :class:`OrgMemberType`.
+    member_type: Mapped[OrgMemberType] = mapped_column(
+        enum_type(OrgMemberType), nullable=False, default=OrgMemberType.ATTENDEE
     )
     # School-local ("na ruke") member data. Lives on the org-scoped membership, so
     # it is never shared across tenants and never touches the global Person.

@@ -34,6 +34,11 @@ class SessionSeries(Base, TimestampMixin, RecordStatusMixin):
     trainer_person_id: Mapped[str | None] = mapped_column(
         ForeignKey("person.id", ondelete="SET NULL"), nullable=True
     )
+    # Where the series meets. Nullable so a rule can exist before a place is
+    # picked, SET NULL so archiving a location never destroys schedule history.
+    location_id: Mapped[str | None] = mapped_column(
+        ForeignKey("structure_location.id", ondelete="SET NULL"), nullable=True
+    )
     title: Mapped[str] = mapped_column(String(160), nullable=False)
     frequency: Mapped[SessionSeriesFrequency] = mapped_column(
         enum_type(SessionSeriesFrequency), nullable=False
@@ -67,6 +72,12 @@ class Session(Base, TimestampMixin, RecordStatusMixin):
     )
     trainer_person_id: Mapped[str | None] = mapped_column(
         ForeignKey("person.id", ondelete="SET NULL"), nullable=True
+    )
+    # Per-occurrence place. Seeded from the group's default (or the series) at
+    # create time and overridable for this one occurrence, which is what makes
+    # "premesti samo ovaj termin" possible without touching the series.
+    location_id: Mapped[str | None] = mapped_column(
+        ForeignKey("structure_location.id", ondelete="SET NULL"), nullable=True
     )
     title: Mapped[str | None] = mapped_column(String(160), nullable=True)
     starts_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, RecordStatusMixin, TimestampMixin
@@ -20,7 +20,14 @@ from app.domains.events.enums import (
 
 class Event(Base, TimestampMixin, RecordStatusMixin):
     """A light event: a thing children can be registered for. (The full Events ERP
-    (venues, ticketing, POS) is explicitly out of P0 scope.)"""
+    (venues, ticketing, POS) is explicitly out of P0 scope.)
+
+    Events share the Raspored calendar with training sessions, so they carry the
+    same handful of facts a session does , when, where, who is responsible , plus
+    a free-text description. ``location_id`` is the one structured place;
+    ``location_note`` carries the detail a single row cannot ("Zlatibor , hotel
+    'X', teren 'Y'"), because a multi-venue camp is one event, not several.
+    """
 
     __tablename__ = "event"
 
@@ -44,6 +51,15 @@ class Event(Base, TimestampMixin, RecordStatusMixin):
     capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
     starts_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ends_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # SET NULL: archiving a location must never delete the event's history.
+    location_id: Mapped[str | None] = mapped_column(
+        ForeignKey("structure_location.id", ondelete="SET NULL"), nullable=True
+    )
+    location_note: Mapped[str | None] = mapped_column(String(400), nullable=True)
+    responsible_person_id: Mapped[str | None] = mapped_column(
+        ForeignKey("person.id", ondelete="SET NULL"), nullable=True
+    )
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class EventRegistration(Base, TimestampMixin):

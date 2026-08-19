@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime as dt
+
 from sqlalchemy.orm import Session
 
 from app.common.enums import AuditDataClass
@@ -24,7 +26,24 @@ from app.platform.outbox.service import enqueue
 from app.security.context import RequestContext
 
 
+def _require_location(db: Session, context: RequestContext, location_id: str | None) -> None:
+    if location_id is None:
+        return
+    if not repository.is_org_location(db, context.organization_id, location_id):
+        # Same error for foreign/nonexistent, never leak cross-tenant existence.
+        raise NotFoundError("Lokacija nije pronađena.")
+
+
+def _require_person(db: Session, context: RequestContext, person_id: str | None) -> None:
+    if person_id is None:
+        return
+    if not repository.is_org_person(db, context.organization_id, person_id):
+        raise NotFoundError("Osoba nije pronađena u ovoj školi.")
+
+
 def create_event(db: Session, context: RequestContext, req: CreateEventRequest) -> EventResponse:
+    _require_location(db, context, req.location_id)
+    _require_person(db, context, req.responsible_person_id)
     event = Event(
         organization_id=context.organization_id,
         title=req.title,
@@ -32,6 +51,10 @@ def create_event(db: Session, context: RequestContext, req: CreateEventRequest) 
         category=req.category,
         starts_at=req.starts_at,
         ends_at=req.ends_at,
+        location_id=req.location_id,
+        location_note=req.location_note,
+        responsible_person_id=req.responsible_person_id,
+        description=req.description,
         capacity_mode=req.capacity_mode,
         capacity=req.capacity,
     )
@@ -44,6 +67,21 @@ def list_events(db: Session, context: RequestContext) -> list[EventResponse]:
     return [
         EventResponse.model_validate(e)
         for e in repository.list_published(db, context.organization_id)
+    ]
+
+
+def list_calendar(
+    db: Session, context: RequestContext, start: dt.datetime, end: dt.datetime
+) -> list[EventResponse]:
+    """The staff calendar feed for Raspored: events in a window, any status.
+
+    Deliberately mirrors ``scheduling.list_schedule``'s shape so one screen can
+    merge training sessions and events into a single calendar without either
+    side special-casing the other.
+    """
+    return [
+        EventResponse.model_validate(e)
+        for e in repository.list_in_range(db, context.organization_id, start, end)
     ]
 
 
@@ -79,6 +117,26 @@ def update_event(
         if req.starts_at <= repository.now():
             raise ConflictError("Novi termin događaja mora biti u budućnosti.")
         event.starts_at = req.starts_at
+        # Moving the start past a previously-set end would leave the event
+        # ending before it begins; drop the stale end rather than store that.
+        if event.ends_at is not None and event.ends_at < event.starts_at:
+            event.ends_at = None
+    if "ends_at" in fields:
+        if req.ends_at is not None and req.ends_at < event.starts_at:
+            raise BadRequestError("Kraj događaja ne može biti pre početka.")
+        event.ends_at = req.ends_at
+    if "type" in fields and req.type is not None:
+        event.type = req.type
+    if "location_id" in fields:
+        _require_location(db, context, req.location_id)
+        event.location_id = req.location_id
+    if "location_note" in fields:
+        event.location_note = req.location_note
+    if "responsible_person_id" in fields:
+        _require_person(db, context, req.responsible_person_id)
+        event.responsible_person_id = req.responsible_person_id
+    if "description" in fields:
+        event.description = req.description
     if "capacity_mode" in fields:
         if req.capacity_mode is None:
             raise BadRequestError("Režim kapaciteta je obavezan.")

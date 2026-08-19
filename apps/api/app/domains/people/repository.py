@@ -7,7 +7,7 @@ from app.common.enums import RecordStatus
 from app.common.pagination import PageParams
 from app.domains.identity.enums import PersonMergeStatus, RoleAssignmentStatus, RoleCode
 from app.domains.identity.models import Person, PersonMergeRecord, RoleAssignment
-from app.domains.organization.enums import MembershipStatus
+from app.domains.organization.enums import MembershipStatus, OrgMemberType
 from app.domains.organization.models import OrganizationMembership
 from app.domains.people.models import GuardianOrganizationAccess, GuardianRelationship
 
@@ -33,10 +33,20 @@ def find_duplicate_candidates(
 
 
 def list_org_people(
-    db: Session, organization_id: str, params: PageParams
-) -> tuple[list[Person], int]:
+    db: Session,
+    organization_id: str,
+    params: PageParams,
+    *,
+    member_type: OrgMemberType | None = None,
+) -> tuple[list[tuple[Person, OrgMemberType]], int]:
+    """People visible in this organization, each paired with what they are to it.
+
+    ``member_type`` narrows the page to one kind (e.g. ``STAFF`` to populate a
+    trainer picker). ``total`` is the count *after* that filter, so a filtered
+    page never reports the whole roster's size.
+    """
     base = (
-        select(Person)
+        select(Person, OrganizationMembership.member_type)
         .join(OrganizationMembership, OrganizationMembership.person_id == Person.id)
         .where(
             OrganizationMembership.organization_id == organization_id,
@@ -45,17 +55,15 @@ def list_org_people(
             Person.record_status == RecordStatus.ACTIVE,
         )
     )
+    if member_type is not None:
+        base = base.where(OrganizationMembership.member_type == member_type)
     total = db.execute(
         select(func.count()).select_from(base.order_by(None).subquery())
     ).scalar_one()
-    rows = (
-        db.execute(
-            base.order_by(Person.display_name).limit(params.limit).offset(params.offset)
-        )
-        .scalars()
-        .all()
-    )
-    return list(rows), total
+    rows = db.execute(
+        base.order_by(Person.display_name).limit(params.limit).offset(params.offset)
+    ).all()
+    return [(row[0], row[1]) for row in rows], total
 
 
 def get_org_person(db: Session, organization_id: str, person_id: str) -> Person | None:
