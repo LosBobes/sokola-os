@@ -72,3 +72,31 @@ export const ORG_MEMBER_TYPE_HINT: Record<OrgMemberType, string> = {
   GUARDIAN: "Prati svoje dete. Ne plaća članarinu za sebe i ne broji se kao član.",
   CONTACT: "Samo kontakt podatak, bez učešća u aktivnostima.",
 };
+
+
+/*
+ * IANA timezone id → the city's name in Serbian.
+ *
+ * "Europe/Belgrade" is an identifier, not a thing to show a person: it is
+ * English, it carries a slash, and the region half is noise. Only the zones a
+ * school here would realistically pick are listed; anything else falls back to
+ * the id's last segment with its underscores removed, which is still better
+ * than printing the whole identifier.
+ */
+const TIMEZONE_CITY: Record<string, string> = {
+  "Europe/Belgrade": "Beograd",
+  "Europe/Zagreb": "Zagreb",
+  "Europe/Sarajevo": "Sarajevo",
+  "Europe/Podgorica": "Podgorica",
+  "Europe/Skopje": "Skoplje",
+  "Europe/Ljubljana": "Ljubljana",
+  "Europe/Vienna": "Beč",
+  "Europe/Budapest": "Budimpešta",
+  "Europe/Berlin": "Berlin",
+  "Europe/Zurich": "Cirih",
+};
+
+export function timezoneCity(timezone: string | null | undefined): string {
+  if (!timezone) return "";
+  return TIMEZONE_CITY[timezone] ?? (timezone.split("/").pop() ?? "").replace(/_/g, " ");
+}

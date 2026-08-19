@@ -38,7 +38,7 @@ import {
   formatWeekdayDate,
   formatWeekdayShort,
 } from "../../lib/format";
-import { EVENT_TYPE_LABEL, LOCATION_KIND_LABEL } from "../../lib/labels";
+import { EVENT_TYPE_LABEL, LOCATION_KIND_LABEL, timezoneCity } from "../../lib/labels";
 import "./Schedule.css";
 
 /* ===================================================================== */
@@ -362,8 +362,8 @@ export function SchedulePage() {
   }
 
   const orgName = org.data?.name ?? activeContext?.organization_name ?? "";
-  // The IANA zone id is an implementation detail; a person reads a city.
-  const timezoneCity = (org.data?.timezone ?? "").split("/").pop()?.replace(/_/g, " ") ?? "";
+  // The IANA zone id is an implementation detail; a person reads a city name.
+  const city = timezoneCity(org.data?.timezone);
 
   const loading = sessions.loading || events.loading;
 
@@ -386,7 +386,7 @@ export function SchedulePage() {
       {orgName ? (
         <p className="schedule-subtitle">
           {orgName}
-          {timezoneCity ? ` · Vremenska zona: ${timezoneCity}` : ""}
+          {city ? ` · Vremenska zona: ${city}` : ""}
         </p>
       ) : null}
 
@@ -656,9 +656,24 @@ function ScheduleGrid({
   }, [days, activities]);
 
   function blockStyle(a: Activity): React.CSSProperties {
-    const top = (((a.start.getHours() - startHour) * 60 + a.start.getMinutes()) / 60) * HOUR_PX;
+    const top = Math.max(
+      0,
+      (((a.start.getHours() - startHour) * 60 + a.start.getMinutes()) / 60) * HOUR_PX,
+    );
     const rawHeight = ((a.end.getTime() - a.start.getTime()) / 60000 / 60) * HOUR_PX;
-    return { top: `${Math.max(0, top)}px`, height: `${Math.max(28, rawHeight)}px` };
+    /*
+     * Clamped to the bottom of the day column. A training slot never reaches
+     * it, but an event can run for a week, and its untrimmed height (24h ×
+     * 7 × the hour height) would be a block several thousand pixels tall
+     * spilling out of the grid and over everything under it. The block only
+     * ever represents this day's share of the activity; the full span is on
+     * the block's own label and in its detail.
+     */
+    const available = totalHeight - top;
+    return {
+      top: `${top}px`,
+      height: `${Math.max(28, Math.min(rawHeight, available))}px`,
+    };
   }
 
   return (
