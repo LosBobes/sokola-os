@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import datetime as dt
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.common.http import IdempotencyKey
 from app.domains.events import service
@@ -19,11 +20,19 @@ from app.security.permissions import PermissionArea, require_permission
 router = APIRouter(tags=["events"])
 
 _staff = require_permission(PermissionArea.EVENTS)
+# The merged Raspored calendar is the timetable surface, so its feed is gated on
+# the two areas the timetable is worked from: SCHEDULING (managing staff) or
+# ATTENDANCE (trainers, whose only area this is). A trainer therefore sees the
+# school's events on their calendar without gaining event *management* rights,
+# while PARENT holds neither area and keeps seeing published events only, via
+# the separate parent-facing list.
+_calendar = require_permission(PermissionArea.SCHEDULING, PermissionArea.ATTENDANCE)
 # Parent-facing routes are the parent surface, not staff event management:
 # guard on PARENTS so staff cannot reach them and PARENT cannot reach _staff.
 _parent = require_permission(PermissionArea.PARENTS)
 StaffContext = Annotated[ContextDep, Depends(_staff)]
 ParentContext = Annotated[ContextDep, Depends(_parent)]
+CalendarContext = Annotated[ContextDep, Depends(_calendar)]
 
 
 @router.post(
@@ -39,6 +48,20 @@ def create_event(body: CreateEventRequest, db: DbDep, context: StaffContext) -> 
 @router.get("/events", response_model=list[EventResponse], operation_id="listEvents")
 def list_events(db: DbDep, context: ContextDep) -> list[EventResponse]:
     return service.list_events(db, context)
+
+
+@router.get(
+    "/events/calendar",
+    response_model=list[EventResponse],
+    operation_id="listEventCalendar",
+)
+def list_event_calendar(
+    db: DbDep,
+    context: CalendarContext,
+    date_from: Annotated[dt.datetime, Query()],
+    date_to: Annotated[dt.datetime, Query()],
+) -> list[EventResponse]:
+    return service.list_calendar(db, context, date_from, date_to)
 
 
 @router.patch(

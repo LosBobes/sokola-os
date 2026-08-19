@@ -33,7 +33,7 @@ from app.domains.identity.schemas import (
     MeResponse,
     RevokeInvitationRequest,
 )
-from app.domains.organization.enums import MembershipStatus
+from app.domains.organization.enums import MembershipStatus, OrgMemberType
 from app.domains.organization.models import Organization, OrganizationMembership
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
 from app.domains.people.models import GuardianOrganizationAccess, GuardianRelationship
@@ -244,10 +244,35 @@ def reissue_invitation(
     )
 
 
-def _open_membership(db: Session, organization_id: str, person_id: str) -> None:
+_INVITED_MEMBER_TYPE: dict[RoleCode, OrgMemberType] = {
+    RoleCode.OWNER: OrgMemberType.STAFF,
+    RoleCode.MANAGER: OrgMemberType.STAFF,
+    RoleCode.ADMIN: OrgMemberType.STAFF,
+    RoleCode.TRAINER: OrgMemberType.STAFF,
+    RoleCode.PARENT: OrgMemberType.GUARDIAN,
+    RoleCode.STUDENT: OrgMemberType.ATTENDEE,
+}
+
+
+def _open_membership(
+    db: Session, organization_id: str, person_id: str, role_code: RoleCode
+) -> None:
+    """Open (or re-open) the invitee's membership, typed by the role they accepted.
+
+    A brand-new membership is typed from the invitation, so accepting a trainer
+    invite never books the coach in as a polaznik. An *existing* membership keeps
+    its type: the school already said what this person is, and a role grant is
+    not the place to silently overrule that.
+    """
     membership = repository.get_membership(db, organization_id, person_id)
     if membership is None:
-        db.add(OrganizationMembership(organization_id=organization_id, person_id=person_id))
+        db.add(
+            OrganizationMembership(
+                organization_id=organization_id,
+                person_id=person_id,
+                member_type=_INVITED_MEMBER_TYPE.get(role_code, OrgMemberType.ATTENDEE),
+            )
+        )
         return
     if membership.status is MembershipStatus.ENDED:
         # A deliberate staff invitation re-opens access even though the generic
@@ -354,7 +379,7 @@ def accept_invitation(
     if person is None:
         raise UnauthorizedError("Nepoznata osoba.")
 
-    _open_membership(db, invitation.organization_id, person.id)
+    _open_membership(db, invitation.organization_id, person.id, invitation.role_code)
     assignment = _grant_role(
         db,
         organization_id=invitation.organization_id,

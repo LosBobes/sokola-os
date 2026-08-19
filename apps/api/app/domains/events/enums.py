@@ -4,8 +4,12 @@ import enum
 
 
 class EventType(enum.StrEnum):
+    """The event's category as a school would name it (kamp, pripreme, takmičenje...)."""
+
     TRAINING_CAMP = "TRAINING_CAMP"
+    PREPARATION = "PREPARATION"
     COMPETITION = "COMPETITION"
+    PERFORMANCE = "PERFORMANCE"
     WORKSHOP = "WORKSHOP"
     SOCIAL = "SOCIAL"
     OTHER = "OTHER"

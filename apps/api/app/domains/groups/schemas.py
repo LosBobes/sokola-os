@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.domains.groups.enums import (
     GroupCapacityMode,
+    GroupMemberRole,
     GroupMembershipEndReason,
     GroupMembershipStatus,
 )
@@ -18,6 +19,8 @@ class CreateGroupRequest(BaseModel):
     program_id: str | None = None
     location_id: str | None = None
     base_monthly_price_minor: int | None = Field(default=None, ge=0)
+    default_trainer_person_id: str | None = None
+    default_location_id: str | None = None
 
     @model_validator(mode="after")
     def _capacity_consistency(self) -> CreateGroupRequest:
@@ -30,12 +33,18 @@ class CreateGroupRequest(BaseModel):
 
 class UpdateGroupRequest(BaseModel):
     """Partial update. Only fields present in the request body are changed , 
-    send ``null`` for ``program_id``/``location_id``/``base_monthly_price_minor``
-    to clear that link/price, omit a field entirely to leave it untouched."""
+    send ``null`` for any nullable field to clear that link/price/default, omit
+    a field entirely to leave it untouched.
+
+    Changing a default only affects sessions created *after* the change:
+    defaults are copied onto a session at create time, never read through.
+    """
 
     program_id: str | None = None
     location_id: str | None = None
     base_monthly_price_minor: int | None = Field(default=None, ge=0)
+    default_trainer_person_id: str | None = None
+    default_location_id: str | None = None
 
 
 class GroupResponse(BaseModel):
@@ -48,16 +57,27 @@ class GroupResponse(BaseModel):
     program_id: str | None
     location_id: str | None
     base_monthly_price_minor: int | None
+    default_trainer_person_id: str | None
+    default_location_id: str | None
 
 
 class AddGroupMemberRequest(BaseModel):
+    """Attach a person to a group. ``role`` says in what capacity , defaults to
+    ``MEMBER`` (polaznik), the only role that is rostered and billed."""
+
     person_id: str
+    role: GroupMemberRole = GroupMemberRole.MEMBER
+
+
+class SetGroupMemberRoleRequest(BaseModel):
+    role: GroupMemberRole
 
 
 class GroupMemberResponse(BaseModel):
     membership_id: str
     person_id: str
     display_name: str
+    role: GroupMemberRole
     status: GroupMembershipStatus
     discount_minor: int
     joined_at: dt.datetime

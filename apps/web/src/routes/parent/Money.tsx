@@ -12,7 +12,9 @@ import {
   StatusBadge,
   SystemState,
 } from "../../components/ui";
+import { PaymentSlipDialog } from "../../components/PaymentSlipDialog";
 import { useAsync } from "../../hooks/useAsync";
+import { formatDate, isPastDue } from "../../lib/format";
 import { formatMinor } from "../../lib/money";
 import "./money.css";
 
@@ -180,7 +182,16 @@ function BalanceHero({ state }: { state: ReturnType<typeof useAsync<Page<Charge>
   const remainingMinor = items
     .filter((c) => c.status !== "CANCELLED")
     .reduce((sum, c) => sum + (c.amount_due_minor - c.amount_paid_minor), 0);
-  const openCount = items.filter((c) => c.status === "OPEN" || c.status === "PARTIALLY_PAID").length;
+  const outstanding = items.filter(
+    (c) => c.status === "OPEN" || c.status === "PARTIALLY_PAID",
+  );
+  const openCount = outstanding.length;
+  // The earliest deadline still ahead of the family, across everything unpaid.
+  // Charges with no due date simply do not compete for the slot.
+  const nextDue = outstanding
+    .map((c) => c.due_date)
+    .filter((d): d is string => Boolean(d))
+    .sort()[0];
 
   return (
     <div className="money-hero" data-cy="money-hero">
@@ -200,10 +211,9 @@ function BalanceHero({ state }: { state: ReturnType<typeof useAsync<Page<Charge>
           </div>
           <div className="money-hero__stat">
             <span className="money-hero__stat-label">Sledeći rok</span>
-            {/* Charges have no due-date field in the API yet (see
-                ChargeResponse in schema.d.ts), degrade honestly instead of
-                fabricating a date. */}
-            <span className="money-hero__stat-value">Nije dostupno</span>
+            <span className="money-hero__stat-value" data-cy="money-hero-next-due">
+              {nextDue ? formatDate(nextDue) : "Nije određen"}
+            </span>
           </div>
         </div>
       )}
@@ -211,14 +221,34 @@ function BalanceHero({ state }: { state: ReturnType<typeof useAsync<Page<Charge>
   );
 }
 
-const STATUS_META: Record<ChargeStatus, { label: string; tone: "success" | "warning" | "neutral" }> = {
-  OPEN: { label: "Dospelo", tone: "warning" },
+type ChargeTone = "success" | "warning" | "error" | "neutral";
+
+const STATUS_META: Record<ChargeStatus, { label: string; tone: ChargeTone }> = {
+  OPEN: { label: "Neplaćeno", tone: "warning" },
   PARTIALLY_PAID: { label: "Delimično", tone: "warning" },
   PAID: { label: "Plaćeno", tone: "success" },
   CANCELLED: { label: "Otkazano", tone: "neutral" },
 };
 
+/*
+ * "Dospelo" is a claim about time, not about payment state: an unpaid charge
+ * whose deadline is next month has not fallen due. It is shown only when a due
+ * date exists and has passed , and the row prints that date right beside it.
+ */
+function chargeStatusView(charge: Charge): { label: string; tone: ChargeTone } {
+  const outstanding = charge.status === "OPEN" || charge.status === "PARTIALLY_PAID";
+  if (outstanding && isPastDue(charge.due_date)) return { label: "Dospelo", tone: "error" };
+  return STATUS_META[charge.status];
+}
+
 function ObligationsList({ state }: { state: ReturnType<typeof useAsync<Page<Charge>>> }) {
+  /*
+   * The uplatnica belongs on the parent surface most of all: they are the ones
+   * who scan the code. It only pre-fills their banking app , the school still
+   * confirms the payment by hand after checking its account.
+   */
+  const [slipFor, setSlipFor] = useState<Charge | null>(null);
+
   if (state.loading) return <LoadingState />;
   if (state.error) return <SystemState error={state.error} />;
 
@@ -232,8 +262,9 @@ function ObligationsList({ state }: { state: ReturnType<typeof useAsync<Page<Cha
   return (
     <div className="money-oblig-list" data-cy="obligation-list">
       {items.map((c) => {
-        const meta = STATUS_META[c.status];
+        const meta = chargeStatusView(c);
         const remaining = c.amount_due_minor - c.amount_paid_minor;
+        const settled = c.status === "PAID" || c.status === "CANCELLED";
         return (
           <section className="money-oblig-row" key={c.id} data-cy="obligation-row">
             <div className="money-oblig-row__top">
@@ -257,13 +288,27 @@ function ObligationsList({ state }: { state: ReturnType<typeof useAsync<Page<Cha
               </div>
               <div>
                 <span className="money-oblig-row__field-label">Rok</span>
-                {/* No due-date field on ChargeResponse yet, see BalanceHero comment. */}
-                <span className="money-oblig-row__field-value">-</span>
+                <span className="money-oblig-row__field-value">
+                  {c.due_date ? formatDate(c.due_date) : "-"}
+                </span>
               </div>
             </div>
+            {!settled ? (
+              <button
+                type="button"
+                className="btn btn--secondary money-oblig-row__slip"
+                onClick={() => setSlipFor(c)}
+                data-cy="obligation-slip"
+              >
+                Uplatnica sa QR kodom
+              </button>
+            ) : null}
           </section>
         );
       })}
+      {slipFor ? (
+        <PaymentSlipDialog chargeId={slipFor.id} onClose={() => setSlipFor(null)} />
+      ) : null}
     </div>
   );
 }

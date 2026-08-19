@@ -13,6 +13,30 @@ class OrganizationType(enum.StrEnum):
     OTHER = "OTHER"
 
 
+class OrgMemberType(enum.StrEnum):
+    """What a person *is* to the school, independent of whether they can sign in.
+
+    A school's headline "aktivni članovi" figure must count enrolled
+    participants and nobody else, so an owner, a coach, a parent and an
+    emergency contact all belong to the tenant without inflating it. That is
+    what this field separates; :class:`app.domains.identity.enums.RoleCode`
+    answers a different question (what may this account *do*), and many people
+    here have no account at all.
+
+    ``ATTENDEE`` is the default and the backfill value for pre-existing rows,
+    except for people who already hold a staff role assignment.
+    """
+
+    #: Polaznik / član , the only type counted as an active member.
+    ATTENDEE = "ATTENDEE"
+    #: Trener, nastavnik, asistent, administracija.
+    STAFF = "STAFF"
+    #: Roditelj / staratelj.
+    GUARDIAN = "GUARDIAN"
+    #: Kontakt osoba (no participation, no account).
+    CONTACT = "CONTACT"
+
+
 class MembershipStatus(enum.StrEnum):
     ACTIVE = "ACTIVE"
     # Temporarily inactive; membership may be resumed (§20/§21).

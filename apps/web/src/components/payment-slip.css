@@ -1,0 +1,71 @@
+/*
+ * Uplatnica dialog. Consumes only semantic role tokens, with one deliberate
+ * exception: the QR itself is painted pure black on pure white in
+ * PaymentSlipDialog.tsx. A themed QR is a QR that some scanners refuse , the
+ * contrast ratio is part of the format, not a style choice.
+ */
+.slip-dialog {
+  max-width: 560px;
+  width: 100%;
+}
+.slip-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-5);
+}
+
+.slip {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+  margin-top: var(--space-4);
+}
+.slip-qr {
+  width: 100%;
+  height: auto;
+  border: var(--ink-border) solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+}
+.slip-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  min-width: 0;
+}
+.slip-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.slip-row dt {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.slip-row dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+  /* Account and reference numbers are long and unbroken; let them wrap rather
+     than widen the dialog past the viewport. */
+  overflow-wrap: anywhere;
+}
+
+/* On a phone the QR goes above the fields rather than beside them. */
+@media (max-width: 560px) {
+  .slip {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+  .slip-qr {
+    max-width: 220px;
+  }
+  .slip-facts {
+    width: 100%;
+  }
+}

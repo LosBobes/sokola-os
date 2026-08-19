@@ -10,7 +10,7 @@ from app.common.errors import ConflictError, ForbiddenError, NotFoundError
 from app.common.slug import slugify
 from app.domains.identity.enums import RoleAssignmentStatus, RoleCode, RoleScopeType
 from app.domains.identity.models import RoleAssignment
-from app.domains.organization.enums import OrganizationLifecycleStatus
+from app.domains.organization.enums import OrganizationLifecycleStatus, OrgMemberType
 from app.domains.organization.models import Organization, OrganizationMembership
 from app.domains.organization.schemas import (
     CreateOrganizationRequest,
@@ -50,7 +50,16 @@ def create_organization(
     db.add(org)
     db.flush()
 
-    db.add(OrganizationMembership(organization_id=org.id, person_id=principal.person_id))
+    # The founder runs the school, they are not one of its polaznici, so the
+    # first membership is STAFF. Otherwise every brand-new school would open
+    # reporting "1 aktivan član" before a single child was enrolled.
+    db.add(
+        OrganizationMembership(
+            organization_id=org.id,
+            person_id=principal.person_id,
+            member_type=OrgMemberType.STAFF,
+        )
+    )
     db.add(
         RoleAssignment(
             person_id=principal.person_id,

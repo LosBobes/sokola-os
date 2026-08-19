@@ -23,7 +23,7 @@ from app.domains.billing.enums import ChargeStatus
 from app.domains.billing.models import Charge
 from app.domains.groups.enums import GroupMembershipStatus
 from app.domains.groups.models import Group, GroupMembership
-from app.domains.organization.enums import MembershipStatus
+from app.domains.organization.enums import MembershipStatus, OrgMemberType
 from app.domains.organization.models import OrganizationMembership
 from app.domains.payments.enums import PaymentRecordStatus
 from app.domains.payments.models import PaymentRecord
@@ -45,8 +45,17 @@ def get_org_group(db: Session, organization_id: str, group_id: str) -> Group | N
 
 
 def active_member_count(db: Session, organization_id: str) -> int:
+    """The school's headline member figure: active *participants* only.
+
+    Owners, trainers, guardians and plain contacts all hold an organization
+    membership too, so counting memberships flatters the number by everyone who
+    merely works at or is related to the school. Filtering on
+    :class:`OrgMemberType.ATTENDEE` counts polaznici and nobody else; archived
+    and ended people are already excluded by the status filters.
+    """
     stmt = select(func.count()).select_from(OrganizationMembership).where(
         OrganizationMembership.organization_id == organization_id,
+        OrganizationMembership.member_type == OrgMemberType.ATTENDEE,
         OrganizationMembership.status == MembershipStatus.ACTIVE,
         OrganizationMembership.record_status == RecordStatus.ACTIVE,
     )
@@ -54,9 +63,12 @@ def active_member_count(db: Session, organization_id: str) -> int:
 
 
 def active_membership_count_as_of(db: Session, organization_id: str, as_of: dt.datetime) -> int:
-    """Currently-active memberships that had already joined by ``as_of``."""
+    """Currently-active *participant* memberships that had already joined by
+    ``as_of``. Same ATTENDEE-only rule as :func:`active_member_count`, so the
+    trend curve and the headline figure can never disagree."""
     stmt = select(func.count()).select_from(OrganizationMembership).where(
         OrganizationMembership.organization_id == organization_id,
+        OrganizationMembership.member_type == OrgMemberType.ATTENDEE,
         OrganizationMembership.status == MembershipStatus.ACTIVE,
         OrganizationMembership.record_status == RecordStatus.ACTIVE,
         OrganizationMembership.created_at < as_of,

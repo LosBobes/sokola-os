@@ -57,6 +57,7 @@ def _location_response(row: Location) -> LocationResponse:
     return LocationResponse(
         id=row.id,
         name=row.name,
+        kind=row.kind,
         address=row.address,
         internal_code=row.internal_code,
         status=row.record_status,
@@ -236,6 +237,7 @@ def create_location(
     location = Location(
         organization_id=context.organization_id,
         name=req.name.strip(),
+        kind=req.kind,
         address=req.address.strip() if req.address is not None else None,
         internal_code=code,
     )
@@ -266,6 +268,8 @@ def update_location(
         raise NotFoundError("Ogranak nije pronađen.")
     if "name" in req.model_fields_set and req.name is not None:
         row.name = req.name.strip()
+    if "kind" in req.model_fields_set and req.kind is not None:
+        row.kind = req.kind
     if "address" in req.model_fields_set:
         row.address = req.address.strip() if req.address is not None else None
     if "internal_code" in req.model_fields_set:

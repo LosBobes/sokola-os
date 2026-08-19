@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.common.enums import RecordStatus
 from app.common.pagination import PageParams
-from app.domains.groups.enums import GroupMembershipStatus
+from app.domains.groups.enums import GroupMemberRole, GroupMembershipStatus
 from app.domains.groups.models import Group, GroupMembership
 from app.domains.identity.models import Person
 from app.domains.organization.models import OrganizationMembership
@@ -60,11 +60,15 @@ def get_member_person(db: Session, organization_id: str, person_id: str) -> Pers
 
 
 def count_active_members(db: Session, group_id: str) -> int:
+    """Participants currently holding a place in the group. Staff attached to the
+    same group (trainer/assistant rows) are not participants and never count
+    against its capacity."""
     return db.execute(
         select(func.count())
         .select_from(GroupMembership)
         .where(
             GroupMembership.group_id == group_id,
+            GroupMembership.role == GroupMemberRole.MEMBER,
             GroupMembership.status != GroupMembershipStatus.ENDED,
         )
     ).scalar_one()

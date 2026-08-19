@@ -28,10 +28,15 @@
         "type": "object"
       },
       "AddGroupMemberRequest": {
+        "description": "Attach a person to a group. ``role`` says in what capacity , defaults to\n``MEMBER`` (polaznik), the only role that is rostered and billed.",
         "properties": {
           "person_id": {
             "title": "Person Id",
             "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/GroupMemberRole",
+            "default": "MEMBER"
           }
         },
         "required": [
@@ -482,6 +487,18 @@
             "title": "Description",
             "type": "string"
           },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
           "group_id": {
             "title": "Group Id",
             "type": "string"
@@ -711,6 +728,18 @@
             "title": "Description",
             "type": "string"
           },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -725,6 +754,17 @@
               }
             ],
             "title": "Note"
+          },
+          "payment_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Reference"
           },
           "person_id": {
             "title": "Person Id",
@@ -992,6 +1032,18 @@
             "$ref": "#/components/schemas/EventCategory",
             "default": "INTERNAL"
           },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "ends_at": {
             "anyOf": [
               {
@@ -1003,6 +1055,40 @@
               }
             ],
             "title": "Ends At"
+          },
+          "location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
+          },
+          "location_note": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Note"
+          },
+          "responsible_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible Person Id"
           },
           "starts_at": {
             "format": "date-time",
@@ -1056,6 +1142,28 @@
           "capacity_mode": {
             "$ref": "#/components/schemas/GroupCapacityMode",
             "default": "UNLIMITED"
+          },
+          "default_location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Location Id"
+          },
+          "default_trainer_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Trainer Person Id"
           },
           "location_id": {
             "anyOf": [
@@ -1191,6 +1299,10 @@
             ],
             "title": "Internal Code"
           },
+          "kind": {
+            "$ref": "#/components/schemas/LocationKind",
+            "default": "OTHER"
+          },
           "name": {
             "maxLength": 160,
             "minLength": 1,
@@ -1285,6 +1397,10 @@
             "minLength": 1,
             "title": "Given Name",
             "type": "string"
+          },
+          "member_type": {
+            "$ref": "#/components/schemas/OrgMemberType",
+            "default": "ATTENDEE"
           }
         },
         "required": [
@@ -1818,9 +1934,65 @@
           "category": {
             "$ref": "#/components/schemas/EventCategory"
           },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
+          },
+          "location_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Note"
+          },
+          "responsible_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible Person Id"
           },
           "starts_at": {
             "format": "date-time",
@@ -1845,6 +2017,11 @@
           "category",
           "status",
           "starts_at",
+          "ends_at",
+          "location_id",
+          "location_note",
+          "responsible_person_id",
+          "description",
           "capacity_mode",
           "capacity"
         ],
@@ -1862,9 +2039,12 @@
         "type": "string"
       },
       "EventType": {
+        "description": "The event's category as a school would name it (kamp, pripreme, takmi\u010denje...).",
         "enum": [
           "TRAINING_CAMP",
+          "PREPARATION",
           "COMPETITION",
+          "PERFORMANCE",
           "WORKSHOP",
           "SOCIAL",
           "OTHER"
@@ -1974,6 +2154,9 @@
             "title": "Person Id",
             "type": "string"
           },
+          "role": {
+            "$ref": "#/components/schemas/GroupMemberRole"
+          },
           "status": {
             "$ref": "#/components/schemas/GroupMembershipStatus"
           }
@@ -1982,6 +2165,7 @@
           "membership_id",
           "person_id",
           "display_name",
+          "role",
           "status",
           "discount_minor",
           "joined_at",
@@ -1990,6 +2174,17 @@
         ],
         "title": "GroupMemberResponse",
         "type": "object"
+      },
+      "GroupMemberRole": {
+        "description": "Why a person is attached to a group.\n\nAttaching a trainer to a group is not the same act as enrolling a child in\nit, and conflating the two is what makes staff show up on attendance sheets\nand membership invoices. Only :attr:`MEMBER` is a *polaznik*: the attendance\nroster and every billing run filter to it, so staff are never charged a\nmembership fee nor counted as members.\n\n``MEMBER`` is the default, which is what every row created before this enum\nexisted is backfilled to (those rosters were participants by construction:\nthey were already being billed and marked present).",
+        "enum": [
+          "MEMBER",
+          "TRAINER",
+          "ASSISTANT",
+          "OTHER_STAFF"
+        ],
+        "title": "GroupMemberRole",
+        "type": "string"
       },
       "GroupMembershipEndReason": {
         "enum": [
@@ -2057,6 +2252,28 @@
           "capacity_mode": {
             "$ref": "#/components/schemas/GroupCapacityMode"
           },
+          "default_location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Location Id"
+          },
+          "default_trainer_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Trainer Person Id"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -2095,7 +2312,9 @@
           "capacity",
           "program_id",
           "location_id",
-          "base_monthly_price_minor"
+          "base_monthly_price_minor",
+          "default_trainer_person_id",
+          "default_location_id"
         ],
         "title": "GroupResponse",
         "type": "object"
@@ -2628,6 +2847,21 @@
         "title": "LivenessResponse",
         "type": "object"
       },
+      "LocationKind": {
+        "description": "What kind of place a :class:`app.domains.structure.models.Location` is.\n\nActivities do not only happen in a hall, so the model deliberately carries\nthe general concept *location* (lokacija) and lets this enum describe the\nspecific kind. Renaming the UI filter from \"sale\" to \"lokacije\" without\nthis would have left the data model unable to express a session held in a\nkindergarten, a theatre, outdoors or online.\n\n``OTHER`` is the fallback for anything not listed and the default for rows\ncreated before the column existed, so an unclassified location is never\nsilently mislabelled as a hall.",
+        "enum": [
+          "SPORTS_HALL",
+          "FIELD",
+          "KINDERGARTEN",
+          "SCHOOL",
+          "THEATRE",
+          "OUTDOOR",
+          "ONLINE",
+          "OTHER"
+        ],
+        "title": "LocationKind",
+        "type": "string"
+      },
       "LocationResponse": {
         "properties": {
           "address": {
@@ -2656,6 +2890,9 @@
             ],
             "title": "Internal Code"
           },
+          "kind": {
+            "$ref": "#/components/schemas/LocationKind"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -2667,6 +2904,7 @@
         "required": [
           "id",
           "name",
+          "kind",
           "address",
           "internal_code",
           "status"
@@ -2732,6 +2970,9 @@
             ],
             "title": "Local Member Code"
           },
+          "member_type": {
+            "$ref": "#/components/schemas/OrgMemberType"
+          },
           "person_id": {
             "title": "Person Id",
             "type": "string"
@@ -2744,6 +2985,7 @@
           "id",
           "person_id",
           "status",
+          "member_type",
           "local_member_code",
           "admin_note"
         ],
@@ -3109,6 +3351,17 @@
         ],
         "title": "OnboardingStepStatus",
         "type": "object"
+      },
+      "OrgMemberType": {
+        "description": "What a person *is* to the school, independent of whether they can sign in.\n\nA school's headline \"aktivni \u010dlanovi\" figure must count enrolled\nparticipants and nobody else, so an owner, a coach, a parent and an\nemergency contact all belong to the tenant without inflating it. That is\nwhat this field separates; :class:`app.domains.identity.enums.RoleCode`\nanswers a different question (what may this account *do*), and many people\nhere have no account at all.\n\n``ATTENDEE`` is the default and the backfill value for pre-existing rows,\nexcept for people who already hold a staff role assignment.",
+        "enum": [
+          "ATTENDEE",
+          "STAFF",
+          "GUARDIAN",
+          "CONTACT"
+        ],
+        "title": "OrgMemberType",
+        "type": "string"
       },
       "OrganizationLifecycleStatus": {
         "description": "Where a school is in guided onboarding (PRD 02 \u00a724/\u00a725), independent of\n``record_status`` (which is the soft-delete/deactivation axis, \u00a731).\n\nA school created through ``POST /organizations`` starts ``IN_PREPARATION``\n(\"u pripremi\"): the owner may set up structure and invite a co-owner, but\nnormal STAFF/PARENT/STUDENT invitations are blocked until ``ACTIVE`` (see\n``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).\nLegacy/seed rows default to ``ACTIVE`` so behaviour outside the real\nsignup path is unchanged.",
@@ -3906,6 +4159,102 @@
         "title": "PaymentResponse",
         "type": "object"
       },
+      "PaymentSlipResponse": {
+        "description": "Everything needed to fill in a Serbian payment order for one charge.\n\n``ips_qr_payload`` is the string to render as a QR code. Scanning it only\npre-fills the payer's banking app , it neither moves money nor tells SOKOLA\nOS anything. The charge stays OPEN until someone at the school checks the\nbank account and records the payment, which is why this response carries no\npayment status of its own beyond the amount still outstanding.",
+        "properties": {
+          "account_number": {
+            "title": "Account Number",
+            "type": "string"
+          },
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "charge_id": {
+            "title": "Charge Id",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "ips_qr_payload": {
+            "title": "Ips Qr Payload",
+            "type": "string"
+          },
+          "payee_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payee Address"
+          },
+          "payee_city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payee City"
+          },
+          "payee_name": {
+            "title": "Payee Name",
+            "type": "string"
+          },
+          "payer_name": {
+            "title": "Payer Name",
+            "type": "string"
+          },
+          "payment_code": {
+            "title": "Payment Code",
+            "type": "string"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "reference_number": {
+            "title": "Reference Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "charge_id",
+          "payee_name",
+          "payee_address",
+          "payee_city",
+          "account_number",
+          "payer_name",
+          "currency",
+          "amount_minor",
+          "purpose",
+          "payment_code",
+          "reference_number",
+          "due_date",
+          "ips_qr_payload"
+        ],
+        "title": "PaymentSlipResponse",
+        "type": "object"
+      },
       "PaymentVoidReasonCode": {
         "enum": [
           "ERROR",
@@ -4015,12 +4364,16 @@
           },
           "identity_status": {
             "$ref": "#/components/schemas/PersonIdentityStatus"
+          },
+          "member_type": {
+            "$ref": "#/components/schemas/OrgMemberType"
           }
         },
         "required": [
           "id",
           "display_name",
-          "identity_status"
+          "identity_status",
+          "member_type"
         ],
         "title": "PersonSummary",
         "type": "object"
@@ -4044,6 +4397,18 @@
             "minLength": 1,
             "title": "Description",
             "type": "string"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
           },
           "group_id": {
             "title": "Group Id",
@@ -4863,7 +5228,7 @@
         "type": "string"
       },
       "SessionDraft": {
-        "description": "The proposed shape of a session, used for both conflict preview and create.",
+        "description": "The proposed shape of a session, used for both conflict preview and create.\n\n``trainer_person_id`` and ``location_id`` are optional *overrides*: omit them\nand the group's own defaults are copied onto the session (see\n:func:`app.domains.scheduling.service.create_session`). Send an explicit\n``null`` to create the session deliberately unassigned.",
         "properties": {
           "ends_at": {
             "format": "date-time",
@@ -4873,6 +5238,17 @@
           "group_id": {
             "title": "Group Id",
             "type": "string"
+          },
+          "location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
           },
           "starts_at": {
             "format": "date-time",
@@ -4890,6 +5266,17 @@
               }
             ],
             "title": "Title"
+          },
+          "trainer_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trainer Person Id"
           }
         },
         "required": [
@@ -4927,6 +5314,17 @@
               }
             ],
             "title": "Local Time"
+          },
+          "location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
           },
           "reason": {
             "$ref": "#/components/schemas/SessionChangeReasonCode",
@@ -4996,6 +5394,17 @@
             "format": "time",
             "title": "Local Time",
             "type": "string"
+          },
+          "location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
           },
           "start_date": {
             "format": "date",
@@ -5075,6 +5484,17 @@
             "title": "Local Time",
             "type": "string"
           },
+          "location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
+          },
           "start_date": {
             "format": "date",
             "title": "Start Date",
@@ -5111,6 +5531,7 @@
           "id",
           "group_id",
           "trainer_person_id",
+          "location_id",
           "title",
           "frequency",
           "weekdays",
@@ -5155,6 +5576,17 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
           },
           "series_id": {
             "anyOf": [
@@ -5207,6 +5639,18 @@
           "status"
         ],
         "title": "SessionSummary",
+        "type": "object"
+      },
+      "SetGroupMemberRoleRequest": {
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/GroupMemberRole"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "SetGroupMemberRoleRequest",
         "type": "object"
       },
       "SetMembershipDiscountRequest": {
@@ -5360,6 +5804,64 @@
               }
             ]
           },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
+          },
+          "location_note": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Note"
+          },
+          "responsible_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible Person Id"
+          },
           "starts_at": {
             "anyOf": [
               {
@@ -5384,6 +5886,16 @@
               }
             ],
             "title": "Title"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventType"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "title": "UpdateEventRequest",
@@ -5411,7 +5923,7 @@
         "type": "object"
       },
       "UpdateGroupRequest": {
-        "description": "Partial update. Only fields present in the request body are changed , \nsend ``null`` for ``program_id``/``location_id``/``base_monthly_price_minor``\nto clear that link/price, omit a field entirely to leave it untouched.",
+        "description": "Partial update. Only fields present in the request body are changed , \nsend ``null`` for any nullable field to clear that link/price/default, omit\na field entirely to leave it untouched.\n\nChanging a default only affects sessions created *after* the change:\ndefaults are copied onto a session at create time, never read through.",
         "properties": {
           "base_monthly_price_minor": {
             "anyOf": [
@@ -5424,6 +5936,28 @@
               }
             ],
             "title": "Base Monthly Price Minor"
+          },
+          "default_location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Location Id"
+          },
+          "default_trainer_person_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Trainer Person Id"
           },
           "location_id": {
             "anyOf": [
@@ -5479,6 +6013,16 @@
             ],
             "title": "Internal Code"
           },
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocationKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "name": {
             "anyOf": [
               {
@@ -5497,7 +6041,7 @@
         "type": "object"
       },
       "UpdateMemberDataRequest": {
-        "description": "School-local member data. Only fields present in the request body are\nchanged; omit a field to leave it untouched, send ``null`` to clear it.",
+        "description": "School-local member data. Only fields present in the request body are\nchanged; omit a field to leave it untouched, send ``null`` to clear it.\n\n``member_type`` is not school-local trivia , moving someone in or out of\nATTENDEE changes the school's active-member figure , so it is settable here\nbut never nullable.",
         "properties": {
           "admin_note": {
             "anyOf": [
@@ -5522,6 +6066,16 @@
               }
             ],
             "title": "Local Member Code"
+          },
+          "member_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrgMemberType"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "title": "UpdateMemberDataRequest",
@@ -6359,6 +6913,54 @@
         ]
       }
     },
+    "/charges/lookup": {
+      "get": {
+        "description": "Reconciliation helper: which charge does this bank-statement reference\nbelong to? Read-only , confirming the payment is a separate, deliberate act.",
+        "operationId": "findChargeByReference",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "reference",
+            "required": true,
+            "schema": {
+              "maxLength": 40,
+              "minLength": 1,
+              "title": "Reference",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChargeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No charge in this school carries that reference."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Find Charge By Reference",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/charges/{charge_id}/cancel": {
       "post": {
         "operationId": "cancelCharge",
@@ -6425,6 +7027,52 @@
           }
         },
         "summary": "Cancel Charge",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/charges/{charge_id}/payment-slip": {
+      "get": {
+        "description": "Payment-slip data + NBS IPS QR payload for one charge.\n\nReachable by any authenticated context in the school, staff and the paying\nparent alike, because it is the parent who scans it. It exposes nothing\nbeyond what a payment order already prints, and it never moves money nor\nchanges the charge.",
+        "operationId": "getChargePaymentSlip",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "charge_id",
+            "required": true,
+            "schema": {
+              "title": "Charge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentSlipResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Charge is settled or cancelled, or the school has no valid payee account configured."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Charge Payment Slip",
         "tags": [
           "billing"
         ]
@@ -7495,6 +8143,63 @@
         ]
       }
     },
+    "/events/calendar": {
+      "get": {
+        "operationId": "listEventCalendar",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Date To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventResponse"
+                  },
+                  "title": "Response Listeventcalendar",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Event Calendar",
+        "tags": [
+          "events"
+        ]
+      }
+    },
     "/events/{event_id}": {
       "patch": {
         "operationId": "updateEvent",
@@ -8154,6 +8859,70 @@
           }
         },
         "summary": "Resume Group Membership",
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/groups/{group_id}/members/{membership_id}/role": {
+      "patch": {
+        "operationId": "setGroupMemberRole",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "title": "Group Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetGroupMemberRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMemberResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Membership ended, or the group is full."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Group Member Role",
         "tags": [
           "groups"
         ]
@@ -9385,6 +10154,22 @@
       "get": {
         "operationId": "listPeople",
         "parameters": [
+          {
+            "in": "query",
+            "name": "member_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/OrgMemberType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Member Type"
+            }
+          },
           {
             "in": "query",
             "name": "limit",

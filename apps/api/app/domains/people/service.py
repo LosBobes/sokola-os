@@ -8,7 +8,7 @@ from app.common.errors import BadRequestError, ConflictError, NotFoundError
 from app.common.pagination import Page, PageParams
 from app.domains.identity.enums import PersonIdentityStatus, PersonMergeStatus
 from app.domains.identity.models import Person, PersonMergeRecord
-from app.domains.organization.enums import MembershipStatus
+from app.domains.organization.enums import MembershipStatus, OrgMemberType
 from app.domains.organization.models import OrganizationMembership
 from app.domains.people import repository
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
@@ -69,7 +69,13 @@ def create_provisional_person(
     db.add(person)
     db.flush()
 
-    db.add(OrganizationMembership(organization_id=context.organization_id, person_id=person.id))
+    db.add(
+        OrganizationMembership(
+            organization_id=context.organization_id,
+            person_id=person.id,
+            member_type=req.member_type,
+        )
+    )
 
     summary = f"Dodata osoba „{person.display_name}“."
     if req.allow_possible_duplicate:
@@ -95,9 +101,25 @@ def create_provisional_person(
     return PersonResponse.model_validate(person)
 
 
-def list_people(db: Session, context: RequestContext, params: PageParams) -> Page[PersonSummary]:
-    people, total = repository.list_org_people(db, context.organization_id, params)
-    items = [PersonSummary.model_validate(p) for p in people]
+def list_people(
+    db: Session,
+    context: RequestContext,
+    params: PageParams,
+    *,
+    member_type: OrgMemberType | None = None,
+) -> Page[PersonSummary]:
+    rows, total = repository.list_org_people(
+        db, context.organization_id, params, member_type=member_type
+    )
+    items = [
+        PersonSummary(
+            id=person.id,
+            display_name=person.display_name,
+            identity_status=person.identity_status,
+            member_type=kind,
+        )
+        for person, kind in rows
+    ]
     return Page.build(items, total, params)
 
 
@@ -239,6 +261,9 @@ def update_member_data(
 
     if "admin_note" in fields:
         membership.admin_note = (req.admin_note or "").strip() or None
+
+    if "member_type" in fields and req.member_type is not None:
+        membership.member_type = req.member_type
 
     record_audit(
         db,

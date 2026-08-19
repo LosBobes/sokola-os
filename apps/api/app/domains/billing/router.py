@@ -14,6 +14,7 @@ from app.domains.billing.schemas import (
     CancelChargeRequest,
     ChargeResponse,
     DebtSummaryResponse,
+    PaymentSlipResponse,
     PersonDebtItem,
     PostBillingRunRequest,
 )
@@ -61,6 +62,48 @@ def list_charges(
     person_id: Annotated[str | None, Query()] = None,
 ) -> Page[ChargeResponse]:
     return service.list_charges(db, context, params, person_id)
+
+
+@router.get(
+    "/charges/lookup",
+    response_model=ChargeResponse,
+    operation_id="findChargeByReference",
+    responses={404: {"description": "No charge in this school carries that reference."}},
+)
+def find_charge_by_reference(
+    db: DbDep,
+    context: FinanceContext,
+    reference: Annotated[str, Query(min_length=1, max_length=40)],
+) -> ChargeResponse:
+    """Reconciliation helper: which charge does this bank-statement reference
+    belong to? Read-only , confirming the payment is a separate, deliberate act."""
+    return service.find_charge_by_reference(db, context, reference)
+
+
+@router.get(
+    "/charges/{charge_id}/payment-slip",
+    response_model=PaymentSlipResponse,
+    operation_id="getChargePaymentSlip",
+    responses={
+        409: {
+            "description": (
+                "Charge is settled or cancelled, or the school has no valid payee "
+                "account configured."
+            )
+        }
+    },
+)
+def get_charge_payment_slip(
+    charge_id: str, db: DbDep, context: ContextDep
+) -> PaymentSlipResponse:
+    """Payment-slip data + NBS IPS QR payload for one charge.
+
+    Reachable by any authenticated context in the school, staff and the paying
+    parent alike, because it is the parent who scans it. It exposes nothing
+    beyond what a payment order already prints, and it never moves money nor
+    changes the charge.
+    """
+    return service.payment_slip(db, context, charge_id)
 
 
 @router.post(

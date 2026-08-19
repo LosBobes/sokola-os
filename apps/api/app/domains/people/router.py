@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.common.pagination import Page, PageParams, page_params
+from app.domains.organization.enums import OrgMemberType
 from app.domains.people import service
 from app.domains.people.schemas import (
     CreateMergeReviewRequest,
@@ -48,8 +49,9 @@ def list_people(
     db: DbDep,
     context: ContextDep,
     params: Annotated[PageParams, Depends(page_params)],
+    member_type: Annotated[OrgMemberType | None, Query()] = None,
 ) -> Page[PersonSummary]:
-    return service.list_people(db, context, params)
+    return service.list_people(db, context, params, member_type=member_type)
 
 
 # --- Duplicate detection + review (§13–15). Declared before /people/{person_id}

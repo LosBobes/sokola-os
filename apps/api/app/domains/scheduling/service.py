@@ -59,6 +59,8 @@ def create_session(
         "starts_at": draft.starts_at.isoformat(),
         "ends_at": draft.ends_at.isoformat(),
         "title": draft.title,
+        "trainer_person_id": draft.trainer_person_id,
+        "location_id": draft.location_id,
     }
     guard = None
     if idempotency_key:
@@ -68,8 +70,26 @@ def create_session(
         if guard.replay is not None:
             return SessionSummary.model_validate(guard.replay["body"])
 
-    if repository.get_org_group(db, context.organization_id, draft.group_id) is None:
+    group = repository.get_org_group(db, context.organization_id, draft.group_id)
+    if group is None:
         raise NotFoundError("Grupa nije pronađena.")
+
+    # The group is the default source for who leads the session and where it is
+    # held. An explicitly-sent field always wins (including an explicit null,
+    # which is how the caller says "deliberately unassigned"); an omitted field
+    # inherits the group's default.
+    trainer_person_id = (
+        draft.trainer_person_id
+        if "trainer_person_id" in draft.model_fields_set
+        else group.default_trainer_person_id
+    )
+    location_id = (
+        draft.location_id
+        if "location_id" in draft.model_fields_set
+        else group.default_location_id
+    )
+    _require_trainer_in_org(db, context, trainer_person_id)
+    _require_location_in_org(db, context, location_id)
 
     conflicts = repository.find_conflicts(
         db, context.organization_id, draft.group_id, draft.starts_at, draft.ends_at
@@ -88,6 +108,8 @@ def create_session(
     session = Session(
         organization_id=context.organization_id,
         group_id=draft.group_id,
+        trainer_person_id=trainer_person_id,
+        location_id=location_id,
         title=draft.title,
         starts_at=draft.starts_at,
         ends_at=draft.ends_at,
@@ -167,21 +189,47 @@ def _require_trainer_in_org(
         raise NotFoundError("Trener nije pronađen.")
 
 
+def _require_location_in_org(
+    db: DbSession, context: RequestContext, location_id: str | None
+) -> None:
+    if location_id is None:
+        return
+    if not repository.is_org_location(db, context.organization_id, location_id):
+        # Same error for foreign/nonexistent, never leak cross-tenant existence.
+        raise NotFoundError("Lokacija nije pronađena.")
+
+
 def create_series(
     db: DbSession, context: RequestContext, body: SessionSeriesCreate
 ) -> SessionSeriesSummary:
     """M1. Create a weekly recurrence rule and activate it (concrete sessions are
     materialized by a subsequent generate call)."""
-    if repository.get_org_group(db, context.organization_id, body.group_id) is None:
+    group = repository.get_org_group(db, context.organization_id, body.group_id)
+    if group is None:
         raise NotFoundError("Grupa nije pronađena.")
     if body.frequency is SessionSeriesFrequency.MONTHLY:
         raise BadRequestError("Mesečna učestalost još nije podržana.")
-    _require_trainer_in_org(db, context, body.trainer_person_id)
+
+    # Same group-as-default rule as a one-off session, so "svake srede u 18:00"
+    # inherits the group's trainer and place without re-typing them.
+    trainer_person_id = (
+        body.trainer_person_id
+        if "trainer_person_id" in body.model_fields_set
+        else group.default_trainer_person_id
+    )
+    location_id = (
+        body.location_id
+        if "location_id" in body.model_fields_set
+        else group.default_location_id
+    )
+    _require_trainer_in_org(db, context, trainer_person_id)
+    _require_location_in_org(db, context, location_id)
 
     series = SessionSeries(
         organization_id=context.organization_id,
         group_id=body.group_id,
-        trainer_person_id=body.trainer_person_id,
+        trainer_person_id=trainer_person_id,
+        location_id=location_id,
         title=body.title,
         frequency=body.frequency,
         weekdays=body.weekdays,
@@ -260,6 +308,7 @@ def generate_sessions(
             group_id=series.group_id,
             series_id=series.id,
             trainer_person_id=series.trainer_person_id,
+            location_id=series.location_id,
             title=series.title,
             starts_at=starts_at,
             ends_at=ends_at,
@@ -313,6 +362,8 @@ def _apply_field_changes(session: Session, edit: SessionEdit, tz_name: str) -> b
         session.title = edit.title
     if edit.trainer_person_id is not None:
         session.trainer_person_id = edit.trainer_person_id
+    if edit.location_id is not None:
+        session.location_id = edit.location_id
 
     if edit.local_time is None and edit.duration_minutes is None:
         return False
@@ -358,6 +409,7 @@ def edit_session(
     if session.status is not SessionStatus.SCHEDULED:
         raise ConflictError("Samo zakazani termin može biti izmenjen.")
     _require_trainer_in_org(db, context, edit.trainer_person_id)
+    _require_location_in_org(db, context, edit.location_id)
 
     series: SessionSeries | None = None
     if edit.scope is not SessionEditScope.SINGLE:
@@ -378,6 +430,8 @@ def edit_session(
             series.title = edit.title
         if edit.trainer_person_id is not None:
             series.trainer_person_id = edit.trainer_person_id
+        if edit.location_id is not None:
+            series.location_id = edit.location_id
         if edit.local_time is not None:
             series.local_time = edit.local_time
         if edit.duration_minutes is not None:

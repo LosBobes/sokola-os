@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from app.common.enums import RecordStatus
 from app.domains.attendance.models import AttendanceRecord
+from app.domains.groups.enums import GroupMemberRole
 from app.domains.groups.models import GroupMembership
 from app.domains.identity.models import Person
 from app.domains.scheduling.models import Session as TrainingSession
@@ -24,12 +25,18 @@ def get_session(
 
 
 def list_roster(db: DbSession, group_id: str) -> list[Person]:
-    """Active members of the session's group, in display order."""
+    """Active *participants* of the session's group, in display order.
+
+    Attendance is a record of who trained, so the roster is participants only:
+    a trainer or assistant attached to the same group is running the session,
+    not attending it, and must never appear as a row to be marked present.
+    """
     stmt = (
         select(Person)
         .join(GroupMembership, GroupMembership.person_id == Person.id)
         .where(
             GroupMembership.group_id == group_id,
+            GroupMembership.role == GroupMemberRole.MEMBER,
             GroupMembership.ended_at.is_(None),
             Person.record_status == RecordStatus.ACTIVE,
         )

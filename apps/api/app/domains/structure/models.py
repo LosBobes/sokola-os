@@ -4,7 +4,9 @@ from sqlalchemy import ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, RecordStatusMixin, TimestampMixin
+from app.common.columns import enum_type
 from app.common.ids import new_id
+from app.domains.structure.enums import LocationKind
 
 
 class Category(Base, TimestampMixin, RecordStatusMixin):
@@ -44,9 +46,15 @@ class Program(Base, TimestampMixin, RecordStatusMixin):
 
 
 class Location(Base, TimestampMixin, RecordStatusMixin):
-    """A branch (ogranak) of an organization: a physical place where activities
-    happen. Rooms belong to it. Its optional internal code is unique among the
-    organization's active locations."""
+    """A place (lokacija) where an organization's activities happen: a branch, a
+    hall, a pitch, a kindergarten, a theatre, the outdoors, or an online room.
+    Rooms belong to it. Its optional internal code is unique among the
+    organization's active locations.
+
+    ``kind`` classifies the place (see :class:`LocationKind`). It is descriptive
+    only, nothing in scheduling, billing or attendance branches on it, so adding
+    a kind later never changes behaviour of existing rows.
+    """
 
     __tablename__ = "structure_location"
     __table_args__ = (
@@ -59,6 +67,9 @@ class Location(Base, TimestampMixin, RecordStatusMixin):
         ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(160), nullable=False)
+    kind: Mapped[LocationKind] = mapped_column(
+        enum_type(LocationKind), nullable=False, default=LocationKind.OTHER
+    )
     address: Mapped[str | None] = mapped_column(String(400), nullable=True)
     internal_code: Mapped[str | None] = mapped_column(String(60), nullable=True)
 

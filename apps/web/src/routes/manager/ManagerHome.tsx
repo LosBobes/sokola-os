@@ -7,12 +7,15 @@ import type {
   Charge,
   Group,
   LocationSummary,
+  OverviewReport,
   Page,
   PersonSummary,
   SessionSummary,
 } from "../../api/types";
 import { Card, EmptyState, LoadingState, StatTile, StatusBadge, SystemState, TableContainer } from "../../components/ui";
 import { useAsync } from "../../hooks/useAsync";
+import { formatTime, formatWeekdayDate } from "../../lib/format";
+import { SESSION_STATUS_LABEL } from "../../lib/labels";
 import "../home.css";
 
 function todayRange(): { from: string; to: string } {
@@ -23,12 +26,7 @@ function todayRange(): { from: string; to: string } {
 }
 
 function dateLabel(): string {
-  const s = new Date().toLocaleDateString("sr-Latn-RS", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const s = formatWeekdayDate(new Date());
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
@@ -57,20 +55,28 @@ function useAttendanceRollup(sessions: SessionSummary[] | null) {
     ).then((results) => {
       if (cancelled) return;
       let present = 0;
-      let total = 0;
+      let recorded = 0;
       const unconfirmed: SessionSummary[] = [];
       results.forEach((r, i) => {
         if (r.status !== "fulfilled") return;
         const session = finished[i];
         if (!session) return;
         const sheet = r.value;
-        if (sheet.attendance_version === 0) unconfirmed.push(session);
+        // Version 0 means nobody has saved this sheet yet, so its rows are the
+        // API's PRESENT default rather than anything anyone observed. Counting
+        // them would report untaken attendance as a perfect 100%.
+        if (sheet.attendance_version === 0) {
+          unconfirmed.push(session);
+          return;
+        }
         for (const entry of sheet.entries) {
-          total += 1;
+          recorded += 1;
+          // Same arithmetic as the attendance sheet itself: present over
+          // (present + absent). Legacy LATE rows were presences.
           if (entry.status === "PRESENT" || entry.status === "LATE") present += 1;
         }
       });
-      setState({ pct: total > 0 ? Math.round((present / total) * 100) : null, unconfirmed });
+      setState({ pct: recorded > 0 ? Math.round((present / recorded) * 100) : null, unconfirmed });
     });
     return () => {
       cancelled = true;
@@ -96,16 +102,24 @@ export function ManagerHome() {
   const groups = useAsync(() => api.get<Page<Group>>("/groups"), []);
   const people = useAsync(() => api.get<Page<PersonSummary>>("/people"), []);
   const charges = useAsync(() => api.get<Page<Charge>>("/charges?limit=100"), []);
-  const locations = useAsync(
-    () =>
-      activeContext?.scope_type === "BRANCH"
-        ? api.get<Page<LocationSummary>>("/locations")
-        : Promise.resolve<Page<LocationSummary>>({ items: [], total: 0, limit: 0, offset: 0 }),
-    [activeContext?.scope_type],
+  /*
+   * "Aktivni članovi" is the school's headline figure, and the server is the
+   * only thing that can compute it honestly: /people counts everyone the
+   * tenant can see (owner, trainers, guardians, contacts), while the overview
+   * report counts active participants and nothing else.
+   */
+  const overview = useAsync(
+    () => api.get<OverviewReport>("/reports/overview").catch(() => null),
+    [],
   );
+  // Loaded for every context, not just branch-scoped ones: the day's table
+  // names each session's location, and a school with one location has one too.
+  const locations = useAsync(() => api.get<Page<LocationSummary>>("/locations?limit=100"), []);
   const attendance = useAttendanceRollup(sessions.data);
 
   const groupName = (id: string) => groups.data?.items.find((g) => g.id === id)?.name ?? "-";
+  const locationName = (id: string | null | undefined) =>
+    id ? (locations.data?.items.find((l) => l.id === id)?.name ?? "-") : "-";
   const trainerName = (id: string | null | undefined) =>
     id ? (people.data?.items.find((p) => p.id === id)?.display_name ?? "-") : "-";
   const statusTone = (s: SessionSummary["status"]) =>
@@ -129,7 +143,7 @@ export function ManagerHome() {
     <div>
       <header className="home-header">
         <span className="section-header__eyebrow">{dateLabel()}</span>
-        <h1>Šta danas traži vašu pažnju?{firstName ? `, ${firstName}` : ""}</h1>
+        <h1>Šta danas traži vašu pažnju{firstName ? `, ${firstName}` : ""}?</h1>
         <p className="home-subtitle">{subtitle}</p>
       </header>
 
@@ -140,7 +154,7 @@ export function ManagerHome() {
           title={todaySessions.length ? `${todaySessions.length} zakazano` : "Nema termina"}
           subtitle={
             nextSession
-              ? `Sledeći: ${new Date(nextSession.starts_at).toLocaleTimeString("sr-Latn", { hour: "2-digit", minute: "2-digit" })} · ${groupName(nextSession.group_id)}`
+              ? `Sledeći: ${formatTime(nextSession.starts_at)} · ${groupName(nextSession.group_id)}`
               : "Nema predstojećih termina danas."
           }
         >
@@ -203,22 +217,21 @@ export function ManagerHome() {
                   <th>Vreme</th>
                   <th>Grupa</th>
                   <th>Trener</th>
-                  <th>Sala</th>
+                  <th>Lokacija</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {todaySessions.map((s) => (
                   <tr key={s.id} data-cy="home-session-row">
-                    <td>
-                      {new Date(s.starts_at).toLocaleTimeString("sr-Latn", { hour: "2-digit", minute: "2-digit" })}
-                    </td>
+                    <td>{formatTime(s.starts_at)}</td>
                     <td>{groupName(s.group_id)}</td>
                     <td>{trainerName(s.trainer_person_id)}</td>
-                    {/* Sessions have no room assignment in the API yet, degrade honestly. */}
-                    <td className="home-room-cell">-</td>
+                    <td className="home-room-cell">{locationName(s.location_id)}</td>
                     <td>
-                      <StatusBadge tone={statusTone(s.status)}>{s.status}</StatusBadge>
+                      <StatusBadge tone={statusTone(s.status)}>
+                        {SESSION_STATUS_LABEL[s.status]}
+                      </StatusBadge>
                     </td>
                   </tr>
                 ))}
@@ -252,12 +265,19 @@ export function ManagerHome() {
       </Card>
 
       <section className="home-stats" aria-label="Pregled">
-        <StatTile label="Aktivni članovi" value={people.data ? people.data.total : "-"} />
         <StatTile
-          label="Završeno prisustvo %"
+          label="Aktivni članovi"
+          value={overview.data ? overview.data.active_member_count : "-"}
+          delta={{ label: "Polaznici škole", tone: "neutral" }}
+        />
+        <StatTile
+          label="Završena evidencija prisustva"
           value={attendance.pct !== null ? `${attendance.pct}%` : "-"}
         />
-        <StatTile label="Dospele obaveze" value={charges.data ? openCharges.length : "-"} />
+        <StatTile
+          label="Otvorena zaduženja"
+          value={charges.data ? openCharges.length : "-"}
+        />
       </section>
     </div>
   );

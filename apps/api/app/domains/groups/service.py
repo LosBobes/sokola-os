@@ -8,7 +8,11 @@ from app.common.enums import AuditDataClass
 from app.common.errors import ConflictError, NotFoundError
 from app.common.pagination import Page, PageParams
 from app.domains.groups import repository
-from app.domains.groups.enums import GroupCapacityMode, GroupMembershipStatus
+from app.domains.groups.enums import (
+    GroupCapacityMode,
+    GroupMemberRole,
+    GroupMembershipStatus,
+)
 from app.domains.groups.models import Group, GroupMembership
 from app.domains.groups.schemas import (
     CreateGroupRequest,
@@ -16,6 +20,7 @@ from app.domains.groups.schemas import (
     GroupMemberResponse,
     GroupMembershipTransitionRequest,
     GroupResponse,
+    SetGroupMemberRoleRequest,
     SetMembershipDiscountRequest,
     UpdateGroupRequest,
 )
@@ -23,6 +28,13 @@ from app.domains.identity.models import Person
 from app.platform.audit.service import record_audit
 from app.platform.outbox.service import enqueue
 from app.security.context import RequestContext
+
+_ROLE_LABEL: dict[GroupMemberRole, str] = {
+    GroupMemberRole.MEMBER: "polaznik",
+    GroupMemberRole.TRAINER: "trener",
+    GroupMemberRole.ASSISTANT: "asistent",
+    GroupMemberRole.OTHER_STAFF: "stručno lice",
+}
 
 
 def _group_response(group: Group) -> GroupResponse:
@@ -34,6 +46,7 @@ def _member_response(membership: GroupMembership, person: Person) -> GroupMember
         membership_id=membership.id,
         person_id=person.id,
         display_name=person.display_name,
+        role=membership.role,
         status=membership.status,
         discount_minor=membership.discount_minor,
         joined_at=membership.joined_at,
@@ -62,6 +75,19 @@ def _resolve_location(
     return location.id
 
 
+def _resolve_default_trainer(
+    db: Session, context: RequestContext, person_id: str | None
+) -> str | None:
+    """The group's default trainer must be someone this school actually has.
+    Same not-found error for a foreign id as for a missing one, never leak
+    cross-tenant existence."""
+    if person_id is None:
+        return None
+    if repository.get_member_person(db, context.organization_id, person_id) is None:
+        raise NotFoundError("Osoba nije pronađena u ovoj školi.")
+    return person_id
+
+
 def create_group(db: Session, context: RequestContext, req: CreateGroupRequest) -> GroupResponse:
     program_id = _resolve_program(db, context, req.program_id)
     location_id = _resolve_location(db, context, req.location_id)
@@ -73,6 +99,10 @@ def create_group(db: Session, context: RequestContext, req: CreateGroupRequest) 
         program_id=program_id,
         location_id=location_id,
         base_monthly_price_minor=req.base_monthly_price_minor,
+        default_trainer_person_id=_resolve_default_trainer(
+            db, context, req.default_trainer_person_id
+        ),
+        default_location_id=_resolve_location(db, context, req.default_location_id),
     )
     db.add(group)
     db.commit()
@@ -100,6 +130,12 @@ def update_group(
         group.location_id = _resolve_location(db, context, req.location_id)
     if "base_monthly_price_minor" in fields:
         group.base_monthly_price_minor = req.base_monthly_price_minor
+    if "default_trainer_person_id" in fields:
+        group.default_trainer_person_id = _resolve_default_trainer(
+            db, context, req.default_trainer_person_id
+        )
+    if "default_location_id" in fields:
+        group.default_location_id = _resolve_location(db, context, req.default_location_id)
 
     record_audit(
         db,
@@ -116,7 +152,11 @@ def update_group(
 
 
 def add_member(
-    db: Session, context: RequestContext, group_id: str, person_id: str
+    db: Session,
+    context: RequestContext,
+    group_id: str,
+    person_id: str,
+    role: GroupMemberRole = GroupMemberRole.MEMBER,
 ) -> GroupMemberResponse:
     group = repository.get_org_group(db, context.organization_id, group_id)
     if group is None:
@@ -130,8 +170,11 @@ def add_member(
     if repository.get_active_membership(db, group_id, person_id) is not None:
         raise ConflictError("Osoba je već član ove grupe.")
 
+    # Capacity is about places for participants: adding a second coach must not
+    # report the group as full, so staff rows are excluded from the count.
     if (
-        group.capacity_mode is GroupCapacityMode.LIMITED
+        role is GroupMemberRole.MEMBER
+        and group.capacity_mode is GroupCapacityMode.LIMITED
         and group.capacity is not None
         and repository.count_active_members(db, group_id) >= group.capacity
     ):
@@ -141,6 +184,7 @@ def add_member(
         group_id=group_id,
         organization_id=context.organization_id,
         person_id=person_id,
+        role=role,
         joined_at=dt.datetime.now(tz=dt.UTC),
     )
     db.add(membership)
@@ -150,7 +194,10 @@ def add_member(
         action="group.member_added",
         entity_type="group",
         entity_id=group_id,
-        summary=f"„{person.display_name}“ dodat/a u grupu „{group.name}“.",
+        summary=(
+            f"„{person.display_name}“ dodat/a u grupu „{group.name}“ "
+            f"({_ROLE_LABEL[role]})."
+        ),
         organization_id=context.organization_id,
         actor_person_id=context.person_id,
     )
@@ -276,6 +323,56 @@ def end_membership(
     membership.ended_at = dt.datetime.now(tz=dt.UTC)
     membership.end_reason = req.end_reason
     _emit_membership_change(db, context, group, membership, person, "ended", req.reason)
+    db.commit()
+    return _member_response(membership, person)
+
+
+def set_member_role(
+    db: Session,
+    context: RequestContext,
+    group_id: str,
+    membership_id: str,
+    req: SetGroupMemberRoleRequest,
+) -> GroupMemberResponse:
+    """Correct in what capacity someone is attached to a group.
+
+    This moves a person between the participant roster and the staff list, so
+    it changes who is billed and who appears on attendance sheets from the next
+    run/sheet onward. Already-issued charges and already-recorded attendance are
+    history and stay as they were.
+    """
+    group, membership, person = _load_group_membership(db, context, group_id, membership_id)
+    if membership.status is GroupMembershipStatus.ENDED:
+        raise ConflictError("Okončanom članstvu se ne može menjati uloga.")
+    if membership.role is req.role:
+        return _member_response(membership, person)
+
+    # Promoting someone into the participant roster consumes a place, so the
+    # same capacity rule that guards `add_member` applies here.
+    if (
+        req.role is GroupMemberRole.MEMBER
+        and group.capacity_mode is GroupCapacityMode.LIMITED
+        and group.capacity is not None
+        and repository.count_active_members(db, group_id) >= group.capacity
+    ):
+        raise ConflictError("Grupa je popunjena.")
+
+    previous = membership.role
+    membership.role = req.role
+    record_audit(
+        db,
+        data_class=AuditDataClass.RELATIONSHIP,
+        action="group_membership.role_changed",
+        entity_type="group_membership",
+        entity_id=membership.id,
+        summary=(
+            f"Uloga za „{person.display_name}“ u grupi „{group.name}“ promenjena "
+            f"iz „{_ROLE_LABEL[previous]}“ u „{_ROLE_LABEL[req.role]}“."
+        ),
+        organization_id=context.organization_id,
+        actor_person_id=context.person_id,
+        context={"group_id": group.id, "person_id": person.id},
+    )
     db.commit()
     return _member_response(membership, person)
 

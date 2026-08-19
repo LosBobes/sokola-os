@@ -6,6 +6,7 @@ import type { Group, GroupMember, Page, SessionSummary } from "../../api/types";
 import { BrandMark } from "../../components/shell";
 import { Card, EmptyState, LoadingState, StatusBadge, SystemState } from "../../components/ui";
 import { useAsync } from "../../hooks/useAsync";
+import { formatTime, formatWeekdayDate } from "../../lib/format";
 import "../home.css";
 
 function todayRange(): { from: string; to: string } {
@@ -16,11 +17,12 @@ function todayRange(): { from: string; to: string } {
 }
 
 function dateLabel(): string {
-  return new Date().toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "long" });
+  const s = formatWeekdayDate(new Date());
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function timeLabel(iso: string): string {
-  return new Date(iso).toLocaleTimeString("sr-Latn", { hour: "2-digit", minute: "2-digit" });
+  return formatTime(iso);
 }
 
 /** Headcount per group, fetched only for the handful of groups on today's

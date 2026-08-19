@@ -39,6 +39,18 @@
   padding: 0;
   list-style: none;
 }
+/* The percentage, spelled out so it is never mistaken for a share of the whole
+   roster: it is presences over what has actually been recorded. */
+.attendance-rate {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.attendance-rate strong {
+  color: var(--text-primary);
+  font-size: var(--text-base);
+}
+
 .attendance-counter {
   display: inline-flex;
   align-items: center;
@@ -107,32 +119,8 @@
   color: var(--tone-error-fg);
 }
 
-/* Reason selector, only rendered once Odsutan is chosen. */
-.attendance-row__reason {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-.attendance-reason {
-  min-height: 44px;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-md);
-  border: var(--ink-border) solid var(--border-default);
-  background: var(--surface-raised);
-  color: var(--text-secondary);
-  font-weight: 600;
-  font-size: var(--text-sm);
-  transition:
-    background var(--duration),
-    border-color var(--duration),
-    color var(--duration);
-}
-.attendance-reason.is-active {
-  background: var(--action-surface);
-  border-color: var(--action-primary);
-  color: var(--action-primary-hover);
-}
+/* The excused/unexcused sub-selector is gone: attendance records whether a
+   person was there, and nothing else. See Attendance.tsx's LocalStatus note. */
 
 .attendance-row__hint {
   margin: var(--space-2) 0 0;

@@ -7,8 +7,12 @@ from app.common.enums import RecordStatus
 from app.common.pagination import PageParams
 from app.domains.billing.enums import ChargeStatus
 from app.domains.billing.models import Charge
+from app.domains.groups.enums import GroupMemberRole
 from app.domains.groups.models import Group, GroupMembership
 from app.domains.identity.models import Person
+from app.domains.organization.models import Organization
+from app.domains.people.enums import GuardianAccessStatus
+from app.domains.people.models import GuardianOrganizationAccess
 
 
 def get_org_group(db: Session, organization_id: str, group_id: str) -> Group | None:
@@ -21,11 +25,15 @@ def get_org_group(db: Session, organization_id: str, group_id: str) -> Group | N
 
 
 def active_group_people(db: Session, group_id: str) -> list[Person]:
+    """Participants of the group, the only people a membership run may charge.
+    Trainers and other staff attached to the group are excluded: they are paid
+    by the school, not billed by it."""
     stmt = (
         select(Person)
         .join(GroupMembership, GroupMembership.person_id == Person.id)
         .where(
             GroupMembership.group_id == group_id,
+            GroupMembership.role == GroupMemberRole.MEMBER,
             GroupMembership.ended_at.is_(None),
             Person.record_status == RecordStatus.ACTIVE,
         )
@@ -45,6 +53,7 @@ def active_group_members_with_discount(
         .join(GroupMembership, GroupMembership.person_id == Person.id)
         .where(
             GroupMembership.group_id == group_id,
+            GroupMembership.role == GroupMemberRole.MEMBER,
             GroupMembership.ended_at.is_(None),
             Person.record_status == RecordStatus.ACTIVE,
         )
@@ -138,3 +147,45 @@ def debt_summary(db: Session, organization_id: str) -> tuple[int, int]:
     )
     total_minor, people = db.execute(stmt).one()
     return int(total_minor or 0), int(people or 0)
+
+
+def get_organization(db: Session, organization_id: str) -> Organization | None:
+    """The paying-in party on a payment slip. Read directly from the shared
+    model (cross-domain model access, never the organization service)."""
+    stmt = select(Organization).where(
+        Organization.id == organization_id,
+        Organization.record_status == RecordStatus.ACTIVE,
+    )
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def get_person(db: Session, person_id: str) -> Person | None:
+    stmt = select(Person).where(
+        Person.id == person_id, Person.record_status == RecordStatus.ACTIVE
+    )
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def get_charge_by_reference(
+    db: Session, organization_id: str, payment_reference: str
+) -> Charge | None:
+    """Reconciliation lookup: find the charge a bank statement's reference
+    ("poziv na broj") points at, within this school only."""
+    stmt = select(Charge).where(
+        Charge.organization_id == organization_id,
+        Charge.payment_reference == payment_reference,
+    )
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def is_guardian_of(
+    db: Session, organization_id: str, guardian_person_id: str, child_person_id: str
+) -> bool:
+    """Whether this guardian may act for this child inside this school."""
+    stmt = select(GuardianOrganizationAccess.id).where(
+        GuardianOrganizationAccess.organization_id == organization_id,
+        GuardianOrganizationAccess.guardian_person_id == guardian_person_id,
+        GuardianOrganizationAccess.child_person_id == child_person_id,
+        GuardianOrganizationAccess.status == GuardianAccessStatus.ACTIVE,
+    )
+    return db.execute(stmt).first() is not None

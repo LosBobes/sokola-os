@@ -1,7 +1,15 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
-import type { Group, GroupMember, Page, PersonSummary, SessionStatus } from "../../api/types";
+import type {
+  Group,
+  GroupMember,
+  GroupMemberRole,
+  LocationSummary,
+  Page,
+  PersonSummary,
+  SessionStatus,
+} from "../../api/types";
 import { PageHeader } from "../../components/shell";
 import {
   Button,
@@ -18,6 +26,9 @@ import {
   SystemState,
 } from "../../components/ui";
 import { useAsync } from "../../hooks/useAsync";
+import { formatDateTime, formatDayMonth, formatTime } from "../../lib/format";
+import { GROUP_MEMBER_ROLE_LABEL, LOCATION_KIND_LABEL } from "../../lib/labels";
+import "./Groups.css";
 
 /*
  * M03 · Grupe.
@@ -77,10 +88,10 @@ function formatWhen(iso: string): string {
   const d = new Date(iso);
   const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const diffDays = Math.round((startOf(d) - startOf(new Date())) / 86400000);
-  const time = d.toLocaleTimeString("sr-Latn", { hour: "2-digit", minute: "2-digit" });
+  const time = formatTime(d);
   if (diffDays === 0) return `danas u ${time}`;
   if (diffDays === 1) return `sutra u ${time}`;
-  return `${d.toLocaleDateString("sr-Latn", { day: "2-digit", month: "2-digit" })} u ${time}`;
+  return `${formatDayMonth(d)} u ${time}`;
 }
 
 function groupStatus(group: Group, count: number): { tone: "success" | "error" | "info"; label: string } {
@@ -126,6 +137,7 @@ function CapacityRow({ group, count }: { group: Group; count: number }) {
 export function GroupsPage() {
   const groups = useAsync(() => api.get<Page<Group>>("/groups"), []);
   const people = useAsync(() => api.get<Page<PersonSummary>>("/people"), []);
+  const locations = useAsync(() => api.get<Page<LocationSummary>>("/locations?limit=100"), []);
 
   const scheduleRange = useMemo(() => {
     const from = new Date();
@@ -148,6 +160,15 @@ export function GroupsPage() {
     );
     return Object.fromEntries(entries) as Record<string, GroupMember[]>;
   }, [groupIds.join(",")]);
+
+  const locationsMap = useMemo(
+    () =>
+      Object.fromEntries((locations.data?.items ?? []).map((l) => [l.id, l])) as Record<
+        string,
+        LocationSummary
+      >,
+    [locations.data],
+  );
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -225,7 +246,14 @@ export function GroupsPage() {
         Članovi, treneri, kapaciteti i raspored po grupama.
       </p>
 
-      {showCreate ? <CreateGroupForm onCreated={afterCreate} onCancel={() => setShowCreate(false)} /> : null}
+      {showCreate ? (
+        <CreateGroupForm
+          onCreated={afterCreate}
+          onCancel={() => setShowCreate(false)}
+          people={people.data?.items ?? []}
+          locations={locations.data?.items ?? []}
+        />
+      ) : null}
 
       <FilterBar>
         <FilterChip caret disabled title="Uskoro: grupe još nisu povezane sa programom" style={{ opacity: 0.55 }}>
@@ -307,6 +335,7 @@ export function GroupsPage() {
                 peopleMap={peopleMap}
                 sessionsForGroup={(sessions.data ?? []).filter((s) => s.group_id === selectedGroup.id)}
                 seriesForGroup={(series.data ?? []).filter((s) => s.group_id === selectedGroup.id)}
+                locationsMap={locationsMap}
                 onMembersChanged={afterMemberChange}
               />
             ) : (
@@ -319,10 +348,28 @@ export function GroupsPage() {
   );
 }
 
-function CreateGroupForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: () => void }) {
+function CreateGroupForm({
+  onCreated,
+  onCancel,
+  people,
+  locations,
+}: {
+  onCreated: () => void;
+  onCancel: () => void;
+  people: PersonSummary[];
+  locations: LocationSummary[];
+}) {
   const [name, setName] = useState("");
   const [capacityMode, setCapacityMode] = useState<Group["capacity_mode"]>("UNLIMITED");
   const [capacity, setCapacity] = useState(20);
+  /*
+   * The group is the default source for a new session's trainer and location.
+   * Setting them here means "svake srede u 18:00" can be scheduled without
+   * re-picking both every time; whoever creates a session may still override
+   * either for that one occurrence.
+   */
+  const [defaultTrainer, setDefaultTrainer] = useState("");
+  const [defaultLocation, setDefaultLocation] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
@@ -335,9 +382,13 @@ function CreateGroupForm({ onCreated, onCancel }: { onCreated: () => void; onCan
         name,
         capacity_mode: capacityMode,
         capacity: capacityMode === "LIMITED" ? capacity : null,
+        default_trainer_person_id: defaultTrainer || null,
+        default_location_id: defaultLocation || null,
       });
       setName("");
       setCapacityMode("UNLIMITED");
+      setDefaultTrainer("");
+      setDefaultLocation("");
       onCreated();
     } catch (err) {
       setError(err);
@@ -350,7 +401,7 @@ function CreateGroupForm({ onCreated, onCancel }: { onCreated: () => void; onCan
     <section className="card" data-cy="group-create-form" style={{ marginBottom: "var(--space-4)" }}>
       <SectionHeader title="Nova grupa" />
       {error ? <SystemState error={error} /> : null}
-      <form onSubmit={save} style={{ display: "grid", gap: "var(--space-3)", gridTemplateColumns: "2fr 1fr 1fr auto" }}>
+      <form onSubmit={save} className="group-create-grid">
         <div className="field" style={{ margin: 0 }}>
           <label htmlFor="g-name">Naziv grupe</label>
           <input id="g-name" value={name} onChange={(e) => setName(e.target.value)} required data-cy="group-name" />
@@ -383,7 +434,43 @@ function CreateGroupForm({ onCreated, onCancel }: { onCreated: () => void; onCan
         ) : (
           <div />
         )}
-        <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "start", paddingTop: "22px" }}>
+        <div className="field" style={{ margin: 0 }}>
+          <label htmlFor="g-trainer">Podrazumevani trener</label>
+          <select
+            id="g-trainer"
+            value={defaultTrainer}
+            onChange={(e) => setDefaultTrainer(e.target.value)}
+            data-cy="group-default-trainer"
+          >
+            <option value="">Bez podrazumevanog</option>
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.display_name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field" style={{ margin: 0 }}>
+          <label htmlFor="g-location">Podrazumevana lokacija</label>
+          <select
+            id="g-location"
+            value={defaultLocation}
+            onChange={(e) => setDefaultLocation(e.target.value)}
+            data-cy="group-default-location"
+          >
+            <option value="">Bez podrazumevane</option>
+            {locations.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name} · {LOCATION_KIND_LABEL[l.kind]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="field__hint group-create-grid__note">
+          Podrazumevani trener i lokacija se prenose na svaki novi termin ove grupe. Za
+          pojedinačni termin mogu se promeniti bez izmene grupe.
+        </p>
+        <div className="group-create-grid__actions">
           <Button type="submit" disabled={busy} data-cy="group-save">
             Sačuvaj grupu
           </Button>
@@ -459,6 +546,7 @@ function GroupDetail({
   peopleMap,
   sessionsForGroup,
   seriesForGroup,
+  locationsMap,
   onMembersChanged,
 }: {
   group: Group;
@@ -467,15 +555,23 @@ function GroupDetail({
   peopleMap: Record<string, string>;
   sessionsForGroup: ScheduleSession[];
   seriesForGroup: SeriesSummary[];
+  locationsMap: Record<string, LocationSummary>;
   onMembersChanged: () => void;
 }) {
   const [tab, setTab] = useState<DetailTab>("clanovi");
   const [addOpen, setAddOpen] = useState(false);
   const [personId, setPersonId] = useState("");
+  const [role, setRole] = useState<GroupMemberRole>("MEMBER");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   const memberIds = useMemo(() => new Set(members.map((m) => m.person_id)), [members]);
+  // Capacity, counts and the roster are about participants; staff attached to
+  // the group are running it, not occupying one of its places.
+  const participants = useMemo(
+    () => members.filter((m) => (m.role ?? "MEMBER") === "MEMBER"),
+    [members],
+  );
   const availablePeople = useMemo(
     () => peopleOptions.filter((p) => !memberIds.has(p.id)),
     [peopleOptions, memberIds],
@@ -486,8 +582,9 @@ function GroupDetail({
     setBusy(true);
     setError(null);
     try {
-      await api.post(`/groups/${group.id}/members`, { person_id: personId });
+      await api.post(`/groups/${group.id}/members`, { person_id: personId, role });
       setPersonId("");
+      setRole("MEMBER");
       setAddOpen(false);
       onMembersChanged();
     } catch (err) {
@@ -515,7 +612,8 @@ function GroupDetail({
         <div>
           <h2 style={{ margin: 0 }}>{group.name}</h2>
           <p style={{ margin: "4px 0 0", color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>
-            Trener: {trainerLabel} · {members.length} {members.length === 1 ? "član" : "članova"}
+            Trener: {trainerLabel} · {participants.length}{" "}
+            {participants.length === 1 ? "polaznik" : "polaznika"}
           </p>
         </div>
         <Button onClick={() => setAddOpen((v) => !v)} data-cy="group-add-member">
@@ -545,6 +643,21 @@ function GroupDetail({
               ))}
             </select>
           </div>
+          <div className="field" style={{ flex: 1, margin: 0 }}>
+            <label htmlFor="dm-role">Uloga u grupi</label>
+            <select
+              id="dm-role"
+              value={role}
+              onChange={(e) => setRole(e.target.value as GroupMemberRole)}
+              data-cy="member-role"
+            >
+              {(Object.keys(GROUP_MEMBER_ROLE_LABEL) as GroupMemberRole[]).map((r) => (
+                <option key={r} value={r}>
+                  {GROUP_MEMBER_ROLE_LABEL[r]}
+                </option>
+              ))}
+            </select>
+          </div>
           <Button type="submit" variant="secondary" disabled={busy} data-cy="member-add">
             Dodaj
           </Button>
@@ -557,8 +670,8 @@ function GroupDetail({
           label="Kapacitet"
           value={
             group.capacity_mode === "LIMITED" && group.capacity != null
-              ? `${members.length} od ${group.capacity}`
-              : `${members.length} · bez ograničenja`
+              ? `${participants.length} od ${group.capacity}`
+              : `${participants.length} · bez ograničenja`
           }
         />
         <StatTile label="Mesečna cena" value="Uskoro" delta={{ label: "Cenovnik dolazi (#7)", tone: "neutral" }} />
@@ -582,7 +695,9 @@ function GroupDetail({
         {tab === "treneri" ? (
           <TrainersTab trainerIds={trainerIds} peopleMap={peopleMap} seriesForGroup={seriesForGroup} />
         ) : null}
-        {tab === "osnovno" ? <BasicsTab group={group} /> : null}
+        {tab === "osnovno" ? (
+          <BasicsTab group={group} peopleMap={peopleMap} locationsMap={locationsMap} />
+        ) : null}
       </div>
     </div>
   );
@@ -625,7 +740,11 @@ function MembersTab({ members }: { members: GroupMember[] }) {
             </span>
             {m.display_name}
           </span>
-          <StatusBadge tone="info">Član</StatusBadge>
+          {/* Says what this person IS here, rather than labelling everyone
+              "Član": a trainer on a group's list is not one of its members. */}
+          <StatusBadge tone={(m.role ?? "MEMBER") === "MEMBER" ? "info" : "neutral"}>
+            {GROUP_MEMBER_ROLE_LABEL[m.role ?? "MEMBER"]}
+          </StatusBadge>
         </li>
       ))}
     </ul>
@@ -646,7 +765,7 @@ function ScheduleTab({ sessions }: { sessions: ScheduleSession[] }) {
       <tbody>
         {sessions.map((s) => (
           <tr key={s.id} data-cy="group-session-row">
-            <td>{new Date(s.starts_at).toLocaleString("sr-Latn")}</td>
+            <td>{formatDateTime(s.starts_at)}</td>
             <td>
               <StatusBadge tone={s.status === "SCHEDULED" ? "success" : "info"}>{s.status}</StatusBadge>
             </td>
@@ -701,7 +820,18 @@ function TrainersTab({
   );
 }
 
-function BasicsTab({ group }: { group: Group }) {
+function BasicsTab({
+  group,
+  peopleMap,
+  locationsMap,
+}: {
+  group: Group;
+  peopleMap: Record<string, string>;
+  locationsMap: Record<string, LocationSummary>;
+}) {
+  const defaultLocation = group.default_location_id
+    ? locationsMap[group.default_location_id]
+    : undefined;
   const rows: Array<[string, ReactNode]> = [
     ["Naziv", group.name],
     [
@@ -709,6 +839,18 @@ function BasicsTab({ group }: { group: Group }) {
       group.capacity_mode === "LIMITED" && group.capacity != null
         ? `${group.capacity} mesta`
         : "Bez ograničenja",
+    ],
+    [
+      "Podrazumevani trener",
+      group.default_trainer_person_id
+        ? (peopleMap[group.default_trainer_person_id] ?? "Nepoznata osoba")
+        : "Nije određen",
+    ],
+    [
+      "Podrazumevana lokacija",
+      defaultLocation
+        ? `${defaultLocation.name} · ${LOCATION_KIND_LABEL[defaultLocation.kind]}`
+        : "Nije određena",
     ],
     ["Mesečna cena", "Uskoro: cenovnik grupa dolazi u narednoj fazi (#7)."],
   ];

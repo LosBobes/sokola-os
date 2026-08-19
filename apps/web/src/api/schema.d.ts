@@ -247,6 +247,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/charges/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find Charge By Reference
+         * @description Reconciliation helper: which charge does this bank-statement reference
+         *     belong to? Read-only , confirming the payment is a separate, deliberate act.
+         */
+        get: operations["findChargeByReference"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/charges/{charge_id}/cancel": {
         parameters: {
             query?: never;
@@ -258,6 +279,31 @@ export interface paths {
         put?: never;
         /** Cancel Charge */
         post: operations["cancelCharge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/charges/{charge_id}/payment-slip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Charge Payment Slip
+         * @description Payment-slip data + NBS IPS QR payload for one charge.
+         *
+         *     Reachable by any authenticated context in the school, staff and the paying
+         *     parent alike, because it is the parent who scans it. It exposes nothing
+         *     beyond what a payment order already prints, and it never moves money nor
+         *     changes the charge.
+         */
+        get: operations["getChargePaymentSlip"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -561,6 +607,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/events/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Event Calendar */
+        get: operations["listEventCalendar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/events/{event_id}": {
         parameters: {
             query?: never;
@@ -731,6 +794,23 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/groups/{group_id}/members/{membership_id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Set Group Member Role */
+        patch: operations["setGroupMemberRole"];
         trace?: never;
     };
     "/groups/{group_id}/members/{membership_id}/suspend": {
@@ -1949,10 +2029,16 @@ export interface components {
         AcceptInvitationResponse: {
             context: components["schemas"]["ContextSummary"];
         };
-        /** AddGroupMemberRequest */
+        /**
+         * AddGroupMemberRequest
+         * @description Attach a person to a group. ``role`` says in what capacity , defaults to
+         *     ``MEMBER`` (polaznik), the only role that is rostered and billed.
+         */
         AddGroupMemberRequest: {
             /** Person Id */
             person_id: string;
+            /** @default MEMBER */
+            role: components["schemas"]["GroupMemberRole"];
         };
         /** AnnouncementDraft */
         AnnouncementDraft: {
@@ -2125,6 +2211,8 @@ export interface components {
             amount_minor?: number | null;
             /** Description */
             description: string;
+            /** Due Date */
+            due_date?: string | null;
             /** Group Id */
             group_id: string;
             /** Period Label */
@@ -2203,10 +2291,14 @@ export interface components {
             currency: string;
             /** Description */
             description: string;
+            /** Due Date */
+            due_date?: string | null;
             /** Id */
             id: string;
             /** Note */
             note?: string | null;
+            /** Payment Reference */
+            payment_reference?: string | null;
             /** Person Id */
             person_id: string;
             status: components["schemas"]["ChargeStatus"];
@@ -2299,8 +2391,16 @@ export interface components {
             capacity_mode: components["schemas"]["EventCapacityMode"];
             /** @default INTERNAL */
             category: components["schemas"]["EventCategory"];
+            /** Description */
+            description?: string | null;
             /** Ends At */
             ends_at?: string | null;
+            /** Location Id */
+            location_id?: string | null;
+            /** Location Note */
+            location_note?: string | null;
+            /** Responsible Person Id */
+            responsible_person_id?: string | null;
             /**
              * Starts At
              * Format: date-time
@@ -2319,6 +2419,10 @@ export interface components {
             capacity?: number | null;
             /** @default UNLIMITED */
             capacity_mode: components["schemas"]["GroupCapacityMode"];
+            /** Default Location Id */
+            default_location_id?: string | null;
+            /** Default Trainer Person Id */
+            default_trainer_person_id?: string | null;
             /** Location Id */
             location_id?: string | null;
             /** Name */
@@ -2347,6 +2451,8 @@ export interface components {
             address?: string | null;
             /** Internal Code */
             internal_code?: string | null;
+            /** @default OTHER */
+            kind: components["schemas"]["LocationKind"];
             /** Name */
             name: string;
         };
@@ -2384,6 +2490,8 @@ export interface components {
             family_name: string;
             /** Given Name */
             given_name: string;
+            /** @default ATTENDEE */
+            member_type: components["schemas"]["OrgMemberType"];
         };
         /** CreateProgramRequest */
         CreateProgramRequest: {
@@ -2576,8 +2684,18 @@ export interface components {
             capacity: number | null;
             capacity_mode: components["schemas"]["EventCapacityMode"];
             category: components["schemas"]["EventCategory"];
+            /** Description */
+            description: string | null;
+            /** Ends At */
+            ends_at: string | null;
             /** Id */
             id: string;
+            /** Location Id */
+            location_id: string | null;
+            /** Location Note */
+            location_note: string | null;
+            /** Responsible Person Id */
+            responsible_person_id: string | null;
             /**
              * Starts At
              * Format: date-time
@@ -2595,9 +2713,10 @@ export interface components {
         EventStatus: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
         /**
          * EventType
+         * @description The event's category as a school would name it (kamp, pripreme, takmičenje...).
          * @enum {string}
          */
-        EventType: "TRAINING_CAMP" | "COMPETITION" | "WORKSHOP" | "SOCIAL" | "OTHER";
+        EventType: "TRAINING_CAMP" | "PREPARATION" | "COMPETITION" | "PERFORMANCE" | "WORKSHOP" | "SOCIAL" | "OTHER";
         /**
          * FinancialReport
          * @description Billed vs. collected over an explicit date range, plus a breakdown of
@@ -2649,8 +2768,25 @@ export interface components {
             membership_id: string;
             /** Person Id */
             person_id: string;
+            role: components["schemas"]["GroupMemberRole"];
             status: components["schemas"]["GroupMembershipStatus"];
         };
+        /**
+         * GroupMemberRole
+         * @description Why a person is attached to a group.
+         *
+         *     Attaching a trainer to a group is not the same act as enrolling a child in
+         *     it, and conflating the two is what makes staff show up on attendance sheets
+         *     and membership invoices. Only :attr:`MEMBER` is a *polaznik*: the attendance
+         *     roster and every billing run filter to it, so staff are never charged a
+         *     membership fee nor counted as members.
+         *
+         *     ``MEMBER`` is the default, which is what every row created before this enum
+         *     existed is backfilled to (those rosters were participants by construction:
+         *     they were already being billed and marked present).
+         * @enum {string}
+         */
+        GroupMemberRole: "MEMBER" | "TRAINER" | "ASSISTANT" | "OTHER_STAFF";
         /**
          * GroupMembershipEndReason
          * @enum {string}
@@ -2680,6 +2816,10 @@ export interface components {
             /** Capacity */
             capacity: number | null;
             capacity_mode: components["schemas"]["GroupCapacityMode"];
+            /** Default Location Id */
+            default_location_id: string | null;
+            /** Default Trainer Person Id */
+            default_trainer_person_id: string | null;
             /** Id */
             id: string;
             /** Location Id */
@@ -2876,6 +3016,22 @@ export interface components {
             /** Version */
             version: string;
         };
+        /**
+         * LocationKind
+         * @description What kind of place a :class:`app.domains.structure.models.Location` is.
+         *
+         *     Activities do not only happen in a hall, so the model deliberately carries
+         *     the general concept *location* (lokacija) and lets this enum describe the
+         *     specific kind. Renaming the UI filter from "sale" to "lokacije" without
+         *     this would have left the data model unable to express a session held in a
+         *     kindergarten, a theatre, outdoors or online.
+         *
+         *     ``OTHER`` is the fallback for anything not listed and the default for rows
+         *     created before the column existed, so an unclassified location is never
+         *     silently mislabelled as a hall.
+         * @enum {string}
+         */
+        LocationKind: "SPORTS_HALL" | "FIELD" | "KINDERGARTEN" | "SCHOOL" | "THEATRE" | "OUTDOOR" | "ONLINE" | "OTHER";
         /** LocationResponse */
         LocationResponse: {
             /** Address */
@@ -2884,6 +3040,7 @@ export interface components {
             id: string;
             /** Internal Code */
             internal_code: string | null;
+            kind: components["schemas"]["LocationKind"];
             /** Name */
             name: string;
             status: components["schemas"]["RecordStatus"];
@@ -2906,6 +3063,7 @@ export interface components {
             id: string;
             /** Local Member Code */
             local_member_code: string | null;
+            member_type: components["schemas"]["OrgMemberType"];
             /** Person Id */
             person_id: string;
             status: components["schemas"]["MembershipStatus"];
@@ -3075,6 +3233,22 @@ export interface components {
             completed_at: string | null;
             step: components["schemas"]["OnboardingStep"];
         };
+        /**
+         * OrgMemberType
+         * @description What a person *is* to the school, independent of whether they can sign in.
+         *
+         *     A school's headline "aktivni članovi" figure must count enrolled
+         *     participants and nobody else, so an owner, a coach, a parent and an
+         *     emergency contact all belong to the tenant without inflating it. That is
+         *     what this field separates; :class:`app.domains.identity.enums.RoleCode`
+         *     answers a different question (what may this account *do*), and many people
+         *     here have no account at all.
+         *
+         *     ``ATTENDEE`` is the default and the backfill value for pre-existing rows,
+         *     except for people who already hold a staff role assignment.
+         * @enum {string}
+         */
+        OrgMemberType: "ATTENDEE" | "STAFF" | "GUARDIAN" | "CONTACT";
         /**
          * OrganizationLifecycleStatus
          * @description Where a school is in guided onboarding (PRD 02 §24/§25), independent of
@@ -3381,6 +3555,44 @@ export interface components {
             status: components["schemas"]["PaymentRecordStatus"];
         };
         /**
+         * PaymentSlipResponse
+         * @description Everything needed to fill in a Serbian payment order for one charge.
+         *
+         *     ``ips_qr_payload`` is the string to render as a QR code. Scanning it only
+         *     pre-fills the payer's banking app , it neither moves money nor tells SOKOLA
+         *     OS anything. The charge stays OPEN until someone at the school checks the
+         *     bank account and records the payment, which is why this response carries no
+         *     payment status of its own beyond the amount still outstanding.
+         */
+        PaymentSlipResponse: {
+            /** Account Number */
+            account_number: string;
+            /** Amount Minor */
+            amount_minor: number;
+            /** Charge Id */
+            charge_id: string;
+            /** Currency */
+            currency: string;
+            /** Due Date */
+            due_date: string | null;
+            /** Ips Qr Payload */
+            ips_qr_payload: string;
+            /** Payee Address */
+            payee_address: string | null;
+            /** Payee City */
+            payee_city: string | null;
+            /** Payee Name */
+            payee_name: string;
+            /** Payer Name */
+            payer_name: string;
+            /** Payment Code */
+            payment_code: string;
+            /** Purpose */
+            purpose: string;
+            /** Reference Number */
+            reference_number: string;
+        };
+        /**
          * PaymentVoidReasonCode
          * @enum {string}
          */
@@ -3435,6 +3647,7 @@ export interface components {
             /** Id */
             id: string;
             identity_status: components["schemas"]["PersonIdentityStatus"];
+            member_type: components["schemas"]["OrgMemberType"];
         };
         /** PostBillingRunRequest */
         PostBillingRunRequest: {
@@ -3442,6 +3655,8 @@ export interface components {
             amount_minor?: number | null;
             /** Description */
             description: string;
+            /** Due Date */
+            due_date?: string | null;
             /** Group Id */
             group_id: string;
             /** Period Label */
@@ -3748,6 +3963,11 @@ export interface components {
         /**
          * SessionDraft
          * @description The proposed shape of a session, used for both conflict preview and create.
+         *
+         *     ``trainer_person_id`` and ``location_id`` are optional *overrides*: omit them
+         *     and the group's own defaults are copied onto the session (see
+         *     :func:`app.domains.scheduling.service.create_session`). Send an explicit
+         *     ``null`` to create the session deliberately unassigned.
          */
         SessionDraft: {
             /**
@@ -3757,6 +3977,8 @@ export interface components {
             ends_at: string;
             /** Group Id */
             group_id: string;
+            /** Location Id */
+            location_id?: string | null;
             /**
              * Starts At
              * Format: date-time
@@ -3764,6 +3986,8 @@ export interface components {
             starts_at: string;
             /** Title */
             title?: string | null;
+            /** Trainer Person Id */
+            trainer_person_id?: string | null;
         };
         /**
          * SessionEdit
@@ -3775,6 +3999,8 @@ export interface components {
             duration_minutes?: number | null;
             /** Local Time */
             local_time?: string | null;
+            /** Location Id */
+            location_id?: string | null;
             /** @default OTHER */
             reason: components["schemas"]["SessionChangeReasonCode"];
             scope: components["schemas"]["SessionEditScope"];
@@ -3812,6 +4038,8 @@ export interface components {
              * Format: time
              */
             local_time: string;
+            /** Location Id */
+            location_id?: string | null;
             /**
              * Start Date
              * Format: date
@@ -3848,6 +4076,8 @@ export interface components {
              * Format: time
              */
             local_time: string;
+            /** Location Id */
+            location_id: string | null;
             /**
              * Start Date
              * Format: date
@@ -3879,6 +4109,8 @@ export interface components {
             group_id: string;
             /** Id */
             id: string;
+            /** Location Id */
+            location_id?: string | null;
             /** Series Id */
             series_id?: string | null;
             /**
@@ -3891,6 +4123,10 @@ export interface components {
             title: string | null;
             /** Trainer Person Id */
             trainer_person_id?: string | null;
+        };
+        /** SetGroupMemberRoleRequest */
+        SetGroupMemberRoleRequest: {
+            role: components["schemas"]["GroupMemberRole"];
         };
         /**
          * SetMembershipDiscountRequest
@@ -3954,10 +4190,21 @@ export interface components {
             /** Capacity */
             capacity?: number | null;
             capacity_mode?: components["schemas"]["EventCapacityMode"] | null;
+            /** Description */
+            description?: string | null;
+            /** Ends At */
+            ends_at?: string | null;
+            /** Location Id */
+            location_id?: string | null;
+            /** Location Note */
+            location_note?: string | null;
+            /** Responsible Person Id */
+            responsible_person_id?: string | null;
             /** Starts At */
             starts_at?: string | null;
             /** Title */
             title?: string | null;
+            type?: components["schemas"]["EventType"] | null;
         };
         /**
          * UpdateGrantedAreasRequest
@@ -3970,12 +4217,19 @@ export interface components {
         /**
          * UpdateGroupRequest
          * @description Partial update. Only fields present in the request body are changed ,
-         *     send ``null`` for ``program_id``/``location_id``/``base_monthly_price_minor``
-         *     to clear that link/price, omit a field entirely to leave it untouched.
+         *     send ``null`` for any nullable field to clear that link/price/default, omit
+         *     a field entirely to leave it untouched.
+         *
+         *     Changing a default only affects sessions created *after* the change:
+         *     defaults are copied onto a session at create time, never read through.
          */
         UpdateGroupRequest: {
             /** Base Monthly Price Minor */
             base_monthly_price_minor?: number | null;
+            /** Default Location Id */
+            default_location_id?: string | null;
+            /** Default Trainer Person Id */
+            default_trainer_person_id?: string | null;
             /** Location Id */
             location_id?: string | null;
             /** Program Id */
@@ -3987,6 +4241,7 @@ export interface components {
             address?: string | null;
             /** Internal Code */
             internal_code?: string | null;
+            kind?: components["schemas"]["LocationKind"] | null;
             /** Name */
             name?: string | null;
         };
@@ -3994,12 +4249,17 @@ export interface components {
          * UpdateMemberDataRequest
          * @description School-local member data. Only fields present in the request body are
          *     changed; omit a field to leave it untouched, send ``null`` to clear it.
+         *
+         *     ``member_type`` is not school-local trivia , moving someone in or out of
+         *     ATTENDEE changes the school's active-member figure , so it is settable here
+         *     but never nullable.
          */
         UpdateMemberDataRequest: {
             /** Admin Note */
             admin_note?: string | null;
             /** Local Member Code */
             local_member_code?: string | null;
+            member_type?: components["schemas"]["OrgMemberType"] | null;
         };
         /** UpdateProgramRequest */
         UpdateProgramRequest: {
@@ -4523,6 +4783,44 @@ export interface operations {
             };
         };
     };
+    findChargeByReference: {
+        parameters: {
+            query: {
+                reference: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChargeResponse"];
+                };
+            };
+            /** @description No charge in this school carries that reference. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     cancelCharge: {
         parameters: {
             query?: never;
@@ -4550,6 +4848,44 @@ export interface operations {
                 };
             };
             /** @description Charge already PAID or already CANCELLED. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getChargePaymentSlip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                charge_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSlipResponse"];
+                };
+            };
+            /** @description Charge is settled or cancelled, or the school has no valid payee account configured. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -5311,6 +5647,38 @@ export interface operations {
             };
         };
     };
+    listEventCalendar: {
+        parameters: {
+            query: {
+                date_from: string;
+                date_to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     updateEvent: {
         parameters: {
             query?: never;
@@ -5752,6 +6120,49 @@ export interface operations {
                 };
             };
             /** @description Invalid transition for the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    setGroupMemberRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+                membership_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetGroupMemberRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupMemberResponse"];
+                };
+            };
+            /** @description Membership ended, or the group is full. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6735,6 +7146,7 @@ export interface operations {
     listPeople: {
         parameters: {
             query?: {
+                member_type?: components["schemas"]["OrgMemberType"] | null;
                 limit?: number;
                 offset?: number;
             };

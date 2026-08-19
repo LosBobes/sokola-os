@@ -8,6 +8,7 @@ function setupGroupWithMember(groupName: string): void {
   cy.get("[data-cy=group-name]").type(groupName);
   cy.get("[data-cy=group-save]").click();
   cy.get("[data-cy=member-select]").first().select("Mila Jovanović");
+  // Added as a participant (the default role), so she is billed.
   cy.get("[data-cy=member-add]").first().click();
   cy.get("[data-cy=group-item]").contains("1 članova").should("exist");
 }
@@ -31,6 +32,17 @@ describe("Manager: finance and communications", () => {
     cy.get("[data-cy=charge-pay]").first().click();
     cy.get("[data-cy=pay-amount]").clear().type("1000");
     cy.get("[data-cy=confirm-dialog][open] [data-cy=confirm-yes]").click();
+    cy.get("[data-cy=charge-row]").contains("Delimično plaćeno").should("exist");
+
+    // --- The uplatnica is an aid, never a payment ---
+    cy.get("[data-cy=charge-slip]").first().click();
+    cy.get("[data-cy=payment-slip-dialog]").should("be.visible");
+    // Whether or not the school has an account number on file, the dialog must
+    // say what the code is for before it shows anything else.
+    cy.get("[data-cy=payment-slip-dialog]").contains("pomoć pri popunjavanju").should("exist");
+    cy.get("[data-cy=payment-slip-dialog]").contains("ručno potvrđuje").should("exist");
+    cy.get("[data-cy=payment-slip-close]").click();
+    // The charge is untouched by having looked at its slip.
     cy.get("[data-cy=charge-row]").contains("Delimično plaćeno").should("exist");
 
     // --- Journey 7: publish an announcement (preview snapshot → publish) ---
