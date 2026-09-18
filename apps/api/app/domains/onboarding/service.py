@@ -31,11 +31,13 @@ from sqlalchemy.orm import Session
 
 from app.common.enums import AuditDataClass, RecordStatus
 from app.common.errors import ConflictError
+from app.common.ids import new_id
 from app.domains.identity.models import Invitation
 from app.domains.onboarding.enums import OnboardingStep
 from app.domains.onboarding.models import OnboardingProgress
 from app.domains.onboarding.schemas import OnboardingProgressResponse, OnboardingStepStatus
-from app.domains.school.enums import SchoolLifecycleStatus
+from app.domains.school import anchor
+from app.domains.school.enums import SchoolStatus, SchoolStatusReason
 from app.domains.school.models import School
 from app.domains.structure.models import Location, Program, Room
 from app.platform import clock
@@ -122,12 +124,12 @@ def _build_response(
     ]
     remaining = [s.step for s in steps if not s.completed]
     can_activate = (
-        org.lifecycle_status is SchoolLifecycleStatus.IN_PREPARATION
+        org.status is SchoolStatus.IN_PREPARATION
         and locations_at is not None
     )
     return OnboardingProgressResponse(
         school_id=org.id,
-        lifecycle_status=org.lifecycle_status,
+        status=org.status,
         steps=steps,
         remaining_steps=remaining,
         can_activate=can_activate,
@@ -148,7 +150,7 @@ def activate(db: Session, context: RequestContext) -> OnboardingProgressResponse
     rules)."""
     org = db.get(School, context.school_id)
     assert org is not None
-    if org.lifecycle_status is SchoolLifecycleStatus.ACTIVE:
+    if org.status is SchoolStatus.ACTIVE:
         raise ConflictError("Škola je već aktivna.")
     if not _minimum_activation_met(db, org.id):
         raise ConflictError("Potrebno je dodati bar jedan ogranak pre aktivacije.")
@@ -156,7 +158,19 @@ def activate(db: Session, context: RequestContext) -> OnboardingProgressResponse
     progress = _get_or_create_progress(db, org.id)
     now = _now()
     progress.activated_at = now
-    org.lifecycle_status = SchoolLifecycleStatus.ACTIVE
+    # Through the anchor, never by assigning the column: M04 §2.5 makes the
+    # append-only transition the authority and the column its projection, and a
+    # direct assignment would leave a school ACTIVE with no record of when or by
+    # whom — which is precisely the history a deactivation later has to be read
+    # against.
+    anchor.transition_status(
+        db,
+        school=org,
+        to_status=SchoolStatus.ACTIVE,
+        reason_code=SchoolStatusReason.INITIAL_ACTIVATION,
+        actor_ref=context.person_id,
+        correlation_id=new_id("corr"),
+    )
 
     record_audit(
         db,

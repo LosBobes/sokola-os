@@ -22,6 +22,7 @@ from app.config import Settings, get_settings
 from app.db import get_db
 from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
 from app.domains.identity.models import RoleAssignment
+from app.domains.school.enums import SchoolStatus
 from app.domains.school.models import School
 from app.security.auth import Principal, resolve_principal
 from app.security.context import RequestContext
@@ -55,7 +56,7 @@ def get_context(request: Request, db: DbDep, principal: PrincipalDep) -> Request
         raise ForbiddenError("Kontekst više nije aktivan.")
 
     school = db.get(School, assignment.school_id)
-    if school is None or school.record_status is RecordStatus.ARCHIVED:
+    if school is None or school.status is SchoolStatus.DEACTIVATED:
         raise ForbiddenError("Škola nije dostupna.")
 
     return RequestContext(

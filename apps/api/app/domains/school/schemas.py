@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.domains.school.enums import SchoolLifecycleStatus, SchoolType
+from app.domains.school.enums import SchoolKind, SchoolStatus, SchoolType
 
 
 class CreateSchoolRequest(BaseModel):
@@ -19,7 +19,8 @@ class SchoolResponse(BaseModel):
     slug: str | None
     type: SchoolType
     timezone: str
-    lifecycle_status: SchoolLifecycleStatus
+    school_kind: SchoolKind
+    status: SchoolStatus
 
 
 class TenantPublic(BaseModel):

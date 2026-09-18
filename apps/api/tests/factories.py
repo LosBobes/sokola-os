@@ -4,13 +4,24 @@ separate session) observe it."""
 from __future__ import annotations
 
 import datetime as dt
+import secrets
 from dataclasses import dataclass
 
+from app.common.ids import new_id
+from app.common.slug import slugify
 from app.domains.identity.enums import AuthAccountStatus, AuthIdentifierType, RoleCode
 from app.domains.identity.models import AuthAccount, AuthIdentifier, Person, RoleAssignment
+from app.domains.organization.enums import OrganizationSchoolChangeReason
+from app.domains.organization.models import Organization
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
 from app.domains.people.models import GuardianRelationship, GuardianSchoolAccess
-from app.domains.school.enums import MembershipStatus, SchoolType
+from app.domains.school import anchor
+from app.domains.school.enums import (
+    LocatorKind,
+    MembershipStatus,
+    SchoolStatus,
+    SchoolType,
+)
 from app.domains.school.models import School, SchoolMembership
 from app.security.auth import DEV_PERSON_HEADER
 from app.security.deps import CONTEXT_HEADER
@@ -24,9 +35,44 @@ def make_person(db: Session, *, given: str = "Ana", family: str = "Marković") -
     return person
 
 
-def make_school(db: Session, *, name: str = "Klub Soko") -> School:
-    org = School(name=name, type=SchoolType.SPORTS_CLUB)
+def make_school(
+    db: Session, *, name: str = "Klub Soko", status: SchoolStatus = SchoolStatus.ACTIVE
+) -> School:
+    """A school with its full M04 anchor, because a school without one cannot
+    exist in production: §3.1.3 and §3.7.1 require a current organization link
+    and one active locator of each kind from the moment it is created. A factory
+    that skipped them would let tests pass against rows the database would reject.
+    """
+    org = School(name=name, type=SchoolType.SPORTS_CLUB, status=status)
     db.add(org)
+    db.flush()
+
+    holder = Organization(
+        organization_ref=new_id("oref"),
+        legal_name=name,
+        country_code="RS",
+        created_by_actor_ref="test",
+        updated_by_actor_ref="test",
+    )
+    db.add(holder)
+    db.flush()
+    anchor.open_organization_link(
+        db,
+        school_id=org.id,
+        organization=holder,
+        reason=OrganizationSchoolChangeReason.INITIAL_PROVISIONING,
+        case_reference="TEST",
+        actor_ref="test",
+    )
+    anchor.issue_locator(
+        db,
+        school_id=org.id,
+        kind=LocatorKind.SLUG,
+        value=f"{slugify(name)}-{secrets.token_hex(3)}",
+        actor_ref="test",
+    )
+    anchor.issue_school_code(db, school_id=org.id, actor_ref="test")
+    anchor.record_creation(db, school=org, actor_ref="test", correlation_id=new_id("corr"))
     db.commit()
     return org
 

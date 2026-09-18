@@ -5,7 +5,7 @@ import datetime as dt
 from pydantic import BaseModel
 
 from app.domains.onboarding.enums import OnboardingStep
-from app.domains.school.enums import SchoolLifecycleStatus
+from app.domains.school.enums import SchoolStatus
 
 
 class OnboardingStepStatus(BaseModel):
@@ -16,7 +16,7 @@ class OnboardingStepStatus(BaseModel):
 
 class OnboardingProgressResponse(BaseModel):
     school_id: str
-    lifecycle_status: SchoolLifecycleStatus
+    status: SchoolStatus
     steps: list[OnboardingStepStatus]
     remaining_steps: list[OnboardingStep]
     # Whether ``POST /onboarding/activate`` would currently succeed, i.e. the

@@ -3201,11 +3201,11 @@ export interface components {
             activated_at: string | null;
             /** Can Activate */
             can_activate: boolean;
-            lifecycle_status: components["schemas"]["SchoolLifecycleStatus"];
             /** Remaining Steps */
             remaining_steps: components["schemas"]["OnboardingStep"][];
             /** School Id */
             school_id: string;
+            status: components["schemas"]["SchoolStatus"];
             /** Steps */
             steps: components["schemas"]["OnboardingStepStatus"][];
         };
@@ -3851,32 +3851,44 @@ export interface components {
             session_id: string;
         };
         /**
-         * SchoolLifecycleStatus
-         * @description Where a school is in guided onboarding (PRD 02 §24/§25), independent of
-         *     ``record_status`` (which is the soft-delete/deactivation axis, §31).
+         * SchoolKind
+         * @description §2.2. What kind of organization the school is.
          *
-         *     A school created through ``POST /schools`` starts ``IN_PREPARATION``
-         *     ("u pripremi"): the owner may set up structure and invite a co-owner, but
-         *     normal STAFF/PARENT/STUDENT invitations are blocked until ``ACTIVE`` (see
-         *     ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).
-         *     Legacy/seed rows default to ``ACTIVE`` so behaviour outside the real
-         *     signup path is unchanged.
+         *     Distinct from the older :class:`SchoolType`, which this repo uses for the
+         *     same idea with a coarser list; the two are reconciled in the M04 migration.
          * @enum {string}
          */
-        SchoolLifecycleStatus: "IN_PREPARATION" | "ACTIVE";
+        SchoolKind: "PRIVATE_SCHOOL" | "SPORTS_CLUB_ACADEMY" | "DANCE_SCHOOL_STUDIO" | "MUSIC_SCHOOL" | "ART_DRAMA_SCHOOL" | "EDUCATION_LANGUAGE_CENTER" | "ACTIVITY_WORKSHOP_CENTER" | "OTHER";
         /** SchoolResponse */
         SchoolResponse: {
             /** Id */
             id: string;
-            lifecycle_status: components["schemas"]["SchoolLifecycleStatus"];
             /** Name */
             name: string;
+            school_kind: components["schemas"]["SchoolKind"];
             /** Slug */
             slug: string | null;
+            status: components["schemas"]["SchoolStatus"];
             /** Timezone */
             timezone: string;
             type: components["schemas"]["SchoolType"];
         };
+        /**
+         * SchoolStatus
+         * @description M04 §2.2. The school's single lifecycle axis.
+         *
+         *     This replaces the pair this repo used to carry — ``lifecycle_status``
+         *     (IN_PREPARATION/ACTIVE) alongside ``record_status`` (ACTIVE/ARCHIVED as the
+         *     deactivation switch). Two fields answering one question is how a guard ends
+         *     up checking the wrong one and reading correct; §5.2 defines a single
+         *     transition table, so there is a single column.
+         *
+         *     The authority is :class:`app.domains.school.models.SchoolStatusTransition`,
+         *     which is append-only. This column is its current projection, maintained in
+         *     the same transaction as the transition that moved it.
+         * @enum {string}
+         */
+        SchoolStatus: "IN_PREPARATION" | "ACTIVE" | "DEACTIVATED";
         /**
          * SchoolType
          * @enum {string}

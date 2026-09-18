@@ -14,7 +14,7 @@ from app.common.enums import RecordStatus
 from app.common.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.domains.groups.models import Group
 from app.domains.identity.enums import InvitationType, RoleCode, RoleScopeType
-from app.domains.school.enums import SchoolLifecycleStatus
+from app.domains.school.enums import SchoolStatus
 from app.domains.school.models import School
 from app.domains.structure.models import Location
 from app.security.permissions import ROLE_DEFAULT_AREAS, effective_areas, parse_granted_areas
@@ -132,7 +132,7 @@ def ensure_invitation_allowed_during_onboarding(
     members before its structure exists.
     """
     if (
-        school.lifecycle_status is SchoolLifecycleStatus.IN_PREPARATION
+        school.status is SchoolStatus.IN_PREPARATION
         and role_code is not RoleCode.OWNER
     ):
         raise ForbiddenError(

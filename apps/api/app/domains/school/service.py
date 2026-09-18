@@ -7,10 +7,19 @@ from sqlalchemy.orm import Session
 
 from app.common.enums import AuditDataClass, RecordStatus
 from app.common.errors import ConflictError, ForbiddenError, NotFoundError
+from app.common.ids import new_id
 from app.common.slug import slugify
 from app.domains.identity.enums import RoleAssignmentStatus, RoleCode, RoleScopeType
 from app.domains.identity.models import RoleAssignment
-from app.domains.school.enums import OrgMemberType, SchoolLifecycleStatus
+from app.domains.organization.enums import OrganizationSchoolChangeReason
+from app.domains.organization.models import Organization
+from app.domains.school import anchor
+from app.domains.school.enums import (
+    LocatorKind,
+    OrgMemberType,
+    SchoolStatus,
+    SchoolStatusReason,
+)
 from app.domains.school.models import School, SchoolMembership
 from app.domains.school.schemas import (
     CreateSchoolRequest,
@@ -21,6 +30,13 @@ from app.platform.audit.service import record_audit
 from app.platform.outbox.service import enqueue
 from app.security.auth import Principal
 from app.security.context import RequestContext
+
+#: Marks an organization the platform created because a school needed one, not
+#: because a legal entity was recorded. M04 §3.1.3 requires every school to hold
+#: a current organization link from creation, and self-service signup has no real
+#: organization to point at yet — so one is provisioned and later replaced by a
+#: real one through an ORG-04 transfer, which is exactly what that command is for.
+PLACEHOLDER_ORGANIZATION_CASE_REF = "SELF_PROVISIONED"
 
 
 def _unique_slug(db: Session, name: str) -> str:
@@ -39,16 +55,56 @@ def create_school(
     """Bootstrap a new tenant. The creating person becomes its OWNER and first
     member, all in one transaction. The school starts ``IN_PREPARATION``
     ("u pripremi"), guided onboarding (app.domains.onboarding) walks it through
-    structure setup and an optional co-owner invite before it may ``activate``."""
+    structure setup and an optional co-owner invite before it may ``activate``.
+
+    The M04 anchor is built here too, in the same transaction: a placeholder
+    organization and its link, both locators, and status transition #1. A school
+    that exists without them would violate §3.1.3 and §3.7.1 from the moment it
+    is created, and there is no later step in this repository that would repair
+    that — M04's own SCH-01 command needs M02/M05/M06 and is finding F-12.
+    """
     org = School(
         name=req.name,
         slug=_unique_slug(db, req.name),
+        provisioning_reference=new_id("prov"),
         type=req.type,
         timezone=req.timezone,
-        lifecycle_status=SchoolLifecycleStatus.IN_PREPARATION,
+        status=SchoolStatus.IN_PREPARATION,
     )
     db.add(org)
     db.flush()
+
+    holder = Organization(
+        organization_ref=new_id("oref"),
+        legal_name=org.name,
+        country_code="RS",
+        created_by_actor_ref=principal.person_id,
+        updated_by_actor_ref=principal.person_id,
+    )
+    db.add(holder)
+    db.flush()
+    anchor.open_organization_link(
+        db,
+        school_id=org.id,
+        organization=holder,
+        reason=OrganizationSchoolChangeReason.INITIAL_PROVISIONING,
+        case_reference=PLACEHOLDER_ORGANIZATION_CASE_REF,
+        actor_ref=principal.person_id,
+    )
+    # The slug column stays the operative one for existing lookups; the locator
+    # is its M04 authority and is issued from the same value so the two agree.
+    assert org.slug is not None
+    anchor.issue_locator(
+        db,
+        school_id=org.id,
+        kind=LocatorKind.SLUG,
+        value=org.slug,
+        actor_ref=principal.person_id,
+    )
+    anchor.issue_school_code(db, school_id=org.id, actor_ref=principal.person_id)
+    anchor.record_creation(
+        db, school=org, actor_ref=principal.person_id, correlation_id=new_id("corr")
+    )
 
     # The founder runs the school, they are not one of its polaznici, so the
     # first membership is STAFF. Otherwise every brand-new school would open
@@ -99,7 +155,7 @@ def lookup_tenant(db: Session, slug: str) -> TenantPublic:
     org = db.execute(
         select(School).where(
             School.slug == slug,
-            School.record_status == RecordStatus.ACTIVE,
+            School.status != SchoolStatus.DEACTIVATED,
         )
     ).scalar_one_or_none()
     if org is None or org.slug is None:
@@ -130,10 +186,18 @@ def deactivate_school(db: Session, context: RequestContext) -> SchoolResponse:
     :func:`reactivate_school`."""
     org = db.get(School, context.school_id)
     assert org is not None  # context guarantees the active org exists
-    if org.record_status is RecordStatus.ARCHIVED:
+    if org.status is SchoolStatus.DEACTIVATED:
         raise ConflictError("Škola je već deaktivirana.")
 
-    org.record_status = RecordStatus.ARCHIVED
+    anchor.transition_status(
+        db,
+        school=org,
+        to_status=SchoolStatus.DEACTIVATED,
+        reason_code=SchoolStatusReason.OPERATIONAL_PAUSE,
+        reason_note="Deaktivacija iz školskog podešavanja.",
+        actor_ref=context.person_id,
+        correlation_id=new_id("corr"),
+    )
     record_audit(
         db,
         data_class=AuditDataClass.ROLE,
@@ -166,10 +230,18 @@ def reactivate_school(
         raise NotFoundError("Škola nije pronađena.")
     if not _is_active_owner(db, school_id, principal.person_id):
         raise ForbiddenError("Nemate ovlašćenje za ovu radnju.")
-    if org.record_status is RecordStatus.ACTIVE:
+    if org.status is not SchoolStatus.DEACTIVATED:
         raise ConflictError("Škola je već aktivna.")
 
-    org.record_status = RecordStatus.ACTIVE
+    anchor.transition_status(
+        db,
+        school=org,
+        to_status=SchoolStatus.ACTIVE,
+        reason_code=SchoolStatusReason.OPERATIONAL_RESUME,
+        reason_note="Ponovno aktiviranje od strane vlasnika.",
+        actor_ref=principal.person_id,
+        correlation_id=new_id("corr"),
+    )
     record_audit(
         db,
         data_class=AuditDataClass.ROLE,

@@ -12,6 +12,7 @@ from app.domains.groups.models import Group, GroupMembership
 from app.domains.identity.models import Person
 from app.domains.people.enums import GuardianAccessStatus
 from app.domains.people.models import GuardianSchoolAccess
+from app.domains.school.enums import SchoolStatus
 from app.domains.school.models import School
 
 
@@ -154,7 +155,7 @@ def get_school(db: Session, school_id: str) -> School | None:
     model (cross-domain model access, never the school service)."""
     stmt = select(School).where(
         School.id == school_id,
-        School.record_status == RecordStatus.ACTIVE,
+        School.status != SchoolStatus.DEACTIVATED,
     )
     return db.execute(stmt).scalar_one_or_none()
 
