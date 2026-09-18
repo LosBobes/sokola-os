@@ -31,7 +31,8 @@ kao dokaz. Nijedna vrednost nije pretpostavljena.
 |---|---|---|---|
 | Framework/runtime | `RESOLVED` | Python 3.12 + FastAPI 0.141 (modularni monolit), Uvicorn; React 19 + Vite + React Router SPA | `apps/api/pyproject.toml`, `apps/api/app/main.py`, `apps/web/package.json` |
 | Baza i ORM | `RESOLVED` | PostgreSQL 16 + SQLAlchemy 2.0.54, Alembic 1.20 | `apps/api/pyproject.toml`, `apps/api/app/db.py`, `apps/api/alembic.ini` |
-| Migration head | `RESOLVED` | `a1c4f2d80b37` (jedan head, 21 revizija) | `alembic heads` → `a1c4f2d80b37 (head)`, exit 0 |
+| Migration head (zatečeni) | `RESOLVED` | `a1c4f2d80b37` (jedan head, 21 revizija) | `alembic heads`, exit 0 |
+| Migration head (posle ovog rada) | `RESOLVED` | `b7e2a4c91f08` (jedan head, 22 revizije) — audit seal | `alembic heads` → `b7e2a4c91f08 (head)`, exit 0 |
 | Auth/OIDC | `RESOLVED` | Email+password (scrypt + server-side pepper, hash samo na `AuthAccount`) i Google OIDC; dev header adapter nemoguće uključiti van `local`/`test` | `apps/api/app/security/{password,password_auth,oidc,auth}.py`, `apps/api/app/config.py` |
 | Storage | `RESOLVED` | Samo lokalni fajl sistem (`documents_storage_dir`, podrazumevano `var/documents`); `StorageBackend` interfejs postoji za budući S3/GCS | `apps/api/app/domains/documents/storage.py`, `apps/api/app/config.py` |
 | Email provider/adapter | `RESOLVED` | **Ne postoji.** Nema SMTP/SendGrid/Resend adaptera u kodu; notifikacije završavaju u `notification` tabeli (in-app inbox), ne u email transportu | `grep -ril 'smtp\|sendgrid\|resend\|send_email' apps/api/app` → bez pogodaka |
@@ -72,24 +73,37 @@ Izvršeno na commit-u `92ccccc` **pre bilo kakve izmene koda** (baseline snimak)
 Zatečeni pad **nije posledica ove izmene** (`00-CLAUDE-CODE-IZVRSI.md` §1.3). Uzrok i
 otklanjanje opisani su u `REPO-FIRST-KLASIFIKACIJA.md` §4 (F-01).
 
-Posle Talas-1 clock port izmene, na istom okruženju:
+Posle Talas-1 izmena (clock port + audit seal), na istom okruženju:
 
 | Komanda | Exit code | Rezultat |
 |---|---:|---|
 | `ruff check app tests` | 0 | All checks passed |
 | `mypy app` | 0 | no issues found in 177 source files |
 | `python -m scripts.check_architecture` | 0 | Architecture gate OK |
+| `alembic upgrade head` | 0 | 22 revizije; backfill audit lanaca izvršen pre nego što trigger počne da važi |
 | `alembic check` | 0 | No new upgrade operations detected |
-| `pytest` | 0 | **293 passed, 0 failed, 0 skipped** |
+| `pytest` | 0 | **307 passed, 0 failed, 0 skipped** |
 | `python -m scripts.check_openapi_parity` | 0 | OpenAPI parity OK |
 | `scripts/verify-spec-manifest.sh` | 0 | 72/72 fajla odgovaraju manifestu |
+| `npx tsc -b --noEmit` (apps/web) | 0 | bez grešaka |
+| `npm run gen:api` + `git diff --exit-code src/api/schema.d.ts` | 0 | nema drift-a u generisanom tipu |
+| `npm run build` (apps/web) | 0 | 81 modul, build za 1.73 s |
+
+**Migracija je dokazana i na stvarnim podacima, ne samo na praznoj bazi:** `downgrade` →
+unos četiri zatečena audit zapisa u tri različita lanca (dve škole + sistemski) → `upgrade`.
+Backfill je proizveo tri nezavisna lanca sa ispravnim `prev_hash` vezama i `audit_chain_head`
+vrednostima, a `verify_all_chains` vraća `ok` za sva tri. Zatim je provereno da baza odbija
+`UPDATE` i `DELETE` (`restrict_violation`), i da se izmena izvršena zaobilaženjem trigera
+detektuje i locira na tačan zapis.
 
 Okruženje izvršavanja: Python 3.12, PostgreSQL 16.13, `SOKOLA_ENVIRONMENT=test`,
 `SOKOLA_ALLOW_INSECURE_DEV_AUTH=true`, baza `postgresql+psycopg://sokola@127.0.0.1:5432/sokola`.
 Nijedan test nije preskočen i nijedan nije označen `xfail`.
 
-**Nije izvršeno u ovoj sesiji:** web `npm run build` / `npm run typecheck` i Cypress E2E
-(zahtevaju pun `npm ci` i pokrenut stack), pa za njih nema izvršnog dokaza.
+**Nije izvršeno u ovoj sesiji:** Cypress E2E. `npm ci` ne može da dovuče Cypress binarni
+paket u ovom okruženju (`node_modules/cypress` postinstall pada), što je ograničenje
+okruženja zabeleženo i u istoriji repoa. Web typecheck, codegen i build **jesu** izvršeni
+nakon `npm ci --ignore-scripts`. Za E2E je jedini dokaz CI.
 
 ## 5. Komande koje čine verifikacioni harness
 
@@ -99,9 +113,10 @@ Nijedan test nije preskočen i nijedan nije označen `xfail`.
 | Spec integritet | `scripts/verify-spec-manifest.sh` | Dodato uz ovaj baseline |
 | Web tipovi/build | `npm run typecheck` / `npm run build` (u `apps/web`) | |
 | E2E | `npx cypress run --e2e` (u `apps/web`) | Zahteva pokrenut API + web |
-| Root `npm run verify` | **neispravan** | Vidi F-02 u klasifikaciji |
+| Root `npm run verify` | `verify:spec` → `verify:api` → web typecheck/build | Popravljen, vidi F-02 |
 
 ## Pravilo aktuelnosti
 
-Baseline važi za commit `92ccccc`. Svaka naredna izmena koja menja migration head, stack ili
-rezultate harness-a mora ažurirati ovaj dokument u istom commit-u.
+Zatečeni baseline važi za commit `92ccccc`; izvršni rezultati iznad odnose se na stanje posle
+Talasa 1 na ovoj grani. Svaka naredna izmena koja menja migration head, stack ili rezultate
+harness-a mora ažurirati ovaj dokument u istom commit-u.

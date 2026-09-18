@@ -1,6 +1,6 @@
 ---
 tip: repo-first-klasifikacija
-status: TALAS-0-ZAVRSEN
+status: TALAS-1-U-TOKU
 baseline-commit: 92ccccc979fb53979081e84ded0c6e7aae56fb11
 datum: 2026-09-18
 scope: [M00-M21, M28]
@@ -64,9 +64,9 @@ materijalizuje. Odluka pripada vlasniku proizvoda — vidi F-04.
 | Oblast | Klasifikacija | Putanja / dokaz |
 |---|---|---|
 | Transakcija (jedan lokalni commit) | `PRESERVE` | `app/db.py`, session-per-request |
-| Audit | `ADAPT` | `app/platform/audit/` postoji; M21 immutable seal + append-only verifikacija ne postoje |
+| Audit | **`PRESERVE` (dopunjeno u ovom radu)** | `app/platform/audit/` + `app/platform/audit/models.py`: per-tenant hash lanac, `verify_chain`/`verify_all_chains` i DB trigger koji odbija `UPDATE`/`DELETE` |
 | Outbox/inbox | `ADAPT` | `app/platform/outbox/` postoji (transakcioni, poll worker); inbox/dead-letter dual control ne postoji |
-| Idempotency receipt | `ADAPT` | `app/platform/idempotency/` postoji; canonical payload hash + expected-version semantika zahtevaju proveru prema M00 |
+| Idempotency receipt | `PRESERVE` | `app/platform/idempotency/service.py:hash_params` već radi kanonski hash (sortirani ključevi, kompaktni separatori) i odbija isti ključ sa drugim podacima. Expected-version semantika ostaje `VERIFY_IN_REPO` |
 | **Clock** | **`PRESERVE` (uvedeno u ovom radu)** | `app/platform/clock.py` — UTC-aware, freezable; svih 17 zatečenih `datetime.now` mesta prevedeno |
 | Exact decimal | **`REMOVE_CONFLICT`** | `app/common/money.py` — vidi F-03 |
 | Storage | `ADAPT` | `app/domains/documents/storage.py` — lokalni FS; nema tenant particije ni signed URL-a |
@@ -129,12 +129,12 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Primenjeno rešenje:** uveden `app/platform/clock.py` (talas-1 port), svih 17 mesta prevedeno na njega, test modul zamrznut na `2026-08-31T09:00:00+00:00`. **Poslovno ponašanje nije menjano** — `ALL_FUTURE` i dalje znači "od sada nadalje"; promenjeno je samo to što "sada" više nije zidni sat.
 - **Status:** `APPLIED`. `pytest` 293 passed, 0 failed.
 
-### F-02 — root `npm run verify` je neispravan
+### F-02 — root `npm run verify` je bio neispravan (OTKLONJENO)
 
-- **Repo dokaz:** `package.json` `workspaces` navodi `packages/contracts`, koji ne postoji; `verify:parity`, `verify:arch` i `verify:migrations` pozivaju `scripts/openapi-parity.mjs`, `scripts/arch-audit.mjs` i `scripts/migration-audit.mjs`, od kojih nijedan ne postoji. `npm run verify:arch` → `MODULE_NOT_FOUND`.
-- **Posledica:** nije CI pad (CI pokreće Python komande direktno), ali root harness koji izgleda kao ulazna tačka ne radi. Novi programer koji prvo pokuša `npm run verify` dobija grešku.
-- **Minimalni predlog:** obrisati tri mrtva `verify:*` script-a i `packages/contracts` iz `workspaces`, a `verify` preusmeriti na `scripts/check.sh`. **Nije primenjeno** — brisanje deklarisanog workspace-a je odluka o strukturi projekta, ne posledica ovog zadatka.
-- **Status:** `CHALLENGE_NOT_APPLIED`.
+- **Repo dokaz:** `package.json` je navodio `packages/contracts` (ne postoji) i `apps/api` (Python, nema `package.json`) kao npm workspace-e, a `verify:parity`/`verify:arch`/`verify:migrations` su pozivali tri `.mjs` skripte koje ne postoje. `npm query .workspace` je vraćao `[]`, a `npm run verify:arch` `MODULE_NOT_FOUND`. Web paket se zove `sokola-web`, pa je i `dev:web --workspace @sokola/web` bio mrtav.
+- **Posledica:** nijedan root script nije radio. Nije bio CI pad (CI poziva Python komande direktno), ali ulazna tačka koja izgleda kao harness nije radila.
+- **Primenjeno rešenje:** `workspaces` je sada samo `apps/web` (jedini stvarni npm paket); mrtvi `verify:*` script-ovi su uklonjeni; `verify` poziva stvarni harness (`verify:spec` → `verify:api` → web typecheck/build). Root ostaje tanak omotač i ne postaje drugi izvor istine.
+- **Status:** `APPLIED`.
 
 ### F-03 — novac je integer minor-unit master (protivreči §3)
 
@@ -165,24 +165,38 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Posledica:** M21 acceptance (39 H0 job-ova + 1 default-disabled M28) je u celini `IMPLEMENT`, što je najveći pojedinačni preostali obim u H0.
 - **Status:** evidentirano kao obim, ne kao kontradikcija.
 
+### F-07 — E2E scenario je vezan za fiksni datum (OTKLONJENO)
+
+- **Repo dokaz:** `apps/web/cypress/e2e/people_and_schedule.cy.ts` je kucao `2026-09-01T17:00` u `session-start`. Raspored podrazumevano lista kotrljajući prozor `danas → danas+90` (`RANGE_DAYS`, `src/routes/manager/Schedule.tsx:49,274`), pa je 2026-09-01 ispao iz prozora kada je datum prošao i `[data-cy=session-row]` se više nije pojavljivao.
+- **Posledica:** CI run 109 je pao na `people_and_schedule.cy.ts` sa „Expected to find element: `[data-cy=session-row]`, but never found it". **Nije regresija ovog PR-a:** web koristi JS `new Date()` i ne dodiruje Python clock port; ista klasa truljenja kao F-01, samo na E2E strani. Prethodni zeleni CI (run 108, 2026-08-19) je prošao jer je 2026-09-01 tada bio *u budućnosti*, unutar prozora.
+- **Primenjeno rešenje:** datumi u scenariju su sada relativni — `dateTimeInput`, `tomorrow` i `nextWeekday` u `cypress/support/e2e.ts`. Drugi scenario (serija) je popravljen istim potezom iako je slučajno prolazio, jer je uzrok isti. Nijedan test nije preskočen ni oslabljen.
+- **Status:** `APPLIED`.
+
 ## 5. Šta je u ovom radu stvarno urađeno
+
+**Talas 0 — baseline i klasifikacija**
 
 1. Paket verifikovan (72/72 SHA-256) i ugrađen u repo kao `docs/spec/v5.7/`, bajt-identičan.
 2. `scripts/verify-spec-manifest.sh` — gate koji hvata tihu izmenu kanona (testiran i pozitivno i negativno).
 3. Baseline popunjen stvarnim vrednostima i stvarnim exit kodovima → `docs/CURRENT-CODE-BASELINE.md`.
 4. Klasifikacija svih M00–M21 + M28 oblasti (ovaj dokument).
-5. Talas 1, prvi port: `app/platform/clock.py` + prelazak svih 17 zatečenih mesta + 7 novih testova; usput otklonjen zatečeni pad (F-01).
+
+**Talas 1 — zajednički portovi**
+
+5. **Clock port** (`app/platform/clock.py`): UTC-aware, freezable; svih 17 zatečenih `datetime.now` mesta prevedeno; 7 testova. Usput otklonjen zatečeni pad (F-01).
+6. **Audit seal** (`app/platform/audit/`): per-tenant hash lanac (`chain_key`, `sequence_no`, `prev_hash`, `row_hash`), `audit_chain_head` sa lock-om po lancu, `verify_chain`/`verify_all_chains`, i DB trigger koji odbija `UPDATE`/`DELETE`. Migracija `b7e2a4c91f08` backfiluje postojeće zapise pre nego što trigger počne da važi. 14 testova, uključujući stvarnu detekciju izmene, brisanja iz sredine i brisanja sa kraja.
+7. F-02 (root harness) i F-07 (E2E fiksni datum) otklonjeni.
 
 ## 6. Šta NIJE urađeno
 
-- Nijedan v5.7 QA scenario nije implementiran. Zatečenih 293 testova pokriva zatečeni proizvod.
-- Nijedna migracija nije dodata (`alembic check` čist, head i dalje `a1c4f2d80b37`).
-- Talasi 2–5 nisu započeti. Nijedan modul nije `IMPLEMENTED`.
-- Web build/typecheck i Cypress E2E nisu izvršeni u ovoj sesiji.
-- F-02, F-03, F-04 čekaju odluku vlasnika proizvoda.
+- Nijedan v5.7 QA scenario nije implementiran. Zatečeni testovi pokrivaju zatečeni proizvod.
+- Talas 1 nije završen: preostaju **outbox inbox/dead-letter**, **exact decimal port** i **PII-free observability**.
+- Talasi 2–5 nisu započeti. **Nijedan modul nije `IMPLEMENTED`.**
+- F-03 (novac) i F-04 (imenovanje) i dalje čekaju — vidi ispod.
+- Web `npm ci` nije uspeo u ovom okruženju (mrežna greška), pa web typecheck/build i Cypress **nisu izvršeni lokalno**; za njih je dokaz jedino CI.
 
 ## 7. Predloženi sledeći korak
 
-Dovršiti Talas 1 pre otvaranja Talasa 2: preostali zajednički portovi su `audit` seal,
-`outbox` inbox/dead-letter i `idempotency` canonical payload hash. Paralelno je potrebna
-odluka o F-04 (imenovanje), jer blokira M04, koji je prvi korak Talasa 2.
+1. Dovršiti Talas 1: outbox inbox/dead-letter, exact decimal port, PII-free observability.
+2. **Odluka o F-04 (imenovanje) blokira Talas 2**, jer je M04 njegov prvi korak.
+3. F-03 (novac → `NUMERIC(18,2)`) ostaje Talas 3. Obim je izmeren: 116 referenci u API-ju (16 fajlova), 56 u web-u (6 fajlova), 49 u OpenAPI dokumentu, 10 test fajlova. To je prava M12 migracija sa reconciliation obavezom, a ne usputna izmena — raditi je van reda talasa bio bi upravo „big-bang" koji DCR §3 zabranjuje.
