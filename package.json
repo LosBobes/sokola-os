@@ -6,15 +6,12 @@
   "engines": {
     "node": ">=22"
   },
-  "comment": "The API is Python and has no package.json, so it is not an npm workspace. Its harness is scripts/check.sh, which is what CI runs. Root scripts are thin wrappers over the real ones; they never become a second source of truth.",
-  "workspaces": [
-    "apps/web"
-  ],
+  "comment": "Deliberately NOT an npm workspace root. apps/web carries its own package-lock.json and CI installs it standalone (npm ci in apps/web, cached on apps/web/package-lock.json); declaring it a workspace member makes that same npm ci resolve up to this directory instead, which is how the Cypress binary went missing in CI. The API is Python and has no package.json at all. These scripts are thin wrappers over the real harnesses and never become a second source of truth.",
   "scripts": {
-    "dev:web": "npm run dev --workspace sokola-web",
-    "build:web": "npm run build --workspace sokola-web",
-    "typecheck:web": "npm run typecheck --workspace sokola-web",
-    "gen:api": "npm run gen:api --workspace sokola-web",
+    "dev:web": "npm --prefix apps/web run dev",
+    "build:web": "npm --prefix apps/web run build",
+    "typecheck:web": "npm --prefix apps/web run typecheck",
+    "gen:api": "npm --prefix apps/web run gen:api",
     "verify:api": "scripts/check.sh",
     "verify:spec": "scripts/verify-spec-manifest.sh",
     "verify": "npm run verify:spec && npm run verify:api && npm run typecheck:web && npm run build:web"

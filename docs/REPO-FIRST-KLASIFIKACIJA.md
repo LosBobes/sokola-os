@@ -1,6 +1,6 @@
 ---
 tip: repo-first-klasifikacija
-status: TALAS-1-U-TOKU
+status: TALAS-1-ZAVRSEN-OSIM-F03
 baseline-commit: 92ccccc979fb53979081e84ded0c6e7aae56fb11
 datum: 2026-09-18
 scope: [M00-M21, M28]
@@ -68,12 +68,12 @@ svako čitanje koda mora znati da `organization_id` i dalje znači *School*.
 | Audit | **`PRESERVE` (dopunjeno u ovom radu)** | `app/platform/audit/` + `app/platform/audit/models.py`: per-tenant hash lanac, `verify_chain`/`verify_all_chains` i DB trigger koji odbija `UPDATE`/`DELETE` |
 | Outbox (producer) | `PRESERVE` | `app/platform/outbox/service.py` — transakcioni enqueue, `FOR UPDATE SKIP LOCKED`, lease takeover, backoff, `DEAD_LETTER` |
 | Inbox (consumer) | **`PRESERVE` (uvedeno u ovom radu)** | `app/platform/inbox/` — `InboxRecord(consumer, message_id)`; claim se upisuje u istoj transakciji kao i efekti handlera |
-| Dead-letter dual control | `IMPLEMENT` | `DEAD_LETTER` status postoji, ali nema replay/discard toka ni kontrole u četiri oka (M21) |
+| Dead-letter dual control | **`PRESERVE` (uvedeno u ovom radu)** | `app/platform/outbox/dead_letter.py` — request/approve/reject, odobravalac ne sme biti podnosilac, replay/discard efekat, sve u zapečaćenom audit lancu. HTTP vezivanje čeka M05 support access (vidi F-09) |
 | Idempotency receipt | `PRESERVE` | `app/platform/idempotency/service.py:hash_params` već radi kanonski hash (sortirani ključevi, kompaktni separatori) i odbija isti ključ sa drugim podacima. Expected-version semantika ostaje `VERIFY_IN_REPO` |
 | **Clock** | **`PRESERVE` (uvedeno u ovom radu)** | `app/platform/clock.py` — UTC-aware, freezable; svih 17 zatečenih `datetime.now` mesta prevedeno |
 | Exact decimal | **`REMOVE_CONFLICT`** | `app/common/money.py` — vidi F-03 |
 | Storage | `ADAPT` | `app/domains/documents/storage.py` — lokalni FS; nema tenant particije ni signed URL-a |
-| PII-free observability | `VERIFY_IN_REPO` | Nema centralnog log/redaction sloja; PII u logovima nije dokazano odsutno |
+| PII-free observability | **`PRESERVE` (uvedeno u ovom radu)** | `app/platform/observability.py` — `safe_error`/`redact`; outbox `last_error` i log linija više ne nose PII. Vidi F-10 |
 
 ### Foundation (Talas 2)
 
@@ -184,6 +184,22 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Posledica po M14:** `source_message_id` ostaje kao poreklo (koji događaj je proizveo notifikaciju), ali više nije mehanizam dedupa — to je sada inbox.
 - **Status:** `APPLIED`. 8 novih testova, uključujući replay bez ponovnog izvršenja, pad handlera koji ne ostavlja claim, i pad koji ne ostavlja delimičan upis.
 
+### F-09 — dead-letter dual control nema HTTP vezivanje
+
+- **Repo dokaz:** `app/platform/outbox/dead_letter.py` implementira ceo tok (zahtev → odobrenje/odbijanje, invarijanta „druga osoba", replay/discard efekat, audit), ali nema ruter.
+- **Zašto:** operatorski endpoint traži M05 support/break-glass model pristupa, koji u repou **ne postoji**. Izmišljanje permisije samo za ovu površinu bilo bi upravo „paralelni authorization sistem" koji arhitektonski mandat zabranjuje.
+- **Posledica:** mehanizam je kompletan i testiran (11 testova), ali ga za sada može pozvati samo kod, ne operator kroz API.
+- **Minimalni predlog:** vezati na M05 support access čim postoji, u okviru M21 integracije. Do tada nema privremene permisije.
+- **Status:** `CHALLENGE_NOT_APPLIED` — svesno odloženo vezivanje, ne nedostatak mehanizma.
+
+### F-10 — `repr(exc)` je unosio PII u dead-letter i logove (OTKLONJENO)
+
+- **Dokument:** `00-CLAUDE-CODE-IZVRSI.md` §3: „Log/metric/event/dead-letter ne sadrže token, credential, raw kontakt, child ime, dokument/poruku, bank reference ili iznos".
+- **Repo dokaz:** `worker.py` je čuvao `repr(exc)` u `outbox_message.last_error` i logovao ga. SQLAlchemy uz poruku lepi `[SQL: ...]` i `[parameters: {...}]`, a PostgreSQL dodaje `DETAIL: Failing row contains (...)`. **Dokazano izvršavanjem:** pad pri upisu notifikacije stavio je ime deteta i email staratelja u `repr(exc)` (provereno na stvarnoj bazi pre popravke).
+- **Posledica:** svaki pad handlera nad redom sa ličnim podacima trajno je upisivao te podatke u dead-letter zapis i u log — tiho, iz linije koda koja kaže samo `repr(exc)`.
+- **Primenjeno rešenje:** `app/platform/observability.py`. Opis greške se **gradi iz strukture**, ne čisti iz teksta: tip izuzetka + SQLSTATE + tabela/kolona/ograničenje. Za bazu je to i precizniji dijagnostički podatak. Slobodan tekst je samo fallback i prolazi kroz `redact` (uklanja `[SQL:]`, `[parameters:]` i `DETAIL:` blokove, maskira email i duge nizove cifara, skraćuje). Skrabovanje samo po obrascima se **ne** oslanja da prepozna ime — zato se primarni put uopšte ne oslanja na tekst.
+- **Status:** `APPLIED`. 7 testova, uključujući stvarni put pada worker-a sa imenom deteta, kontaktom i bankarskom referencom u redu.
+
 ## 5. Šta je u ovom radu stvarno urađeno
 
 **Talas 0 — baseline i klasifikacija**
@@ -198,12 +214,15 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 5. **Clock port** (`app/platform/clock.py`): UTC-aware, freezable; svih 17 zatečenih `datetime.now` mesta prevedeno; 7 testova. Usput otklonjen zatečeni pad (F-01).
 6. **Audit seal** (`app/platform/audit/`): per-tenant hash lanac (`chain_key`, `sequence_no`, `prev_hash`, `row_hash`), `audit_chain_head` sa lock-om po lancu, `verify_chain`/`verify_all_chains`, i DB trigger koji odbija `UPDATE`/`DELETE`. Migracija `b7e2a4c91f08` backfiluje postojeće zapise pre nego što trigger počne da važi. 14 testova, uključujući stvarnu detekciju izmene, brisanja iz sredine i brisanja sa kraja.
 7. **Inbox port** (`app/platform/inbox/`): `InboxRecord` + promena ugovora handlera (prima sesiju), pa su efekti i claim jedna transakcija. Migracija `c3f81d5e60a2`. 8 testova.
-8. F-02 (root harness), F-07 (E2E fiksni datum) i F-08 (inbox) otklonjeni.
+8. **Observability port** (`app/platform/observability.py`): `safe_error`/`redact`; PII više ne curi u dead-letter i logove. Migracija nije potrebna. 7 testova. Vidi F-10.
+9. **Dead-letter dual control** (`app/platform/outbox/dead_letter.py`): zahtev/odobrenje/odbijanje sa invarijantom „druga osoba", replay vraća poruku u red sa resetovanim brojem pokušaja, discard je trajan, oba se upisuju u zapečaćeni audit lanac. Migracija `d5a92c74e8b1` sa parcijalnim unique indeksom (najviše jedan otvoren zahtev po poruci). 11 testova.
+10. F-02 (root harness), F-07 (E2E fiksni datum), F-08 (inbox) i F-10 (PII u logovima) otklonjeni.
 
 ## 6. Šta NIJE urađeno
 
 - Nijedan v5.7 QA scenario nije implementiran. Zatečeni testovi pokrivaju zatečeni proizvod.
-- Talas 1 nije završen: preostaju **dead-letter dual control** i **PII-free observability**. Exact decimal port se isporučuje kroz F-03 kao zaseban PR (odluka vlasnika proizvoda).
+- **Talas 1 je završen osim exact decimal porta**, koji se isporučuje kroz F-03 kao zaseban PR (odluka O-02).
+- Dead-letter dual control nema HTTP vezivanje dok M05 support access ne postoji (F-09).
 - Talasi 2–5 nisu započeti. **Nijedan modul nije `IMPLEMENTED`.**
 - F-03 (novac) i F-04 (imenovanje) i dalje čekaju — vidi ispod.
 - Web `npm ci` nije uspeo u ovom okruženju (mrežna greška), pa web typecheck/build i Cypress **nisu izvršeni lokalno**; za njih je dokaz jedino CI.
@@ -212,10 +231,9 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 
 Redosled je potvrdio vlasnik proizvoda 2026-09-18:
 
-1. Dovršiti Talas 1: dead-letter dual control, PII-free observability.
-2. **F-03** — novac na `NUMERIC(18,2)`, kao zaseban PR, pre Talasa 2. Obim: 116 referenci u API-ju (16 fajlova), 56 u web-u (6 fajlova), 49 u OpenAPI dokumentu, 10 test fajlova.
-3. **F-04** — preimenovanje `Organization` → `School`, kao zaseban PR. Vidi ODLUKE ispod.
-4. Talas 2 (M04 → M06 → M01 → M03 → M05 → M07 → M02).
+1. **F-03** — novac na `NUMERIC(18,2)`, kao zaseban PR, pre Talasa 2. Obim: 116 referenci u API-ju (16 fajlova), 56 u web-u (6 fajlova), 49 u OpenAPI dokumentu, 10 test fajlova.
+2. **F-04** — preimenovanje `Organization` → `School`, kao zaseban PR. Vidi ODLUKE ispod.
+3. Talas 2 (M04 → M06 → M01 → M03 → M05 → M07 → M02).
 
 ## 8. Odluke vlasnika proizvoda (2026-09-18)
 

@@ -136,6 +136,10 @@ jobs:
         working-directory: apps/web
         run: |
           npm ci
+          # The npm cache is restored, but ~/.cache/Cypress is not, so a warm
+          # cache can leave the package installed and the binary absent. This is
+          # a no-op when it is already there.
+          npx cypress install
           npm run build
           nohup npm run preview > /tmp/web.log 2>&1 &
       - name: ⏳ Wait for stack
