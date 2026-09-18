@@ -65,7 +65,9 @@ materijalizuje. Odluka pripada vlasniku proizvoda — vidi F-04.
 |---|---|---|
 | Transakcija (jedan lokalni commit) | `PRESERVE` | `app/db.py`, session-per-request |
 | Audit | **`PRESERVE` (dopunjeno u ovom radu)** | `app/platform/audit/` + `app/platform/audit/models.py`: per-tenant hash lanac, `verify_chain`/`verify_all_chains` i DB trigger koji odbija `UPDATE`/`DELETE` |
-| Outbox/inbox | `ADAPT` | `app/platform/outbox/` postoji (transakcioni, poll worker); inbox/dead-letter dual control ne postoji |
+| Outbox (producer) | `PRESERVE` | `app/platform/outbox/service.py` — transakcioni enqueue, `FOR UPDATE SKIP LOCKED`, lease takeover, backoff, `DEAD_LETTER` |
+| Inbox (consumer) | `IMPLEMENT` | Nema generičkog inbox-a; jedini consumer dedupira ručno. Vidi F-08 |
+| Dead-letter dual control | `IMPLEMENT` | `DEAD_LETTER` status postoji, ali nema replay/discard toka ni kontrole u četiri oka (M21) |
 | Idempotency receipt | `PRESERVE` | `app/platform/idempotency/service.py:hash_params` već radi kanonski hash (sortirani ključevi, kompaktni separatori) i odbija isti ključ sa drugim podacima. Expected-version semantika ostaje `VERIFY_IN_REPO` |
 | **Clock** | **`PRESERVE` (uvedeno u ovom radu)** | `app/platform/clock.py` — UTC-aware, freezable; svih 17 zatečenih `datetime.now` mesta prevedeno |
 | Exact decimal | **`REMOVE_CONFLICT`** | `app/common/money.py` — vidi F-03 |
@@ -172,6 +174,15 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Primenjeno rešenje:** datumi u scenariju su sada relativni — `dateTimeInput`, `tomorrow` i `nextWeekday` u `cypress/support/e2e.ts`. Drugi scenario (serija) je popravljen istim potezom iako je slučajno prolazio, jer je uzrok isti. Nijedan test nije preskočen ni oslabljen.
 - **Status:** `APPLIED`.
 
+### F-08 — generički inbox zahteva promenu handler ugovora
+
+- **Dokument:** `00-CLAUDE-CODE-IZVRSI.md` §2 talas 1 („outbox/inbox"), §3 („M14 je idempotentni outbox consumer").
+- **Repo dokaz:** outbox producer strana je dobra — transakcioni `enqueue`, `FOR UPDATE SKIP LOCKED` claim, preuzimanje isteklog lease-a, eksponencijalni backoff i `DEAD_LETTER` status (`app/platform/outbox/service.py`). Consumer strana nema generički inbox: `app/platform/outbox/worker.py` samo tvrdi da „every handler must be idempotent". Jedini postojeći consumer to rešava ručno, po sebi — `app/domains/communications/outbox.py:_notify` preskače primaoce koji već imaju `Notification.source_message_id == message.id`.
+- **Posledica:** garancija danas stvarno postoji, ali samo za taj jedan consumer i samo zato što je autor toga bio svestan. Sledeći consumer koji to zaboravi dobija duplikat pri redelivery-ju (handler uspe, pa proces padne pre `commit`-a; lease istekne; drugi worker ponovi).
+- **Zašto nije urađeno u ovom koraku:** handleri otvaraju **sopstvenu** sesiju i commit-uju nezavisno od worker-ove (`with SessionLocal() as db: ... db.commit()`). Inbox zapis je ispravan samo ako se commit-uje u **istoj** transakciji kao i efekti koje štiti; upisan iz worker-ove sesije bio bi u drugoj transakciji i ne bi garantovao ništa. Ispravna izvedba zato menja ugovor handlera (da prima sesiju), što dodiruje svih pet postojećih handlera. To je zaseban, fokusiran korak — ne usputna izmena u PR-u koji već nosi audit seal.
+- **Minimalni predlog:** `InboxRecord(consumer, message_id)` sa `UNIQUE(consumer, message_id)`; `register_handler(event_type, handler, consumer=...)`; worker otvara sesiju i prosleđuje je handleru; `claim_for_consumer()` upisuje inbox zapis kroz savepoint i vraća `False` na `IntegrityError` (već obrađeno). Postojeći `source_message_id` dedup tada postaje suvišan i briše se u istom koraku.
+- **Status:** `CHALLENGE_NOT_APPLIED` — sledeća stavka Talasa 1.
+
 ## 5. Šta je u ovom radu stvarno urađeno
 
 **Talas 0 — baseline i klasifikacija**
@@ -190,13 +201,13 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 ## 6. Šta NIJE urađeno
 
 - Nijedan v5.7 QA scenario nije implementiran. Zatečeni testovi pokrivaju zatečeni proizvod.
-- Talas 1 nije završen: preostaju **outbox inbox/dead-letter**, **exact decimal port** i **PII-free observability**.
+- Talas 1 nije završen: preostaju **inbox (F-08)**, **dead-letter dual control**, **exact decimal port** i **PII-free observability**.
 - Talasi 2–5 nisu započeti. **Nijedan modul nije `IMPLEMENTED`.**
 - F-03 (novac) i F-04 (imenovanje) i dalje čekaju — vidi ispod.
 - Web `npm ci` nije uspeo u ovom okruženju (mrežna greška), pa web typecheck/build i Cypress **nisu izvršeni lokalno**; za njih je dokaz jedino CI.
 
 ## 7. Predloženi sledeći korak
 
-1. Dovršiti Talas 1: outbox inbox/dead-letter, exact decimal port, PII-free observability.
+1. Dovršiti Talas 1, ovim redom: inbox (F-08, ima gotov dizajn), dead-letter dual control, exact decimal port, PII-free observability.
 2. **Odluka o F-04 (imenovanje) blokira Talas 2**, jer je M04 njegov prvi korak.
 3. F-03 (novac → `NUMERIC(18,2)`) ostaje Talas 3. Obim je izmeren: 116 referenci u API-ju (16 fajlova), 56 u web-u (6 fajlova), 49 u OpenAPI dokumentu, 10 test fajlova. To je prava M12 migracija sa reconciliation obavezom, a ne usputna izmena — raditi je van reda talasa bio bi upravo „big-bang" koji DCR §3 zabranjuje.
