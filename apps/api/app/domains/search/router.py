@@ -83,7 +83,7 @@ def search(
         )
 
     for charge, person in repository.search_charges(db, org_id, term):
-        amount = charge.amount_due_minor / 100
+        amount = charge.amount_due / 100
         results.append(
             SearchResultItem(
                 type=SearchResultType.CHARGE,

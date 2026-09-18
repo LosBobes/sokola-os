@@ -99,42 +99,42 @@ def test_group_pricing_set_at_creation_and_read(client: TestClient, db: Session)
     created = client.post(
         "/groups",
         headers=actor.headers,
-        json={"name": "Balet", "base_monthly_price_minor": 250000},
+        json={"name": "Balet", "base_monthly_price": "2500.00"},
     )
     assert created.status_code == 201
     group = created.json()
-    assert group["base_monthly_price_minor"] == 250000
+    assert group["base_monthly_price"] == "2500.00"
 
     listed = client.get("/groups", headers=actor.headers).json()
-    assert listed["items"][0]["base_monthly_price_minor"] == 250000
+    assert listed["items"][0]["base_monthly_price"] == "2500.00"
 
 
 def test_group_pricing_set_and_cleared_via_patch(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db)
     group = client.post("/groups", headers=actor.headers, json={"name": "Balet"}).json()
-    assert group["base_monthly_price_minor"] is None
+    assert group["base_monthly_price"] is None
 
     updated = client.patch(
         f"/groups/{group['id']}",
         headers=actor.headers,
-        json={"base_monthly_price_minor": 300000},
+        json={"base_monthly_price": "3000.00"},
     )
     assert updated.status_code == 200
-    assert updated.json()["base_monthly_price_minor"] == 300000
+    assert updated.json()["base_monthly_price"] == "3000.00"
 
     cleared = client.patch(
         f"/groups/{group['id']}",
         headers=actor.headers,
-        json={"base_monthly_price_minor": None},
+        json={"base_monthly_price": None},
     )
     assert cleared.status_code == 200
-    assert cleared.json()["base_monthly_price_minor"] is None
+    assert cleared.json()["base_monthly_price"] is None
 
 
 def test_group_pricing_rejects_negative_price(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db)
     resp = client.post(
-        "/groups", headers=actor.headers, json={"name": "Balet", "base_monthly_price_minor": -1}
+        "/groups", headers=actor.headers, json={"name": "Balet", "base_monthly_price": "-1.00"}
     )
     assert resp.status_code == 422
 
@@ -144,18 +144,18 @@ def test_membership_discount_set_and_read(client: TestClient, db: Session) -> No
     group = client.post("/groups", headers=actor.headers, json={"name": "Balet"}).json()
     person_id = _make_person_in_org(client, actor, "Mina")
     member = _add_member(client, actor, group["id"], person_id)
-    assert member["discount_minor"] == 0
+    assert member["discount"] == "0.00"
 
     discounted = client.patch(
         f"/groups/{group['id']}/members/{member['membership_id']}/discount",
         headers=actor.headers,
-        json={"discount_minor": 5000},
+        json={"discount": "50.00"},
     )
     assert discounted.status_code == 200
-    assert discounted.json()["discount_minor"] == 5000
+    assert discounted.json()["discount"] == "50.00"
 
     members = client.get(f"/groups/{group['id']}/members", headers=actor.headers).json()
-    assert members[0]["discount_minor"] == 5000
+    assert members[0]["discount"] == "50.00"
 
 
 def test_membership_discount_rejects_negative(client: TestClient, db: Session) -> None:
@@ -167,7 +167,7 @@ def test_membership_discount_rejects_negative(client: TestClient, db: Session) -
     resp = client.patch(
         f"/groups/{group['id']}/members/{member['membership_id']}/discount",
         headers=actor.headers,
-        json={"discount_minor": -100},
+        json={"discount": -100},
     )
     assert resp.status_code == 422
 

@@ -99,7 +99,7 @@ export interface Group {
   capacity: number | null;
   program_id?: string | null;
   location_id?: string | null;
-  base_monthly_price_minor?: number | null;
+  base_monthly_price?: string | null;
   /** Copied onto a new session for this group; overridable per occurrence. */
   default_trainer_person_id?: string | null;
   default_location_id?: string | null;
@@ -254,13 +254,13 @@ export interface SaveAttendanceResponse {
 export interface BillingPreviewItem {
   person_id: string;
   display_name: string;
-  amount_minor: number;
+  amount: string;
 }
 
 export interface BillingPreview {
   preview_hash: string;
   currency: string;
-  total_minor: number;
+  total: string;
   items: BillingPreviewItem[];
 }
 
@@ -269,7 +269,7 @@ export interface BillingRun {
   description: string;
   period_label: string;
   currency: string;
-  total_minor: number;
+  total: string;
   charge_count: number;
 }
 
@@ -280,8 +280,8 @@ export interface Charge {
   person_id: string;
   description: string;
   currency: string;
-  amount_due_minor: number;
-  amount_paid_minor: number;
+  amount_due: string;
+  amount_paid: string;
   /** ISO date. Null when nobody set a deadline for this charge. */
   due_date?: string | null;
   payment_reference?: string | null;
@@ -303,7 +303,7 @@ export interface PaymentSlip {
   account_number: string;
   payer_name: string;
   currency: string;
-  amount_minor: number;
+  amount: string;
   purpose: string;
   payment_code: string;
   reference_number: string;
@@ -314,13 +314,13 @@ export interface PaymentSlip {
 export interface Payment {
   id: string;
   charge_id: string;
-  amount_minor: number;
+  amount: string;
   currency: string;
   method: string;
   status: string;
   charge_status: ChargeStatus;
-  charge_amount_due_minor: number;
-  charge_amount_paid_minor: number;
+  charge_amount_due: string;
+  charge_amount_paid: string;
 }
 
 export type EventType =
@@ -383,9 +383,9 @@ export interface OverviewReport {
   period_end: string;
   currency: string;
   active_member_count: number;
-  billed_total_minor: number;
-  collected_total_minor: number;
-  outstanding_debt_total_minor: number;
+  billed_total: string;
+  collected_total: string;
+  outstanding_debt_total: string;
   attendance_window_days: number;
   attendance_recorded_count: number;
   attendance_present_count: number;

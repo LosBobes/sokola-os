@@ -126,13 +126,13 @@ def test_finance_only_admin_denied_on_people_allowed_on_billing(
         headers=finance_admin.headers,
         json={
             "group_id": group_id,
-            "amount_minor": 300000,
+            "amount": "3000.00",
             "description": "Članarina",
             "period_label": "2026-09",
         },
     )
     assert allowed.status_code == 200
-    assert allowed.json()["total_minor"] == 600000
+    assert allowed.json()["total"] == "6000.00"
 
 
 # --- HTTP: default (granted_areas=None) preserves prior access ------------
@@ -157,7 +157,7 @@ def test_default_grant_preserves_admin_finance_access(
         headers=admin.headers,
         json={
             "group_id": group_id,
-            "amount_minor": 100000,
+            "amount": "1000.00",
             "description": "Č",
             "period_label": "2026-09",
         },

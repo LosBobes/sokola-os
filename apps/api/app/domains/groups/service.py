@@ -47,7 +47,7 @@ def _member_response(membership: GroupMembership, person: Person) -> GroupMember
         display_name=person.display_name,
         role=membership.role,
         status=membership.status,
-        discount_minor=membership.discount_minor,
+        discount=membership.discount,
         joined_at=membership.joined_at,
         ended_at=membership.ended_at,
         end_reason=membership.end_reason,
@@ -97,7 +97,7 @@ def create_group(db: Session, context: RequestContext, req: CreateGroupRequest) 
         capacity=req.capacity,
         program_id=program_id,
         location_id=location_id,
-        base_monthly_price_minor=req.base_monthly_price_minor,
+        base_monthly_price=req.base_monthly_price,
         default_trainer_person_id=_resolve_default_trainer(
             db, context, req.default_trainer_person_id
         ),
@@ -127,8 +127,8 @@ def update_group(
         group.program_id = _resolve_program(db, context, req.program_id)
     if "location_id" in fields:
         group.location_id = _resolve_location(db, context, req.location_id)
-    if "base_monthly_price_minor" in fields:
-        group.base_monthly_price_minor = req.base_monthly_price_minor
+    if "base_monthly_price" in fields:
+        group.base_monthly_price = req.base_monthly_price
     if "default_trainer_person_id" in fields:
         group.default_trainer_person_id = _resolve_default_trainer(
             db, context, req.default_trainer_person_id
@@ -389,7 +389,7 @@ def set_membership_discount(
     req: SetMembershipDiscountRequest,
 ) -> GroupMemberResponse:
     group, membership, person = _load_group_membership(db, context, group_id, membership_id)
-    membership.discount_minor = req.discount_minor
+    membership.discount = req.discount
     record_audit(
         db,
         data_class=AuditDataClass.FINANCIAL,
@@ -398,7 +398,7 @@ def set_membership_discount(
         entity_id=membership.id,
         summary=(
             f"Popust za „{person.display_name}“ u grupi „{group.name}“ "
-            f"postavljen na {req.discount_minor}."
+            f"postavljen na {req.discount}."
         ),
         organization_id=context.organization_id,
         actor_person_id=context.person_id,

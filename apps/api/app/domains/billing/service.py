@@ -4,9 +4,11 @@ import calendar
 import datetime as dt
 import hashlib
 import json
+from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from app.common import money
 from app.common.enums import AuditDataClass
 from app.common.errors import ConflictError, NotFoundError
 from app.common.ids import new_id
@@ -41,43 +43,43 @@ from app.security.permissions import (
 
 def _compute(
     db: Session, context: RequestContext, req: BillingPreviewRequest
-) -> tuple[list[BillingPreviewItem], int, str, str]:
-    """PRD 07 M1: with an explicit ``amount_minor`` it's charged to every member
+) -> tuple[list[BillingPreviewItem], Decimal, str, str]:
+    """PRD 07 M1: with an explicit ``amount`` it's charged to every member
     unchanged (caller override, e.g. a one-off fee). Omitted, the amount is
     derived per member from the group's pricing: ``Group.base_monthly_price_
-    minor`` minus that member's ``GroupMembership.discount_minor``, floored at
+    minor`` minus that member's ``GroupMembership.discount``, floored at
     0 so a discount can never make a charge negative."""
     group = repository.get_org_group(db, context.organization_id, req.group_id)
     if group is None:
         raise NotFoundError("Grupa nije pronađena.")
     currency = get_settings().default_currency
 
-    if req.amount_minor is not None:
+    if req.amount is not None:
         people = repository.active_group_people(db, req.group_id)
         items = [
             BillingPreviewItem(
-                person_id=p.id, display_name=p.display_name, amount_minor=req.amount_minor
+                person_id=p.id, display_name=p.display_name, amount=req.amount
             )
             for p in people
         ]
     else:
-        if group.base_monthly_price_minor is None:
+        if group.base_monthly_price is None:
             raise ConflictError(
                 "Grupa nema podešenu cenu; unesite iznos ili podesite cenu grupe.",
                 details={"code": "GROUP_PRICE_NOT_SET"},
             )
-        base_price = group.base_monthly_price_minor
+        base_price = group.base_monthly_price
         members = repository.active_group_members_with_discount(db, req.group_id)
         items = [
             BillingPreviewItem(
                 person_id=p.id,
                 display_name=p.display_name,
-                amount_minor=max(base_price - discount, 0),
+                amount=max(base_price - discount, money.zero()),
             )
             for p, discount in members
         ]
 
-    total = sum(i.amount_minor for i in items)
+    total = sum((i.amount for i in items), money.zero())
     # The fingerprint covers each member's resolved amount (not just the
     # request), so a roster change OR a pricing/discount change between
     # preview and post both invalidate the hash and force a fresh review.
@@ -86,7 +88,12 @@ def _compute(
         "description": req.description,
         "period_label": req.period_label,
         "currency": currency,
-        "items": [{"person_id": i.person_id, "amount_minor": i.amount_minor} for i in items],
+        # Decimals are not JSON-serialisable and their repr is not stable
+        # across scales, so the fingerprint uses the wire format.
+        "items": [
+            {"person_id": i.person_id, "amount": money.format_amount(i.amount)}
+            for i in items
+        ],
     }
     canonical = json.dumps(fingerprint, sort_keys=True, separators=(",", ":"))
     preview_hash = hashlib.sha256(canonical.encode()).hexdigest()
@@ -98,7 +105,7 @@ def preview(
 ) -> BillingPreviewResponse:
     items, total, currency, preview_hash = _compute(db, context, req)
     return BillingPreviewResponse(
-        preview_hash=preview_hash, currency=currency, total_minor=total, items=items
+        preview_hash=preview_hash, currency=currency, total=total, items=items
     )
 
 
@@ -134,7 +141,7 @@ def post_run(
         description=req.description,
         period_label=req.period_label,
         currency=currency,
-        total_minor=total,
+        total=total,
         charge_count=len(items),
     )
     db.add(run)
@@ -158,7 +165,7 @@ def post_run(
                 source_type=ChargeSourceType.MEMBERSHIP,
                 description=req.description,
                 currency=currency,
-                amount_due_minor=item.amount_minor,
+                amount_due=item.amount,
                 due_date=due_date,
                 payment_reference=ips_qr.reference_base_from_id(charge_id),
             )
@@ -278,20 +285,20 @@ def list_debts(
             person_id=person_id,
             display_name=display_name,
             currency=currency,
-            outstanding_minor=outstanding_minor,
+            outstanding=outstanding,
             open_charge_count=open_charge_count,
         )
-        for person_id, display_name, currency, outstanding_minor, open_charge_count in rows
+        for person_id, display_name, currency, outstanding, open_charge_count in rows
     ]
     return Page.build(items, total, params)
 
 
 def debt_summary(db: Session, context: RequestContext) -> DebtSummaryResponse:
     """PRD 07 M2. Org-wide roll-up of :func:`list_debts`."""
-    total_minor, people = repository.debt_summary(db, context.organization_id)
+    total, people = repository.debt_summary(db, context.organization_id)
     return DebtSummaryResponse(
         currency=get_settings().default_currency,
-        total_outstanding_minor=total_minor,
+        total_outstanding=total,
         people_with_debt=people,
     )
 
@@ -343,7 +350,7 @@ def payment_slip(
     if charge.status is ChargeStatus.CANCELLED:
         raise ConflictError("Za otkazano zaduženje se ne izdaje uplatnica.")
 
-    outstanding = charge.amount_due_minor - charge.amount_paid_minor
+    outstanding = charge.amount_due - charge.amount_paid
     if outstanding <= 0:
         raise ConflictError("Zaduženje je izmireno, uplatnica nije potrebna.")
 
@@ -364,7 +371,7 @@ def payment_slip(
             payee_name=organization.name,
             payee_address=organization.address,
             payee_city=organization.city,
-            amount_minor=outstanding,
+            amount=outstanding,
             currency=charge.currency,
             purpose=charge.description,
             reference=reference,
@@ -381,7 +388,7 @@ def payment_slip(
         account_number=ips_qr.normalize_account(organization.bank_account_number),
         payer_name=payer_name,
         currency=charge.currency,
-        amount_minor=outstanding,
+        amount=outstanding,
         purpose=charge.description,
         payment_code=ips_qr.DEFAULT_PAYMENT_CODE,
         reference_number=(

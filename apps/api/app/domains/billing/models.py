@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 
-from sqlalchemy import Date, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import Date, ForeignKey, Index, Integer, Numeric, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, TimestampMixin
 from app.common.columns import enum_type
 from app.common.ids import new_id
+from app.common.money import zero
 from app.domains.billing.enums import (
     BillingRunStatus,
     ChargeCancellationReasonCode,
@@ -32,12 +34,12 @@ class BillingRun(Base, TimestampMixin):
         enum_type(BillingRunStatus), nullable=False, default=BillingRunStatus.POSTED
     )
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
-    total_minor: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=zero)
     charge_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class Charge(Base, TimestampMixin):
-    """A debt owed by a person to the organization. Money is integer minor units.
+    """A debt owed by a person to the organization. Money is exact decimal.
     A charge is never edited destructively; it is paid down or cancelled."""
 
     __tablename__ = "charge"
@@ -82,8 +84,8 @@ class Charge(Base, TimestampMixin):
     # reference is an indexed lookup. Nullable for charges predating slips.
     payment_reference: Mapped[str | None] = mapped_column(String(24), nullable=True)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
-    amount_due_minor: Mapped[int] = mapped_column(Integer, nullable=False)
-    amount_paid_minor: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    amount_due: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    amount_paid: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=zero)
     cancellation_reason: Mapped[ChargeCancellationReasonCode | None] = mapped_column(
         enum_type(ChargeCancellationReasonCode), nullable=True
     )

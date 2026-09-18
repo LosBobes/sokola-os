@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, Numeric, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, RecordStatusMixin, TimestampMixin
 from app.common.columns import enum_type
 from app.common.ids import new_id
+from app.common.money import zero
 from app.domains.groups.enums import (
     GroupCapacityMode,
     GroupMemberRole,
@@ -27,8 +29,8 @@ class Group(Base, TimestampMixin, RecordStatusMixin):
     allowed); validation that an id belongs to the caller's org happens in this
     domain's own repository/service, never by calling structure's service.
 
-    ``base_monthly_price_minor`` is the group's list price in the
-    organization's minor currency unit (PRD 04 M1), ``None`` means pricing has
+    ``base_monthly_price`` is the group's list price as an exact decimal
+    amount (PRD 04 M1), ``None`` means pricing has
     not been configured yet. Billing (PRD 07) reads this directly; per-member
     discounts live on :class:`GroupMembership`.
     """
@@ -50,7 +52,7 @@ class Group(Base, TimestampMixin, RecordStatusMixin):
     location_id: Mapped[str | None] = mapped_column(
         ForeignKey("structure_location.id", ondelete="SET NULL"), nullable=True
     )
-    base_monthly_price_minor: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    base_monthly_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
     # Defaults a new session for this group inherits (PRD note "grupa kao osnova").
     # They are a starting value copied onto the session at create time, never a
     # live link: changing a group's default trainer must not silently rewrite
@@ -72,10 +74,10 @@ class GroupMembership(Base, TimestampMixin):
     constraint) lets the same person rejoin the same group as a fresh row after
     a prior membership ended.
 
-    ``discount_minor`` is a per-member discount against ``Group.base_monthly_
-    price_minor``, expressed as an ABSOLUTE amount in the same minor currency
+    ``discount`` is a per-member discount against ``Group.base_monthly_price``,
+    expressed as an ABSOLUTE amount in the same currency
     unit (not a percentage), billing computes what this member owes as
-    ``max(base_monthly_price_minor - discount_minor, 0)``. An absolute amount
+    ``max(base_monthly_price - discount, 0)``. An absolute amount
     keeps that arithmetic exact and rounding-free, unlike a percentage.
     """
 
@@ -109,7 +111,7 @@ class GroupMembership(Base, TimestampMixin):
     status: Mapped[GroupMembershipStatus] = mapped_column(
         enum_type(GroupMembershipStatus), nullable=False, default=GroupMembershipStatus.ACTIVE
     )
-    discount_minor: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    discount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=zero)
     ended_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     end_reason: Mapped[GroupMembershipEndReason | None] = mapped_column(
         enum_type(GroupMembershipEndReason), nullable=True

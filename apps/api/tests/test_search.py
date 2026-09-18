@@ -56,7 +56,7 @@ def _charge_via_run(
 ) -> None:
     body = {
         "group_id": group_id,
-        "amount_minor": 100000,
+        "amount": 100000,
         "description": description,
         "period_label": period,
     }

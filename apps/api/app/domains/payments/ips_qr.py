@@ -41,6 +41,9 @@ payload, so they are stripped from user-supplied text before assembly.
 from __future__ import annotations
 
 import re
+from decimal import Decimal
+
+from app.common import money
 
 #: Payment code for a service/membership fee paid by a citizen ("ostale usluge").
 DEFAULT_PAYMENT_CODE = "189"
@@ -71,15 +74,15 @@ def normalize_account(raw: str) -> str:
     return digits
 
 
-def format_amount(amount_minor: int, currency: str = "RSD") -> str:
+def format_amount(amount: Decimal, currency: str = "RSD") -> str:
     """``I`` field: currency code followed by the amount, comma-separated.
 
-    Formatted from integer minor units so the printed amount is exactly the
-    amount charged , no float rounding anywhere between the ledger and the QR.
+    Formatted straight from the stored exact decimal, so the printed amount is
+    the amount charged. No float and no minor-unit arithmetic in between.
     """
-    if amount_minor < 0:
+    if amount < 0:
         raise PaymentSlipError("Iznos uplate ne može biti negativan.")
-    return f"{currency}{amount_minor // 100},{amount_minor % 100:02d}"
+    return f"{currency}{money.format_amount(amount).replace('.', ',')}"
 
 
 def mod97_reference(base: str) -> str:
@@ -148,7 +151,7 @@ def build_ips_qr_payload(
     payee_name: str,
     payee_address: str | None,
     payee_city: str | None,
-    amount_minor: int,
+    amount: Decimal,
     currency: str,
     purpose: str,
     reference: str,
@@ -171,7 +174,7 @@ def build_ips_qr_payload(
         "C:1",
         f"R:{normalize_account(account)}",
         f"N:{payee}",
-        f"I:{format_amount(amount_minor, currency)}",
+        f"I:{format_amount(amount, currency)}",
     ]
     payer = _party(payer_name, None, None, limit=70)
     if payer:

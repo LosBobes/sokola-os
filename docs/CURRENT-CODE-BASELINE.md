@@ -32,7 +32,7 @@ kao dokaz. Nijedna vrednost nije pretpostavljena.
 | Framework/runtime | `RESOLVED` | Python 3.12 + FastAPI 0.141 (modularni monolit), Uvicorn; React 19 + Vite + React Router SPA | `apps/api/pyproject.toml`, `apps/api/app/main.py`, `apps/web/package.json` |
 | Baza i ORM | `RESOLVED` | PostgreSQL 16 + SQLAlchemy 2.0.54, Alembic 1.20 | `apps/api/pyproject.toml`, `apps/api/app/db.py`, `apps/api/alembic.ini` |
 | Migration head (zatečeni) | `RESOLVED` | `a1c4f2d80b37` (jedan head, 21 revizija) | `alembic heads`, exit 0 |
-| Migration head (posle ovog rada) | `RESOLVED` | `d5a92c74e8b1` (jedan head, 24 revizije) — audit seal, inbox, dead-letter dual control | `alembic heads` → `d5a92c74e8b1 (head)`, exit 0 |
+| Migration head (posle ovog rada) | `RESOLVED` | `e8b47a3c9d16` (jedan head, 25 revizija) — audit seal, inbox, dead-letter dual control, exact decimal | `alembic heads` → `e8b47a3c9d16 (head)`, exit 0 |
 | Auth/OIDC | `RESOLVED` | Email+password (scrypt + server-side pepper, hash samo na `AuthAccount`) i Google OIDC; dev header adapter nemoguće uključiti van `local`/`test` | `apps/api/app/security/{password,password_auth,oidc,auth}.py`, `apps/api/app/config.py` |
 | Storage | `RESOLVED` | Samo lokalni fajl sistem (`documents_storage_dir`, podrazumevano `var/documents`); `StorageBackend` interfejs postoji za budući S3/GCS | `apps/api/app/domains/documents/storage.py`, `apps/api/app/config.py` |
 | Email provider/adapter | `RESOLVED` | **Ne postoji.** Nema SMTP/SendGrid/Resend adaptera u kodu; notifikacije završavaju u `notification` tabeli (in-app inbox), ne u email transportu | `grep -ril 'smtp\|sendgrid\|resend\|send_email' apps/api/app` → bez pogodaka |
@@ -80,7 +80,7 @@ Posle Talas-1 izmena (clock, audit seal, inbox, observability, dead-letter dual 
 | `ruff check app tests` | 0 | All checks passed |
 | `mypy app` | 0 | no issues found in 182 source files |
 | `python -m scripts.check_architecture` | 0 | Architecture gate OK |
-| `alembic upgrade head` | 0 | 24 revizije na praznoj bazi; backfill audit lanaca izvršen pre nego što trigger počne da važi; `downgrade` round-trip čist |
+| `alembic upgrade head` | 0 | 25 revizija na praznoj bazi; backfill audit lanaca izvršen pre nego što trigger počne da važi; `downgrade` round-trip čist |
 | `alembic check` | 0 | No new upgrade operations detected |
 | `pytest` | 0 | **333 passed, 0 failed, 0 skipped** |
 | `python -m scripts.check_openapi_parity` | 0 | OpenAPI parity OK |

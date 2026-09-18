@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from tests.factories import Actor, bootstrap_actor
 
-PRICE = 300_000
+PRICE = "3000.00"
 
 
 def _group_with_members(client: TestClient, actor: Actor, count: int) -> str:
@@ -23,7 +23,7 @@ def _group_with_members(client: TestClient, actor: Actor, count: int) -> str:
 def _run_body(group_id: str) -> dict:
     return {
         "group_id": group_id,
-        "amount_minor": 300000,
+        "amount": "3000.00",
         "description": "Članarina septembar",
         "period_label": "2026-09",
     }
@@ -36,7 +36,7 @@ def test_post_billing_run_journey5(client: TestClient, db: Session) -> None:
 
     preview = client.post("/billing/runs/preview", headers=actor.headers, json=body).json()
     assert len(preview["items"]) == 2
-    assert preview["total_minor"] == 600000
+    assert preview["total"] == "6000.00"
 
     posted = client.post(
         "/billing/runs",
@@ -89,8 +89,8 @@ def test_stale_preview_is_refused(client: TestClient, db: Session) -> None:
 
 
 # ---------------------------------------------------------------------------
-# M1, pricing source: charge amounts derived from Group.base_monthly_price_
-# minor minus GroupMembership.discount_minor when amount_minor is omitted.
+# M1, pricing source: charge amounts derived from Group.base_monthly_price
+# minus GroupMembership.discount when amount is omitted.
 # ---------------------------------------------------------------------------
 
 
@@ -101,7 +101,7 @@ def test_pricing_derived_amount_matches_group_price_minus_discount(
     group_id = client.post(
         "/groups",
         headers=actor.headers,
-        json={"name": "Cenovnik", "base_monthly_price_minor": PRICE},
+        json={"name": "Cenovnik", "base_monthly_price": PRICE},
     ).json()["id"]
     pid = client.post(
         "/people", headers=actor.headers, json={"given_name": "Popust", "family_name": "L"}
@@ -112,15 +112,15 @@ def test_pricing_derived_amount_matches_group_price_minus_discount(
     client.patch(
         f"/groups/{group_id}/members/{member['membership_id']}/discount",
         headers=actor.headers,
-        json={"discount_minor": 50_000},
+        json={"discount": "500.00"},
     )
 
     body = {"group_id": group_id, "description": "Članarina", "period_label": "2026-09"}
     preview = client.post("/billing/runs/preview", headers=actor.headers, json=body).json()
     assert preview["items"] == [
-        {"person_id": pid, "display_name": "Popust L", "amount_minor": PRICE - 50_000}
+        {"person_id": pid, "display_name": "Popust L", "amount": "2500.00"}
     ]
-    assert preview["total_minor"] == PRICE - 50_000
+    assert preview["total"] == "2500.00"
 
     posted = client.post(
         "/billing/runs",
@@ -131,7 +131,7 @@ def test_pricing_derived_amount_matches_group_price_minus_discount(
     charges = client.get(
         "/charges", headers=actor.headers, params={"person_id": pid}
     ).json()["items"]
-    assert charges[0]["amount_due_minor"] == PRICE - 50_000
+    assert charges[0]["amount_due"] == "2500.00"
 
 
 def test_pricing_discount_floors_at_zero(client: TestClient, db: Session) -> None:
@@ -139,7 +139,7 @@ def test_pricing_discount_floors_at_zero(client: TestClient, db: Session) -> Non
     group_id = client.post(
         "/groups",
         headers=actor.headers,
-        json={"name": "Besplatno", "base_monthly_price_minor": 10_000},
+        json={"name": "Besplatno", "base_monthly_price": "100.00"},
     ).json()["id"]
     pid = client.post(
         "/people", headers=actor.headers, json={"given_name": "Stipendija", "family_name": "K"}
@@ -150,12 +150,12 @@ def test_pricing_discount_floors_at_zero(client: TestClient, db: Session) -> Non
     client.patch(
         f"/groups/{group_id}/members/{member['membership_id']}/discount",
         headers=actor.headers,
-        json={"discount_minor": 50_000},
+        json={"discount": "500.00"},
     )
 
     body = {"group_id": group_id, "description": "Članarina", "period_label": "2026-09"}
     preview = client.post("/billing/runs/preview", headers=actor.headers, json=body).json()
-    assert preview["items"][0]["amount_minor"] == 0
+    assert preview["items"][0]["amount"] == "0.00"
 
 
 def test_pricing_requires_group_price_when_amount_omitted(
@@ -170,13 +170,13 @@ def test_pricing_requires_group_price_when_amount_omitted(
 
 
 def test_explicit_amount_override_still_works(client: TestClient, db: Session) -> None:
-    """Backward compatibility: an explicit amount_minor is still honoured
+    """Backward compatibility: an explicit amount is still honoured
     verbatim, even when the group has its own list price configured."""
     actor = bootstrap_actor(db)
     group_id = client.post(
         "/groups",
         headers=actor.headers,
-        json={"name": "Cenovnik", "base_monthly_price_minor": PRICE},
+        json={"name": "Cenovnik", "base_monthly_price": PRICE},
     ).json()["id"]
     pid = client.post(
         "/people", headers=actor.headers, json={"given_name": "Č", "family_name": "L"}
@@ -185,12 +185,12 @@ def test_explicit_amount_override_still_works(client: TestClient, db: Session) -
 
     body = {
         "group_id": group_id,
-        "amount_minor": 12_345,
+        "amount": "123.45",
         "description": "Vanredna uplata",
         "period_label": "2026-09",
     }
     preview = client.post("/billing/runs/preview", headers=actor.headers, json=body).json()
-    assert preview["items"][0]["amount_minor"] == 12_345
+    assert preview["items"][0]["amount"] == "123.45"
 
 
 # ---------------------------------------------------------------------------
@@ -215,22 +215,22 @@ def test_debts_view_aggregates_per_person_and_org(client: TestClient, db: Sessio
     client.post(
         f"/charges/{charges[0]['id']}/payments",
         headers=actor.headers,
-        json={"amount_minor": 300_000, "method": "CASH"},
+        json={"amount": "3000.00", "method": "CASH"},
     )
     client.post(
         f"/charges/{charges[1]['id']}/payments",
         headers=actor.headers,
-        json={"amount_minor": 100_000, "method": "CASH"},
+        json={"amount": "1000.00", "method": "CASH"},
     )
 
     debts = client.get("/billing/debts", headers=actor.headers).json()
     assert debts["total"] == 1
     assert debts["items"][0]["person_id"] == charges[1]["person_id"]
-    assert debts["items"][0]["outstanding_minor"] == 200_000
+    assert debts["items"][0]["outstanding"] == "2000.00"
     assert debts["items"][0]["open_charge_count"] == 1
 
     summary = client.get("/billing/debts/summary", headers=actor.headers).json()
-    assert summary["total_outstanding_minor"] == 200_000
+    assert summary["total_outstanding"] == "2000.00"
     assert summary["people_with_debt"] == 1
 
 
@@ -253,15 +253,15 @@ def test_debts_view_respects_tenant_isolation(client: TestClient, db: Session) -
     assert client.get("/billing/debts", headers=org_a.headers).json()["total"] == 0
     assert (
         client.get("/billing/debts/summary", headers=org_a.headers).json()[
-            "total_outstanding_minor"
+            "total_outstanding"
         ]
-        == 0
+        == "0.00"
     )
     assert (
         client.get("/billing/debts/summary", headers=org_b.headers).json()[
-            "total_outstanding_minor"
+            "total_outstanding"
         ]
-        == 300_000
+        == "3000.00"
     )
 
 
@@ -313,7 +313,7 @@ def test_paid_charge_cannot_be_cancelled(client: TestClient, db: Session) -> Non
     client.post(
         f"/charges/{charge_id}/payments",
         headers=actor.headers,
-        json={"amount_minor": PRICE, "method": "CASH"},
+        json={"amount": PRICE, "method": "CASH"},
     )
 
     resp = client.post(
