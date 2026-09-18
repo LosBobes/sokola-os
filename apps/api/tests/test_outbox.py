@@ -14,7 +14,7 @@ def _reset_handlers() -> None:
 
 def test_enqueued_event_is_delivered(db: Session) -> None:
     seen: list[str] = []
-    worker.register_handler("test.delivered", lambda m: seen.append(m.id))
+    worker.register_handler("test.delivered", lambda _db, m: seen.append(m.id))
 
     msg = service.enqueue(
         db, event_type="test.delivered", payload={"a": 1}, organization_id="org_1"
@@ -32,7 +32,7 @@ def test_enqueued_event_is_delivered(db: Session) -> None:
 
 
 def test_failing_handler_dead_letters_after_max_attempts(db: Session) -> None:
-    def boom(_: OutboxMessage) -> None:
+    def boom(_db: Session, _message: OutboxMessage) -> None:
         raise RuntimeError("provider down")
 
     worker.register_handler("test.fail", boom)
@@ -52,7 +52,7 @@ def test_failing_handler_dead_letters_after_max_attempts(db: Session) -> None:
 
 
 def test_transient_failure_reschedules_before_dead_letter(db: Session) -> None:
-    def boom(_: OutboxMessage) -> None:
+    def boom(_db: Session, _message: OutboxMessage) -> None:
         raise RuntimeError("temporary")
 
     worker.register_handler("test.retry", boom)

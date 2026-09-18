@@ -19,6 +19,7 @@ from app.domains.reports.schemas import (
     OutstandingByStatus,
     OverviewReport,
 )
+from app.platform import clock
 from app.security.context import RequestContext
 
 _OVERVIEW_ATTENDANCE_WINDOW_DAYS = 30
@@ -73,7 +74,7 @@ class _GroupTally:
 
 
 def overview(db: Session, context: RequestContext) -> OverviewReport:
-    now = dt.datetime.now(tz=dt.UTC)
+    now = clock.now()
     period_start_date = now.date().replace(day=1)
     period_start, _ = _day_bounds(period_start_date, now.date())
     period_end_exclusive = now

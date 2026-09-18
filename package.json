@@ -6,22 +6,18 @@
   "engines": {
     "node": ">=22"
   },
+  "comment": "The API is Python and has no package.json, so it is not an npm workspace. Its harness is scripts/check.sh, which is what CI runs. Root scripts are thin wrappers over the real ones; they never become a second source of truth.",
   "workspaces": [
-    "packages/contracts",
-    "apps/api",
     "apps/web"
   ],
   "scripts": {
-    "build": "npm run build --workspace @sokola/contracts && npm run build --workspace @sokola/api && npm run build --workspace @sokola/web",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
-    "verify:parity": "node scripts/openapi-parity.mjs",
-    "verify:arch": "node scripts/arch-audit.mjs",
-    "verify:migrations": "node scripts/migration-audit.mjs",
-    "verify": "npm run typecheck && npm run lint && npm run verify:arch && npm run verify:migrations && npm run verify:parity",
-    "dev:api": "npm run dev --workspace @sokola/api",
-    "dev:web": "npm run dev --workspace @sokola/web"
+    "dev:web": "npm run dev --workspace sokola-web",
+    "build:web": "npm run build --workspace sokola-web",
+    "typecheck:web": "npm run typecheck --workspace sokola-web",
+    "gen:api": "npm run gen:api --workspace sokola-web",
+    "verify:api": "scripts/check.sh",
+    "verify:spec": "scripts/verify-spec-manifest.sh",
+    "verify": "npm run verify:spec && npm run verify:api && npm run typecheck:web && npm run build:web"
   },
   "devDependencies": {
     "typescript": "^5.6.3"

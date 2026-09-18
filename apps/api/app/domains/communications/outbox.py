@@ -3,11 +3,11 @@
 
 Wired the same way every outbox consumer is: :func:`register` binds these
 handlers to event types, and :mod:`app.handlers` calls it once at process
-startup (worker) or test setup. A handler receives only the
-:class:`~app.platform.outbox.models.OutboxMessage`, opens its own DB session,
-and commits independently, this mirrors the pattern already established by
-``app.platform.outbox.worker`` (see its module docstring: "every handler must
-be idempotent").
+startup (worker) or test setup. A handler receives the worker's session and the
+:class:`~app.platform.outbox.models.OutboxMessage`, and neither commits nor
+rolls back: the worker owns the transaction, so these writes land together with
+the message's inbox claim and DELIVERED status (see
+``app.platform.outbox.worker``).
 
 Cross-domain reads here go through *models* only (never another domain's
 service/repository/router), which is exactly what the architecture gate
@@ -21,7 +21,6 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db import SessionLocal
 from app.domains.billing.models import Charge
 from app.domains.communications.enums import NotificationDeliveryStatus
 from app.domains.communications.models import Notification
@@ -92,21 +91,14 @@ def _notify(
     entity_type: str,
     entity_id: str,
 ) -> None:
-    """Insert one ``Notification`` per recipient, skipping anyone who already
-    has a row for this exact outbox message (at-least-once redelivery safe)."""
+    """Insert one ``Notification`` per recipient.
+
+    ``source_message_id`` is kept as provenance (which event produced this
+    notification), not as de-duplication: the inbox claim in the worker is what
+    makes a redelivery a no-op now."""
     if not recipients or message.organization_id is None:
         return
-    already: set[str] = set(
-        db.execute(
-            select(Notification.person_id).where(
-                Notification.source_message_id == message.id,
-                Notification.person_id.in_(recipients),
-            )
-        )
-        .scalars()
-        .all()
-    )
-    for person_id in sorted(recipients - already):
+    for person_id in sorted(recipients):
         db.add(
             Notification(
                 organization_id=message.organization_id,
@@ -124,117 +116,109 @@ def _notify(
 
 
 def _handle_session_event(
-    message: OutboxMessage, *, title: str, body_template: str
+    db: Session, message: OutboxMessage, *, title: str, body_template: str
 ) -> None:
     session_id = message.payload.get("session_id")
     if not session_id or message.organization_id is None:
         return
-    with SessionLocal() as db:
-        session = db.get(ScheduleSession, session_id)
-        if session is None:
-            return
-        recipients = _group_recipients(db, message.organization_id, session.group_id)
-        session_title = session.title or "trening"
-        reason = _reason_label(message.payload.get("reason"))
-        body = body_template.format(title=session_title, reason=reason)
-        _notify(
-            db,
-            message,
-            recipients=recipients,
-            title=title,
-            body=body,
-            entity_type="session",
-            entity_id=session.id,
-        )
-        db.commit()
+    session = db.get(ScheduleSession, session_id)
+    if session is None:
+        return
+    recipients = _group_recipients(db, message.organization_id, session.group_id)
+    session_title = session.title or "trening"
+    reason = _reason_label(message.payload.get("reason"))
+    body = body_template.format(title=session_title, reason=reason)
+    _notify(
+        db,
+        message,
+        recipients=recipients,
+        title=title,
+        body=body,
+        entity_type="session",
+        entity_id=session.id,
+    )
 
 
-def handle_session_changed(message: OutboxMessage) -> None:
+def handle_session_changed(db: Session, message: OutboxMessage) -> None:
     _handle_session_event(
+        db,
         message,
         title="Termin je izmenjen",
         body_template="Termin „{title}“ je izmenjen zbog {reason}.",
     )
 
 
-def handle_session_cancelled(message: OutboxMessage) -> None:
+def handle_session_cancelled(db: Session, message: OutboxMessage) -> None:
     _handle_session_event(
+        db,
         message,
         title="Termin je otkazan",
         body_template="Termin „{title}“ je otkazan zbog {reason}.",
     )
 
 
-def handle_session_reactivated(message: OutboxMessage) -> None:
+def handle_session_reactivated(db: Session, message: OutboxMessage) -> None:
     _handle_session_event(
+        db,
         message,
         title="Termin je ponovo aktiviran",
         body_template="Termin „{title}“ je ponovo aktiviran.",
     )
 
 
-def handle_billing_run_posted(message: OutboxMessage) -> None:
+def handle_billing_run_posted(db: Session, message: OutboxMessage) -> None:
     billing_run_id = message.payload.get("billing_run_id")
     if not billing_run_id or message.organization_id is None:
         return
-    with SessionLocal() as db:
-        charged_ids = set(
-            db.execute(
-                select(Charge.person_id).where(Charge.billing_run_id == billing_run_id)
-            )
-            .scalars()
-            .all()
-        )
-        if not charged_ids:
-            return
-        recipients = charged_ids | _guardians_of(db, message.organization_id, charged_ids)
-        _notify(
-            db,
-            message,
-            recipients=recipients,
-            title="Novo zaduženje",
-            body="Izdato je novo zaduženje za plaćanje. Proverite iznos u obračunu.",
-            entity_type="billing_run",
-            entity_id=billing_run_id,
-        )
-        db.commit()
+    charged_ids = set(
+        db.execute(select(Charge.person_id).where(Charge.billing_run_id == billing_run_id))
+        .scalars()
+        .all()
+    )
+    if not charged_ids:
+        return
+    recipients = charged_ids | _guardians_of(db, message.organization_id, charged_ids)
+    _notify(
+        db,
+        message,
+        recipients=recipients,
+        title="Novo zaduženje",
+        body="Izdato je novo zaduženje za plaćanje. Proverite iznos u obračunu.",
+        entity_type="billing_run",
+        entity_id=billing_run_id,
+    )
 
 
-def handle_event_registered(message: OutboxMessage) -> None:
+def handle_event_registered(db: Session, message: OutboxMessage) -> None:
     event_id = message.payload.get("event_id")
     if not event_id or message.organization_id is None:
         return
-    with SessionLocal() as db:
-        rows = (
-            db.execute(
-                select(
-                    EventRegistration.child_person_id,
-                    EventRegistration.registered_by_person_id,
-                ).where(
-                    EventRegistration.event_id == event_id,
-                    EventRegistration.status == RegistrationStatus.REGISTERED,
-                )
-            )
-            .all()
+    rows = db.execute(
+        select(
+            EventRegistration.child_person_id,
+            EventRegistration.registered_by_person_id,
+        ).where(
+            EventRegistration.event_id == event_id,
+            EventRegistration.status == RegistrationStatus.REGISTERED,
         )
-        if not rows:
-            return
-        child_ids = {r.child_person_id for r in rows}
-        recipients = (
-            child_ids
-            | {r.registered_by_person_id for r in rows}
-            | _guardians_of(db, message.organization_id, child_ids)
-        )
-        _notify(
-            db,
-            message,
-            recipients=recipients,
-            title="Prijava na događaj potvrđena",
-            body="Prijava na događaj je uspešno evidentirana.",
-            entity_type="event",
-            entity_id=event_id,
-        )
-        db.commit()
+    ).all()
+    if not rows:
+        return
+    child_ids = {r.child_person_id for r in rows}
+    recipients = (
+        child_ids
+        | {r.registered_by_person_id for r in rows}
+        | _guardians_of(db, message.organization_id, child_ids)
+    )
+    _notify(
+        db,
+        message,
+        recipients=recipients,
+        title="Prijava na događaj potvrđena",
+        body="Prijava na događaj je uspešno evidentirana.",
+        entity_type="event",
+        entity_id=event_id,
+    )
 
 
 def register() -> None:

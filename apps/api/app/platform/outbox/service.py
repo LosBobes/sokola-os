@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.platform import clock
 from app.platform.outbox.enums import OutboxStatus
 from app.platform.outbox.models import OutboxMessage
 
@@ -38,7 +39,7 @@ def enqueue(
 
 
 def _now() -> dt.datetime:
-    return dt.datetime.now(tz=dt.UTC)
+    return clock.now()
 
 
 def claim_batch(session: Session, *, worker_id: str, limit: int = 20) -> list[OutboxMessage]:

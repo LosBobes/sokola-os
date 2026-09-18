@@ -1,4 +1,6 @@
-import { onboard, uniq } from "../support/e2e";
+import { dateTimeInput, nextWeekday, onboard, tomorrow, uniq } from "../support/e2e";
+
+const WEDNESDAY = 2; // Monday = 0, matching the weekday chips in Raspored.
 
 describe("Manager: people, groups, schedule, attendance", () => {
   it("covers Journeys 8, 1 and 2 end-to-end", () => {
@@ -34,7 +36,7 @@ describe("Manager: people, groups, schedule, attendance", () => {
     // --- Journey 1: create a one-off session (conflict preview then create) ---
     cy.get("[data-cy='nav-/raspored']").click();
     cy.get("[data-cy=session-group]").select(groupName);
-    cy.get("[data-cy=session-start]").type("2026-09-01T17:00");
+    cy.get("[data-cy=session-start]").type(dateTimeInput(tomorrow(), 17));
     cy.get("[data-cy=session-save]").click();
     cy.get("[data-cy=session-row]").should("have.length.at.least", 1);
 
@@ -61,7 +63,7 @@ describe("Manager: people, groups, schedule, attendance", () => {
     // "Svake srede u 18:00": the rule and its occurrences are one action.
     cy.get("[data-cy='nav-/raspored']").click();
     cy.get("[data-cy=session-group]").select(groupName);
-    cy.get("[data-cy=session-start]").type("2026-09-02T18:00");
+    cy.get("[data-cy=session-start]").type(dateTimeInput(nextWeekday(WEDNESDAY), 18));
     cy.get("[data-cy=session-repeats]").check();
     cy.get("[data-cy=session-weekday-2]").click();
     cy.get("[data-cy=session-weeks]").clear().type("3");

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import datetime as dt
-
 from sqlalchemy.orm import Session
 
 from app.common.enums import AuditDataClass
@@ -25,6 +23,7 @@ from app.domains.groups.schemas import (
     UpdateGroupRequest,
 )
 from app.domains.identity.models import Person
+from app.platform import clock
 from app.platform.audit.service import record_audit
 from app.platform.outbox.service import enqueue
 from app.security.context import RequestContext
@@ -185,7 +184,7 @@ def add_member(
         organization_id=context.organization_id,
         person_id=person_id,
         role=role,
-        joined_at=dt.datetime.now(tz=dt.UTC),
+        joined_at=clock.now(),
     )
     db.add(membership)
     record_audit(
@@ -320,7 +319,7 @@ def end_membership(
     if membership.status is GroupMembershipStatus.ENDED:
         raise ConflictError("Članstvo je već okončano.")
     membership.status = GroupMembershipStatus.ENDED
-    membership.ended_at = dt.datetime.now(tz=dt.UTC)
+    membership.ended_at = clock.now()
     membership.end_reason = req.end_reason
     _emit_membership_change(db, context, group, membership, person, "ended", req.reason)
     db.commit()

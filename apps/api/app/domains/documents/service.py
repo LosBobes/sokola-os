@@ -28,6 +28,7 @@ from app.domains.documents.enums import DocumentType, DocumentVisibility, Retent
 from app.domains.documents.models import Document
 from app.domains.documents.schemas import DocumentResponse
 from app.domains.documents.storage import LocalFilesystemBackend, StorageBackend
+from app.platform import clock
 from app.platform.audit.service import record_audit
 from app.platform.outbox.service import enqueue
 from app.security.context import RequestContext
@@ -58,7 +59,7 @@ def _storage() -> StorageBackend:
 
 
 def _now() -> dt.datetime:
-    return dt.datetime.now(tz=dt.UTC)
+    return clock.now()
 
 
 def _has_documents_permission(context: RequestContext) -> bool:

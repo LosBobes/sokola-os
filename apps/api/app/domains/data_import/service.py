@@ -30,7 +30,6 @@ as deliberate, reviewable operations (cf. the merge-review workflow in
 from __future__ import annotations
 
 import csv
-import datetime as dt
 import io
 
 from sqlalchemy.orm import Session
@@ -56,6 +55,7 @@ from app.domains.groups.models import GroupMembership
 from app.domains.identity.enums import PersonIdentityStatus
 from app.domains.identity.models import Person
 from app.domains.organization.models import OrganizationMembership
+from app.platform import clock
 from app.platform.audit.service import record_audit
 from app.platform.outbox.service import enqueue
 from app.security.context import RequestContext
@@ -212,7 +212,7 @@ def preview_batch(
     batch.valid_rows = valid
     batch.invalid_rows = len(rows) - valid
     batch.status = ImportBatchStatus.PREVIEWED
-    batch.previewed_at = dt.datetime.now(tz=dt.UTC)
+    batch.previewed_at = clock.now()
 
     record_audit(
         db,
@@ -307,7 +307,7 @@ def commit_batch(db: Session, context: RequestContext, batch_id: str) -> ImportC
                         group_id=group.id,
                         organization_id=context.organization_id,
                         person_id=person.id,
-                        joined_at=dt.datetime.now(tz=dt.UTC),
+                        joined_at=clock.now(),
                     )
                 )
 
@@ -344,7 +344,7 @@ def commit_batch(db: Session, context: RequestContext, batch_id: str) -> ImportC
         )
 
     batch.status = ImportBatchStatus.COMMITTED
-    batch.committed_at = dt.datetime.now(tz=dt.UTC)
+    batch.committed_at = clock.now()
     batch.created_rows = created
     batch.skipped_rows = skipped
 

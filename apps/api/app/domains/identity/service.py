@@ -37,6 +37,7 @@ from app.domains.organization.enums import MembershipStatus, OrgMemberType
 from app.domains.organization.models import Organization, OrganizationMembership
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
 from app.domains.people.models import GuardianOrganizationAccess, GuardianRelationship
+from app.platform import clock
 from app.platform.audit.service import record_audit
 from app.platform.outbox.service import enqueue
 from app.security.auth import Principal
@@ -44,7 +45,7 @@ from app.security.context import RequestContext
 
 
 def _now() -> dt.datetime:
-    return dt.datetime.now(tz=dt.UTC)
+    return clock.now()
 
 
 def get_me(db: Session, principal: Principal) -> MeResponse:

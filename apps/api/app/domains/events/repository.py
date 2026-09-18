@@ -13,6 +13,7 @@ from app.domains.organization.models import OrganizationMembership
 from app.domains.people.enums import GuardianAccessStatus
 from app.domains.people.models import GuardianOrganizationAccess
 from app.domains.structure.models import Location
+from app.platform import clock
 
 
 def get_event(
@@ -154,4 +155,4 @@ def get_registration(
 
 
 def now() -> dt.datetime:
-    return dt.datetime.now(tz=dt.UTC)
+    return clock.now()
