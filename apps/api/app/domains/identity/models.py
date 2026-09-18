@@ -92,6 +92,17 @@ class RoleAssignment(Base, TimestampMixin, RecordStatusMixin):
             "scope_ref_id",
             name="uq_role_assignment",
         ),
+        # Tenant + person + role as a referenceable key, so a foreign key
+        # elsewhere can require all four at once (see
+        # school_primary_owner_term). Uniqueness is already given by the primary
+        # key; what this adds is the ability to point at it *with* its context.
+        UniqueConstraint(
+            "school_id",
+            "id",
+            "person_id",
+            "role_code",
+            name="uq_role_assignment_tenant_person_role",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("rol"))

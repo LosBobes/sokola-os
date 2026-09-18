@@ -371,6 +371,14 @@ class SchoolMembership(Base, TimestampMixin, RecordStatusMixin):
     __tablename__ = "school_membership"
     __table_args__ = (
         UniqueConstraint("school_id", "person_id", name="uq_school_membership"),
+        # Redundant as a uniqueness claim — `id` alone is already the PK — but
+        # it is what lets another table's foreign key name the tenant as part of
+        # the reference (see school_owner_nomination). That turns "belongs to
+        # this school" from something a query must remember to check into
+        # something the row cannot be written without.
+        UniqueConstraint(
+            "school_id", "id", "person_id", name="uq_school_membership_tenant_person"
+        ),
         # School-local member code is unique within the tenant *when set* (§8/§9).
         Index(
             "uq_school_local_member_code",

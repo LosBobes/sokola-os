@@ -26,6 +26,7 @@ from app.domains.privacy import models as _privacy_models  # noqa: F401
 from app.domains.progress import models as _progress_models  # noqa: F401
 from app.domains.scheduling import models as _scheduling_models  # noqa: F401
 from app.domains.school import models as _school_models  # noqa: F401
+from app.domains.school import ownership_models as _ownership_models  # noqa: F401
 from app.domains.structure import models as _structure_models  # noqa: F401
 from app.platform.audit import models as _audit_models  # noqa: F401
 from app.platform.idempotency import models as _idempotency_models  # noqa: F401

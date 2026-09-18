@@ -81,7 +81,7 @@ authorization domen.
 | M01 Identity | `ADAPT` | `app/domains/identity/`, `app/security/{auth,password,oidc}.py`. Email+password i Google OIDC rade; session revocation i M01 revocation-on-every-request nisu dokazani |
 | M02 Pozivnice | `ADAPT` | `identity/invite_tokens.py`, `Invitation` model, `tests/test_invitations.py`. Invite-only postoji; M02 ugovor je znatno širi (55 KB master) |
 | M03 Multi-tenancy | `ADAPT` | `app/security/context.py`. Server-derived context postoji i testiran je; **nedostaju composite tenant FK/UNIQUE i RLS** (§7) |
-| M04 School/Subscription | `IMPLEMENT` (§2.1–2.5 urađeno) | Anchor postoji: `organization`, `organization_school`, `school_locator`, `school_status_transition`, prošireni `school` (`app/domains/school/{models,anchor,locator}.py`, migracija `a4d76f2b91c0`, 30 testova). **Ostaje:** owner nomination/primary term (§2.6–2.7), entitlement i usage (§2.8–2.10), komercijalni sloj (§2.12–2.20), SCH-01..06 kao komande |
+| M04 School/Subscription | `IMPLEMENT` (§2.1–2.7 urađeno) | Anchor: `organization`, `organization_school`, `school_locator`, `school_status_transition`, prošireni `school` (migracija `a4d76f2b91c0`, 30 testova). Ownership: `school_owner_nomination`, `school_primary_owner_term` sa composite tenant FK-ovima (`app/domains/school/ownership*.py`, migracija `b9e3c05a74d2`, 31 test). **Ostaje:** entitlement i usage (§2.8–2.10), komercijalni sloj (§2.12–2.20), SCH-01..06 / ORG-01..04 / OWN-01..04 kao komande sa permisijama i step-up-om |
 | M05 RBAC | `ADAPT` | `app/security/permissions.py` — per-area granted-areas model, restrikcija može samo sužavati. Nema support/break-glass pristupa ni v5.7 permission registra |
 | M06 Ljudi i članstva | `PRESERVE`/`ADAPT` | `domains/people/`, `domains/organization/`, `tests/test_people_lifecycle.py` |
 | M07 Roditelji/staratelji | `ADAPT` | `people.GuardianRelationship`, `GuardianOrganizationAccess`. **Payer relation ne postoji odvojeno od guardian-a** — M07/M12 zahtev |
@@ -227,6 +227,14 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Šta ostaje otvoreno:** ključevi žive u okruženju. Kompromitovan host čita kontakte. Modul to kaže eksplicitno umesto da implicira jaču garanciju.
 - **Status:** `CHALLENGE_NOT_APPLIED` u delu key custody — arhitektonska odluka vlasnika proizvoda, spremna za zamenu KMS-om bez promene šeme.
 
+### F-14 — M04 referencira M06 `SchoolPersonProfile`, koji u repou ne postoji
+
+- **Ugovor:** M04 §2.6 traži composite FK `(school_id, target_school_person_profile_id, target_person_id)` → M06 `SchoolPersonProfile(school_id, id, person_id)`.
+- **Repo dokaz:** M06 još nije implementiran po v5.7 ugovoru. Postojeći ekvivalent je `SchoolMembership` — red koji globalnu `Person` čini vidljivom unutar jednog tenanta, što je tačno uloga koju §2.6 traži od profila.
+- **Odluka:** nominacija pokazuje na `SchoolMembership`, kroz composite FK istog oblika. Kolona se zove `target_membership_id`, ne `target_school_person_profile_id`, da ime ne bi tvrdilo da postoji entitet koji ne postoji.
+- **Šta ovo *ne* menja:** garancija je ista i nosi je baza — nominacija ne može pokazati na članstvo druge škole ili druge osobe. Kada M06 uvede `SchoolPersonProfile`, FK se premešta na njega; oblik ograničenja ostaje.
+- **Status:** `ADAPT`, zabeleženo da kasniji M06 korak zna gde da pogleda.
+
 ## 5. Šta je u ovom radu stvarno urađeno
 
 **Talas 0 — baseline i klasifikacija**
@@ -257,11 +265,16 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 13. **Konsolidacija statusa:** `lifecycle_status` (IN_PREPARATION/ACTIVE) i `School.record_status` (korišćen kao prekidač deaktivacije) spojeni u jedan `status` po §5.2. Dva polja koja odgovaraju na isto pitanje su način na koji guard proveri pogrešno i deluje ispravno. Mapiranje je tačno §9.2 i ništa više; nepoznata vrednost prekida migraciju umesto da bude pogođena.
 14. **Brownfield:** svaka zatečena škola dobija provisioning referencu, organizaciju i vezu, oba lokatora i tranziciju #1, bez promene `School.id`. Organizacije su označene kao placeholder (`SELF_PROVISIONED`) jer platforma nema dokaz o pravnom licu i §9.5 zabranjuje da ga izmisli. Provereno na bazi sa pet namerno nezgodnih redova (dijakritika, prazan slug, ime bez ijednog alfanumeričkog znaka, arhivirana škola, škola sa onboarding istorijom) — i uzvodno i nizvodno.
 15. 30 novih testova za anchor, od kojih se sedam ne oslanja na servis nego direktno gađa bazu: to su garancije koje moraju važiti i kada ih neka buduća putanja zaobiđe.
+16. **M04 §2.6–2.7 — ownership** (migracija `b9e3c05a74d2`):
+    - `school_owner_nomination` — namera škole da imenovana osoba postane vlasnik, odvojena od poziva koji je nosi. Parcijalni unique dozvoljava najviše jednu `PENDING INITIAL_PRIMARY_OWNER` po školi; istekao poziv **ne** gasi nominaciju, jer „poziv je istekao" i „pogrešili smo osobu" nisu isti događaj — drugo je `CANCELLED`, sa zatvorenim razlogom.
+    - `school_primary_owner_term` — vremenski sled tačno jednog primarnog vlasnika, parcijalni unique `WHERE valid_to IS NULL`; prenos zatvara stari i otvara novi term na isti trenutak i **ne dira role set** (§3.4.8): stari vlasnik ostaje OWNER, jer tiho oduzimanje uloge pretvara prenos u zaključavanje.
+    - §3.4.5 kao dva pravila koja se slažu: dodatni vlasnik uvek sme da ode, uloga primarnog ne sme pre prenosa primarnosti — pa nijedan redosled uklanjanja ne dolazi do nule.
+17. **Composite tenant FK** (M03 §7, zatečeno kao nedostatak): `school_membership` dobija `UNIQUE(school_id, id, person_id)`, `role_assignment` dobija `UNIQUE(school_id, id, person_id, role_code)`. Nijedan ne dodaje garanciju jedinstvenosti — `id` je već PK — nego omogućavaju da strani ključ *imenuje tenanta* kao deo reference. Nominacija zato ne može pokazati na članstvo druge škole, a primary term ne može pokazati na MANAGER dodelu iste osobe. Oba su dokazana testom koji zaobilazi servis.
 
 ## 6. Šta NIJE urađeno
 
 - Nijedan v5.7 QA scenario nije implementiran kao takav. Zatečeni testovi pokrivaju zatečeni proizvod; M04 anchor testovi gađaju invarijante iz ugovora, ali nisu numerisani QA scenariji iz `02-M04-QA-I-TRACEABILITY.md`.
-- **Nijedan modul nije `IMPLEMENTED`.** Talas 1 jeste završen, a od Talasa 2 postoji samo M04 anchor (§2.1–2.5). M04 sam po sebi nije gotov: nedostaju §2.6–2.7 (owner nomination, primary term), §2.8–2.10 (entitlement, usage, korekcije), §2.12–2.20 (komercijalni sloj) i SCH-01..06 / ORG-01..04 kao stvarne komande sa permisijama i step-up-om.
+- **Nijedan modul nije `IMPLEMENTED`.** Talas 1 jeste završen, a od Talasa 2 postoji M04 §2.1–2.7. M04 sam po sebi nije gotov: nedostaju §2.8–2.10 (entitlement, usage, korekcije), §2.12–2.20 (komercijalni sloj) i SCH-01..06 / ORG-01..04 / OWN-01..04 kao stvarne komande sa permisijama i step-up-om. Ovde postoji **domen i njegove invarijante**, ne komandni sloj: ko sme šta da pozove i dalje čeka M05.
 - Dead-letter dual control nema HTTP vezivanje dok M05 support access ne postoji (F-09).
 - Talasi 3–5 nisu započeti.
 - **Cypress se u ovom okruženju ne može pokrenuti** (binarni paket se ne preuzima), pa su korisničke putanje dokazivane pokretanjem stvarnog stack-a i pravim HTTP pozivima, odnosno Playwright-om uz predinstalirani Chromium. Web `typecheck` i `build` **se izvršavaju lokalno i prolaze** (raniji nalaz o suprotnom povučen — vidi F-11).
@@ -273,7 +286,7 @@ Redosled je potvrdio vlasnik proizvoda 2026-09-18:
 1. ~~**F-03** — novac na `NUMERIC(18,2)`~~ — urađeno.
 2. ~~**F-04** — preimenovanje `Organization` → `School`~~ — urađeno.
 3. ~~M04 anchor (§2.1–2.5) i contact protection port~~ — urađeno.
-4. Ostatak M04: owner nomination i primary term (§2.6–2.7), pa entitlement i usage (§2.8–2.10). Komercijalni sloj (§2.12–2.20) je najveći deo i ide posle njih.
+4. ~~Owner nomination i primary term (§2.6–2.7)~~ — urađeno. Sledi entitlement i usage (§2.8–2.10); komercijalni sloj (§2.12–2.20) je najveći deo i ide posle njih.
 5. Nastavak Talasa 2 redosledom iz `DCR-20260903-07`: M06 → M01 → M03 → M05 → M07 → M02. M02 i M05 su ujedno uslov da se F-09 i F-12 zatvore.
 
 ## 8. Odluke vlasnika proizvoda (2026-09-18)
