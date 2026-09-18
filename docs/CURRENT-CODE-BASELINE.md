@@ -32,7 +32,7 @@ kao dokaz. Nijedna vrednost nije pretpostavljena.
 | Framework/runtime | `RESOLVED` | Python 3.12 + FastAPI 0.141 (modularni monolit), Uvicorn; React 19 + Vite + React Router SPA | `apps/api/pyproject.toml`, `apps/api/app/main.py`, `apps/web/package.json` |
 | Baza i ORM | `RESOLVED` | PostgreSQL 16 + SQLAlchemy 2.0.54, Alembic 1.20 | `apps/api/pyproject.toml`, `apps/api/app/db.py`, `apps/api/alembic.ini` |
 | Migration head (zatečeni) | `RESOLVED` | `a1c4f2d80b37` (jedan head, 21 revizija) | `alembic heads`, exit 0 |
-| Migration head (posle ovog rada) | `RESOLVED` | `b7e2a4c91f08` (jedan head, 22 revizije) — audit seal | `alembic heads` → `b7e2a4c91f08 (head)`, exit 0 |
+| Migration head (posle ovog rada) | `RESOLVED` | `c3f81d5e60a2` (jedan head, 23 revizije) — audit seal + inbox | `alembic heads` → `c3f81d5e60a2 (head)`, exit 0 |
 | Auth/OIDC | `RESOLVED` | Email+password (scrypt + server-side pepper, hash samo na `AuthAccount`) i Google OIDC; dev header adapter nemoguće uključiti van `local`/`test` | `apps/api/app/security/{password,password_auth,oidc,auth}.py`, `apps/api/app/config.py` |
 | Storage | `RESOLVED` | Samo lokalni fajl sistem (`documents_storage_dir`, podrazumevano `var/documents`); `StorageBackend` interfejs postoji za budući S3/GCS | `apps/api/app/domains/documents/storage.py`, `apps/api/app/config.py` |
 | Email provider/adapter | `RESOLVED` | **Ne postoji.** Nema SMTP/SendGrid/Resend adaptera u kodu; notifikacije završavaju u `notification` tabeli (in-app inbox), ne u email transportu | `grep -ril 'smtp\|sendgrid\|resend\|send_email' apps/api/app` → bez pogodaka |
@@ -73,16 +73,16 @@ Izvršeno na commit-u `92ccccc` **pre bilo kakve izmene koda** (baseline snimak)
 Zatečeni pad **nije posledica ove izmene** (`00-CLAUDE-CODE-IZVRSI.md` §1.3). Uzrok i
 otklanjanje opisani su u `REPO-FIRST-KLASIFIKACIJA.md` §4 (F-01).
 
-Posle Talas-1 izmena (clock port + audit seal), na istom okruženju:
+Posle Talas-1 izmena (clock port + audit seal + inbox), na istom okruženju:
 
 | Komanda | Exit code | Rezultat |
 |---|---:|---|
 | `ruff check app tests` | 0 | All checks passed |
-| `mypy app` | 0 | no issues found in 177 source files |
+| `mypy app` | 0 | no issues found in 180 source files |
 | `python -m scripts.check_architecture` | 0 | Architecture gate OK |
-| `alembic upgrade head` | 0 | 22 revizije; backfill audit lanaca izvršen pre nego što trigger počne da važi |
+| `alembic upgrade head` | 0 | 23 revizije na praznoj bazi; backfill audit lanaca izvršen pre nego što trigger počne da važi; `downgrade` round-trip čist |
 | `alembic check` | 0 | No new upgrade operations detected |
-| `pytest` | 0 | **307 passed, 0 failed, 0 skipped** |
+| `pytest` | 0 | **315 passed, 0 failed, 0 skipped** |
 | `python -m scripts.check_openapi_parity` | 0 | OpenAPI parity OK |
 | `scripts/verify-spec-manifest.sh` | 0 | 72/72 fajla odgovaraju manifestu |
 | `npx tsc -b --noEmit` (apps/web) | 0 | bez grešaka |

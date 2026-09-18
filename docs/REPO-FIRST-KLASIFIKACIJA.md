@@ -36,14 +36,15 @@ outbox i idempotency već postoje kao pravi platformski portovi. Najveći raskor
 reprezentacija novca, odsustvo composite tenant FK/UNIQUE i to što v5.7 QA tabele još
 nemaju svoje testove.
 
-## 2. Terminološko mapiranje (bez preimenovanja koda)
+## 2. Terminološko mapiranje
 
-`DCR-20260903-07` §3 izričito zabranjuje preimenovanje funkcionalnog koda samo radi
-podudaranja sa dokumentacijom. Zato se koristi mapa, ne rename:
+`DCR-20260903-07` §3 zabranjuje preimenovanje funkcionalnog koda samo radi podudaranja sa
+dokumentacijom. Mapa ispod je zato važila kao polazno stanje; odluka O-01 (§8) je svesno
+odstupanje od tog pravila za jedan pojam, `Organization → School`.
 
 | v5.7 pojam | Zatečeni kod | Status |
 |---|---|---|
-| School (H0 security tenant) | `Organization` / `organization_id` | `ADAPT` — semantički isto (tenant granica), ali ime se sudara sa v5.7 `Organization` |
+| School (H0 security tenant) | `Organization` / `organization_id` | `ADAPT` — preimenuje se u `School` po O-01 |
 | Organization (negrupišući, **ne** authorization domen) | ne postoji | `IMPLEMENT` (M04) |
 | Person | `identity.Person` | `PRESERVE` |
 | UserAccount | `identity.AuthAccount` + `AuthIdentifier` | `PRESERVE` |
@@ -51,11 +52,11 @@ podudaranja sa dokumentacijom. Zato se koristi mapa, ne rename:
 | Guardian relation | `people.GuardianRelationship` | `PRESERVE` |
 | Payer relation | ne postoji kao zaseban autoritet | `IMPLEMENT` (M07/M12) |
 
-⚠️ **Sudar imena.** U repou `Organization` *jeste* tenant; u v5.7 `Organization` je izričito
-**ne**-authorization domen iznad School-a. Dok M04 ne uvede pravi Organization sloj, svako
-čitanje koda mora znati da `organization_id` znači *School*. Predlog: uvesti v5.7
-`Organization` pod drugim imenom u kodu (npr. `OrganizationGroup`) da se sudar nikad ne
-materijalizuje. Odluka pripada vlasniku proizvoda — vidi F-04.
+⚠️ **Sudar imena — razrešen odlukom O-01.** U repou `Organization` *jeste* tenant; u v5.7
+`Organization` je izričito **ne**-authorization domen iznad School-a. Vlasnik proizvoda je
+odlučio (O-01, §8) da se postojeći `Organization` **preimenuje u `School`**, pa ime prestaje
+da bude dvosmisleno pre nego što M04 uvede pravi Organization sloj. Do izvršenja tog PR-a,
+svako čitanje koda mora znati da `organization_id` i dalje znači *School*.
 
 ## 3. Klasifikacija po modulima
 
@@ -66,7 +67,7 @@ materijalizuje. Odluka pripada vlasniku proizvoda — vidi F-04.
 | Transakcija (jedan lokalni commit) | `PRESERVE` | `app/db.py`, session-per-request |
 | Audit | **`PRESERVE` (dopunjeno u ovom radu)** | `app/platform/audit/` + `app/platform/audit/models.py`: per-tenant hash lanac, `verify_chain`/`verify_all_chains` i DB trigger koji odbija `UPDATE`/`DELETE` |
 | Outbox (producer) | `PRESERVE` | `app/platform/outbox/service.py` — transakcioni enqueue, `FOR UPDATE SKIP LOCKED`, lease takeover, backoff, `DEAD_LETTER` |
-| Inbox (consumer) | `IMPLEMENT` | Nema generičkog inbox-a; jedini consumer dedupira ručno. Vidi F-08 |
+| Inbox (consumer) | **`PRESERVE` (uvedeno u ovom radu)** | `app/platform/inbox/` — `InboxRecord(consumer, message_id)`; claim se upisuje u istoj transakciji kao i efekti handlera |
 | Dead-letter dual control | `IMPLEMENT` | `DEAD_LETTER` status postoji, ali nema replay/discard toka ni kontrole u četiri oka (M21) |
 | Idempotency receipt | `PRESERVE` | `app/platform/idempotency/service.py:hash_params` već radi kanonski hash (sortirani ključevi, kompaktni separatori) i odbija isti ključ sa drugim podacima. Expected-version semantika ostaje `VERIFY_IN_REPO` |
 | **Clock** | **`PRESERVE` (uvedeno u ovom radu)** | `app/platform/clock.py` — UTC-aware, freezable; svih 17 zatečenih `datetime.now` mesta prevedeno |
@@ -174,14 +175,14 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Primenjeno rešenje:** datumi u scenariju su sada relativni — `dateTimeInput`, `tomorrow` i `nextWeekday` u `cypress/support/e2e.ts`. Drugi scenario (serija) je popravljen istim potezom iako je slučajno prolazio, jer je uzrok isti. Nijedan test nije preskočen ni oslabljen.
 - **Status:** `APPLIED`.
 
-### F-08 — generički inbox zahteva promenu handler ugovora
+### F-08 — generički inbox (OTKLONJENO)
 
 - **Dokument:** `00-CLAUDE-CODE-IZVRSI.md` §2 talas 1 („outbox/inbox"), §3 („M14 je idempotentni outbox consumer").
-- **Repo dokaz:** outbox producer strana je dobra — transakcioni `enqueue`, `FOR UPDATE SKIP LOCKED` claim, preuzimanje isteklog lease-a, eksponencijalni backoff i `DEAD_LETTER` status (`app/platform/outbox/service.py`). Consumer strana nema generički inbox: `app/platform/outbox/worker.py` samo tvrdi da „every handler must be idempotent". Jedini postojeći consumer to rešava ručno, po sebi — `app/domains/communications/outbox.py:_notify` preskače primaoce koji već imaju `Notification.source_message_id == message.id`.
-- **Posledica:** garancija danas stvarno postoji, ali samo za taj jedan consumer i samo zato što je autor toga bio svestan. Sledeći consumer koji to zaboravi dobija duplikat pri redelivery-ju (handler uspe, pa proces padne pre `commit`-a; lease istekne; drugi worker ponovi).
-- **Zašto nije urađeno u ovom koraku:** handleri otvaraju **sopstvenu** sesiju i commit-uju nezavisno od worker-ove (`with SessionLocal() as db: ... db.commit()`). Inbox zapis je ispravan samo ako se commit-uje u **istoj** transakciji kao i efekti koje štiti; upisan iz worker-ove sesije bio bi u drugoj transakciji i ne bi garantovao ništa. Ispravna izvedba zato menja ugovor handlera (da prima sesiju), što dodiruje svih pet postojećih handlera. To je zaseban, fokusiran korak — ne usputna izmena u PR-u koji već nosi audit seal.
-- **Minimalni predlog:** `InboxRecord(consumer, message_id)` sa `UNIQUE(consumer, message_id)`; `register_handler(event_type, handler, consumer=...)`; worker otvara sesiju i prosleđuje je handleru; `claim_for_consumer()` upisuje inbox zapis kroz savepoint i vraća `False` na `IntegrityError` (već obrađeno). Postojeći `source_message_id` dedup tada postaje suvišan i briše se u istom koraku.
-- **Status:** `CHALLENGE_NOT_APPLIED` — sledeća stavka Talasa 1.
+- **Repo dokaz (pre):** producer strana je bila dobra, ali consumer strana nije imala inbox — `worker.py` je samo tvrdio da „every handler must be idempotent", a jedini consumer je to rešavao ručno preko `Notification.source_message_id`.
+- **Posledica:** garancija je postojala samo za tog jednog consumer-a i samo zato što je autor toga bio svestan.
+- **Primenjeno rešenje:** `app/platform/inbox/` sa `InboxRecord(consumer, message_id)` i `UNIQUE(consumer, message_id)`. Ključno je **gde** se claim upisuje: handler sada prima worker-ovu sesiju, pa njegovi upisi, inbox claim i `DELIVERED` status čine **jednu transakciju**. Replay ili vidi claim i ne radi ništa, ili se sve poništi zajedno i pokušava ponovo. Claim se upisuje kroz savepoint, da duplikat ne otruje pozivaočevu transakciju. Pad handlera sada radi `rollback` pre nego što se neuspeh evidentira (u zasebnoj transakciji), pa se delimičan efekat više ne commit-uje uz zapis o grešci.
+- **Posledica po M14:** `source_message_id` ostaje kao poreklo (koji događaj je proizveo notifikaciju), ali više nije mehanizam dedupa — to je sada inbox.
+- **Status:** `APPLIED`. 8 novih testova, uključujući replay bez ponovnog izvršenja, pad handlera koji ne ostavlja claim, i pad koji ne ostavlja delimičan upis.
 
 ## 5. Šta je u ovom radu stvarno urađeno
 
@@ -196,18 +197,32 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 
 5. **Clock port** (`app/platform/clock.py`): UTC-aware, freezable; svih 17 zatečenih `datetime.now` mesta prevedeno; 7 testova. Usput otklonjen zatečeni pad (F-01).
 6. **Audit seal** (`app/platform/audit/`): per-tenant hash lanac (`chain_key`, `sequence_no`, `prev_hash`, `row_hash`), `audit_chain_head` sa lock-om po lancu, `verify_chain`/`verify_all_chains`, i DB trigger koji odbija `UPDATE`/`DELETE`. Migracija `b7e2a4c91f08` backfiluje postojeće zapise pre nego što trigger počne da važi. 14 testova, uključujući stvarnu detekciju izmene, brisanja iz sredine i brisanja sa kraja.
-7. F-02 (root harness) i F-07 (E2E fiksni datum) otklonjeni.
+7. **Inbox port** (`app/platform/inbox/`): `InboxRecord` + promena ugovora handlera (prima sesiju), pa su efekti i claim jedna transakcija. Migracija `c3f81d5e60a2`. 8 testova.
+8. F-02 (root harness), F-07 (E2E fiksni datum) i F-08 (inbox) otklonjeni.
 
 ## 6. Šta NIJE urađeno
 
 - Nijedan v5.7 QA scenario nije implementiran. Zatečeni testovi pokrivaju zatečeni proizvod.
-- Talas 1 nije završen: preostaju **inbox (F-08)**, **dead-letter dual control**, **exact decimal port** i **PII-free observability**.
+- Talas 1 nije završen: preostaju **dead-letter dual control** i **PII-free observability**. Exact decimal port se isporučuje kroz F-03 kao zaseban PR (odluka vlasnika proizvoda).
 - Talasi 2–5 nisu započeti. **Nijedan modul nije `IMPLEMENTED`.**
 - F-03 (novac) i F-04 (imenovanje) i dalje čekaju — vidi ispod.
 - Web `npm ci` nije uspeo u ovom okruženju (mrežna greška), pa web typecheck/build i Cypress **nisu izvršeni lokalno**; za njih je dokaz jedino CI.
 
 ## 7. Predloženi sledeći korak
 
-1. Dovršiti Talas 1, ovim redom: inbox (F-08, ima gotov dizajn), dead-letter dual control, exact decimal port, PII-free observability.
-2. **Odluka o F-04 (imenovanje) blokira Talas 2**, jer je M04 njegov prvi korak.
-3. F-03 (novac → `NUMERIC(18,2)`) ostaje Talas 3. Obim je izmeren: 116 referenci u API-ju (16 fajlova), 56 u web-u (6 fajlova), 49 u OpenAPI dokumentu, 10 test fajlova. To je prava M12 migracija sa reconciliation obavezom, a ne usputna izmena — raditi je van reda talasa bio bi upravo „big-bang" koji DCR §3 zabranjuje.
+Redosled je potvrdio vlasnik proizvoda 2026-09-18:
+
+1. Dovršiti Talas 1: dead-letter dual control, PII-free observability.
+2. **F-03** — novac na `NUMERIC(18,2)`, kao zaseban PR, pre Talasa 2. Obim: 116 referenci u API-ju (16 fajlova), 56 u web-u (6 fajlova), 49 u OpenAPI dokumentu, 10 test fajlova.
+3. **F-04** — preimenovanje `Organization` → `School`, kao zaseban PR. Vidi ODLUKE ispod.
+4. Talas 2 (M04 → M06 → M01 → M03 → M05 → M07 → M02).
+
+## 8. Odluke vlasnika proizvoda (2026-09-18)
+
+Dve odluke odstupaju od onoga što bi implementacioni agent sam izabrao. Evidentiraju se ovde da kanon ne bi bio tiho promenjen, kako `DCR-20260903-07` §8 zahteva.
+
+**O-01 — `Organization` se preimenuje u `School`.**
+Agent je predložio da se postojeći `Organization` zadrži netaknut, a da v5.7 Organization kasnije uđe pod drugim imenom, jer `DCR-20260903-07` §3 izričito zabranjuje „preimenovanje funkcionalnog koda samo radi podudaranja sa nazivom iz dokumentacije". Vlasnik proizvoda je izabrao preimenovanje. **To je svesno odstupanje od DCR §3**, prihvaćeno radi jednoznačnosti imena pre nego što M04 uvede pravi Organization sloj. Obim: `organization_id` u 42 tabele, svaki guard, OpenAPI i web. Izvodi se kao zaseban PR sa backward-safe migracijom; poslovno ponašanje se ne menja.
+
+**O-02 — F-03 se radi odmah, pre Talasa 2.**
+Agent je predložio da migracija novca sačeka M12 u Talasu 3, po redosledu talasa iz DCR-a. Vlasnik proizvoda je izabrao da se uradi odmah, kao zaseban PR. Prihvaćeno; rizik je zabeležen: menja API i web istovremeno, a Cypress se ne može pokrenuti lokalno, pa E2E dokaz zavisi od CI-ja.
