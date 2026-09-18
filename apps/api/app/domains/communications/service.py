@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime as dt
 import hashlib
 import json
 
@@ -19,6 +18,7 @@ from app.domains.communications.schemas import (
     NotificationResponse,
     PublishAnnouncementRequest,
 )
+from app.platform import clock
 from app.platform.audit.service import record_audit
 from app.platform.idempotency import service as idempotency
 from app.platform.outbox.service import enqueue
@@ -86,7 +86,7 @@ def publish(
         status=AnnouncementStatus.PUBLISHED,
         recipient_count=len(recipients),
         snapshot_hash=req.snapshot_hash,
-        published_at=dt.datetime.now(tz=dt.UTC),
+        published_at=clock.now(),
     )
     db.add(announcement)
     db.flush()
@@ -147,6 +147,6 @@ def mark_notification_read(
     if notification is None:
         raise NotFoundError("Obaveštenje nije pronađeno.")
     if notification.read_at is None:
-        notification.read_at = dt.datetime.now(tz=dt.UTC)
+        notification.read_at = clock.now()
         db.commit()
     return NotificationResponse.model_validate(notification)

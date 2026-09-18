@@ -38,13 +38,14 @@ from app.domains.onboarding.schemas import OnboardingProgressResponse, Onboardin
 from app.domains.organization.enums import OrganizationLifecycleStatus
 from app.domains.organization.models import Organization
 from app.domains.structure.models import Location, Program, Room
+from app.platform import clock
 from app.platform.audit.service import record_audit
 from app.platform.outbox.service import enqueue
 from app.security.context import RequestContext
 
 
 def _now() -> dt.datetime:
-    return dt.datetime.now(tz=dt.UTC)
+    return clock.now()
 
 
 def _get_or_create_progress(db: Session, organization_id: str) -> OnboardingProgress:

@@ -33,6 +33,7 @@ from app.domains.privacy.schemas import (
     UpdateRetentionPeriodRequest,
     WithdrawConsentRequest,
 )
+from app.platform import clock
 from app.platform.audit.service import record_audit
 from app.security.context import RequestContext
 
@@ -41,7 +42,7 @@ _RETENTION_CATEGORY_CONFLICT = "Rok čuvanja za ovu kategoriju podataka već pos
 
 
 def _now() -> dt.datetime:
-    return dt.datetime.now(tz=dt.UTC)
+    return clock.now()
 
 
 def _require_org_person(db: Session, context: RequestContext, person_id: str) -> None:

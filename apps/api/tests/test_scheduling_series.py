@@ -4,8 +4,11 @@ conflict-aware skipping, scoped edits, cancel/reactivate, and tenant isolation."
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Iterator
 
+import pytest
 from app.domains.identity.enums import RoleCode
+from app.platform import clock
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -14,6 +17,17 @@ from tests.factories import Actor, add_actor, bootstrap_actor
 START_DATE = "2026-09-01"  # a Tuesday -> weekday() == 1
 WEEKDAY = dt.date.fromisoformat(START_DATE).weekday()
 RANGE = {"date_from": "2026-08-01T00:00:00+00:00", "date_to": "2027-01-01T00:00:00+00:00"}
+# The whole module reasons about a series fixed at START_DATE, so "now" has to be
+# fixed too. Left on the wall clock, what counts as an *upcoming* occurrence (and
+# whether START_DATE still falls inside the accepted scheduling window at all)
+# drifts with the calendar, and these tests change their answer by the day.
+NOW = "2026-08-31T09:00:00+00:00"  # the day before the first occurrence
+
+
+@pytest.fixture(autouse=True)
+def _frozen_clock() -> Iterator[None]:
+    with clock.frozen_at(NOW):
+        yield
 
 
 def _group(client: TestClient, actor: Actor, name: str = "Grupa A") -> str:

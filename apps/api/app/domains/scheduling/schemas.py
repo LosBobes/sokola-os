@@ -11,6 +11,7 @@ from app.domains.scheduling.enums import (
     SessionSeriesFrequency,
     SessionStatus,
 )
+from app.platform import clock
 
 _MAX_SCHEDULING_PAST = dt.timedelta(days=730)
 _MAX_SCHEDULING_FUTURE = dt.timedelta(days=1825)
@@ -36,7 +37,7 @@ class SessionDraft(BaseModel):
     def _time_order(self) -> SessionDraft:
         if self.ends_at <= self.starts_at:
             raise ValueError("ends_at must be after starts_at")
-        now = dt.datetime.now(dt.UTC)
+        now = clock.now()
         starts = self.starts_at if self.starts_at.tzinfo else self.starts_at.replace(tzinfo=dt.UTC)
         if starts < now - _MAX_SCHEDULING_PAST or starts > now + _MAX_SCHEDULING_FUTURE:
             # Catches malformed client input (e.g. a partially-typed datetime-local

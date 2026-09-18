@@ -26,6 +26,7 @@ from app.domains.scheduling.schemas import (
     SessionSummary,
     SkippedOccurrence,
 )
+from app.platform import clock
 from app.platform.audit.service import record_audit
 from app.platform.idempotency import service as idempotency
 from app.platform.outbox.service import enqueue
@@ -280,7 +281,7 @@ def generate_sessions(
     if series.frequency is SessionSeriesFrequency.MONTHLY:
         raise BadRequestError("Mesečna učestalost još nije podržana.")
 
-    from_date = body.from_date or dt.datetime.now(tz=dt.UTC).date()
+    from_date = body.from_date or clock.now().date()
     horizon_start = max(series.start_date, from_date)
     horizon_end = from_date + dt.timedelta(weeks=body.weeks)
 
@@ -439,7 +440,7 @@ def edit_session(
         if edit.scope is SessionEditScope.THIS_AND_FUTURE:
             boundary = session.starts_at
         else:  # ALL_FUTURE
-            boundary = dt.datetime.now(tz=dt.UTC)
+            boundary = clock.now()
         targets = repository.list_series_sessions(
             db,
             context.organization_id,
