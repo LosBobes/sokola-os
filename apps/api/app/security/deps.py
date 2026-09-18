@@ -1,10 +1,10 @@
 """FastAPI dependencies that turn a request into a verified context.
 
 Flow (Part 6): authenticate -> resolve Person -> the client names a chosen
-RoleAssignment -> the server re-derives organization/role/scope from the DB and
+RoleAssignment -> the server re-derives school/role/scope from the DB and
 confirms the assignment belongs to this person and is active. Downstream code
 receives an immutable :class:`RequestContext` and re-checks every resource
-against ``organization_id``.
+against ``school_id``.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from app.config import Settings, get_settings
 from app.db import get_db
 from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
 from app.domains.identity.models import RoleAssignment
-from app.domains.organization.models import Organization
+from app.domains.school.models import School
 from app.security.auth import Principal, resolve_principal
 from app.security.context import RequestContext
 
@@ -54,14 +54,14 @@ def get_context(request: Request, db: DbDep, principal: PrincipalDep) -> Request
     ):
         raise ForbiddenError("Kontekst više nije aktivan.")
 
-    organization = db.get(Organization, assignment.organization_id)
-    if organization is None or organization.record_status is RecordStatus.ARCHIVED:
+    school = db.get(School, assignment.school_id)
+    if school is None or school.record_status is RecordStatus.ARCHIVED:
         raise ForbiddenError("Škola nije dostupna.")
 
     return RequestContext(
         person_id=principal.person_id,
         role_assignment_id=assignment.id,
-        organization_id=organization.id,
+        school_id=school.id,
         role_code=assignment.role_code,
         scope_type=assignment.scope_type,
         scope_ref_id=assignment.scope_ref_id,

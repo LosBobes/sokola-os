@@ -1,6 +1,6 @@
 ---
 tip: repo-first-klasifikacija
-status: TALAS-1-ZAVRSEN-OSIM-F03
+status: TALAS-1-ZAVRSEN-TALAS-2-ODBLOKIRAN
 baseline-commit: 92ccccc979fb53979081e84ded0c6e7aae56fb11
 datum: 2026-09-18
 scope: [M00-M21, M28]
@@ -44,19 +44,18 @@ odstupanje od tog pravila za jedan pojam, `Organization → School`.
 
 | v5.7 pojam | Zatečeni kod | Status |
 |---|---|---|
-| School (H0 security tenant) | `Organization` / `organization_id` | `ADAPT` — preimenuje se u `School` po O-01 |
+| School (H0 security tenant) | `School` / `school_id` | `PRESERVE` — preimenovano po O-01 |
 | Organization (negrupišući, **ne** authorization domen) | ne postoji | `IMPLEMENT` (M04) |
 | Person | `identity.Person` | `PRESERVE` |
 | UserAccount | `identity.AuthAccount` + `AuthIdentifier` | `PRESERVE` |
-| School membership | `organization.OrganizationMembership` | `PRESERVE` |
+| School membership | `school.SchoolMembership` | `PRESERVE` |
 | Guardian relation | `people.GuardianRelationship` | `PRESERVE` |
 | Payer relation | ne postoji kao zaseban autoritet | `IMPLEMENT` (M07/M12) |
 
-⚠️ **Sudar imena — razrešen odlukom O-01.** U repou `Organization` *jeste* tenant; u v5.7
-`Organization` je izričito **ne**-authorization domen iznad School-a. Vlasnik proizvoda je
-odlučio (O-01, §8) da se postojeći `Organization` **preimenuje u `School`**, pa ime prestaje
-da bude dvosmisleno pre nego što M04 uvede pravi Organization sloj. Do izvršenja tog PR-a,
-svako čitanje koda mora znati da `organization_id` i dalje znači *School*.
+✅ **Sudar imena je otklonjen.** Preimenovanje iz odluke O-01 je izvršeno (F-04): tenant se
+svuda zove `School`/`school_id`. Reč `Organization` više se ne pojavljuje u kodu, pa je
+slobodna za v5.7 značenje — negrupišući sloj iznad škole koji M04 uvodi i koji **nije**
+authorization domen.
 
 ## 3. Klasifikacija po modulima
 
@@ -149,13 +148,15 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Web:** klijent radi aritmetiku nad novcem, pa ima sopstveni egzaktni pomoćnik — iznosi ostaju string, a jedina aritmetika je nad celobrojnim minor jedinicama (koje double predstavlja tačno daleko iznad bilo kog iznosa koji škola naplaćuje). `Math.round(amountMajor * 100)` je uklonjen; polja za iznos primaju tekst i prihvataju zarez kao decimalni separator.
 - **Status:** `APPLIED`. 333 testa, web build zelen, OpenAPI i `schema.d.ts` regenerisani. Cypress se ne može pokrenuti ovde, pa je novčani tok odigran u stvarnom browseru preko Playwright-a: preview 3000,00 → zaduženje 3000,00 → uplata 1000 ostavlja 2000,00 i `Delimično plaćeno`, bez minor jedinica i bez `NaN` na ekranu.
 
-### F-04 — `Organization` znači dve različite stvari
+### F-04 — `Organization` je značio dve stvari (OTKLONJENO)
 
 - **Dokument:** `00-START-OVDE-PROGRAMER.md` §4: „Jedna škola je jedan H0 security tenant; Organization […] nije authorization domen."
-- **Repo dokaz:** `app/domains/organization/models.py` — `Organization` *jeste* authorization tenant kroz ceo kod (`organization_id` u 42 tabele i u svakom guard-u).
-- **Posledica:** kada M04 uvede pravi v5.7 `Organization`, isto ime će u istom kodu značiti i „tenant" i „ne-tenant grupisanje" — klasa greške koja proizvodi tiho cross-tenant curenje.
-- **Minimalni predlog:** rezervisati ime pre M04: v5.7 Organization ulazi u kod kao `OrganizationGroup` (ili slično), a zatečeni `Organization` ostaje netaknut. Preimenovanje zatečenog `Organization → School` je zabranjeno DCR-om §3 kao kozmetički rewrite.
-- **Status:** `CHALLENGE_NOT_APPLIED` — odluka o imenovanju pripada vlasniku proizvoda, potrebna pre Talasa 2 (M04).
+- **Repo dokaz (pre):** `Organization` *jeste* bio authorization tenant kroz ceo kod — `organization_id` u 36 tabela i u svakom guard-u.
+- **Posledica:** čim M04 uvede pravi v5.7 `Organization` sloj, ista reč bi u istom kodu značila i „tenant" i „ne-tenant grupisanje". To je oblik greške koji proizvede guard napisan nad pogrešnim pojmom, a čita se ispravno.
+- **Primenjeno rešenje (odluka O-01, svesno odstupanje od DCR §3):** `Organization` → `School` svuda. Tabele `organization`/`organization_membership`/`guardian_organization_access`, kolona `organization_id` u 36 tabela, 39 ograničenja i indeksa, rute `/organizations` → `/schools`, i **tri uskladištene enum vrednosti** (`role_assignment.scope_type`, `invitation.scope_type`, `announcement.target_type`) plus `granted_areas` tekstualni niz. Migracija `f1c8d24b7a53` preimenuje u mestu — nema kopije ni trenutka u kome red postoji pod oba imena.
+- **Dokaz:** `alembic check` potvrđuje da modeli odgovaraju preimenovanoj šemi. Round-trip nad stvarnim redom: `ORGANIZATION | ORGANIZATION,PEOPLE,ROLES` → `SCHOOL | SCHOOL,PEOPLE,ROLES` → nazad, pri čemu `PEOPLE` i `ROLES` ostaju netaknuti. 333 testa prolazi; oba korisnička toka odigrana u stvarnom browseru nad svežom bazom.
+- **Posledica po kanon:** reč `Organization` je sada slobodna za v5.7 značenje koje M04 uvodi.
+- **Status:** `APPLIED`.
 
 ### F-05 — `CURRENT-CODE-BASELINE.md` je istovremeno „popuni me" i hash-pokriven
 
@@ -241,7 +242,7 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 Redosled je potvrdio vlasnik proizvoda 2026-09-18:
 
 1. ~~**F-03** — novac na `NUMERIC(18,2)`~~ — urađeno.
-2. **F-04** — preimenovanje `Organization` → `School`, kao zaseban PR. Vidi ODLUKE ispod.
+2. ~~**F-04** — preimenovanje `Organization` → `School`~~ — urađeno.
 3. Talas 2 (M04 → M06 → M01 → M03 → M05 → M07 → M02).
 
 ## 8. Odluke vlasnika proizvoda (2026-09-18)

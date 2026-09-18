@@ -136,7 +136,7 @@
       },
       "AnnouncementTargetType": {
         "enum": [
-          "ORGANIZATION",
+          "SCHOOL",
           "GROUP"
         ],
         "title": "AnnouncementTargetType",
@@ -180,7 +180,7 @@
           },
           "scope_type": {
             "$ref": "#/components/schemas/RoleScopeType",
-            "default": "ORGANIZATION"
+            "default": "SCHOOL"
           }
         },
         "required": [
@@ -908,22 +908,22 @@
         "type": "string"
       },
       "ContextSummary": {
-        "description": "One selectable acting context = an active role in one organization.",
+        "description": "One selectable acting context = an active role in one school.",
         "properties": {
-          "organization_id": {
-            "title": "Organization Id",
-            "type": "string"
-          },
-          "organization_name": {
-            "title": "Organization Name",
-            "type": "string"
-          },
           "role_assignment_id": {
             "title": "Role Assignment Id",
             "type": "string"
           },
           "role_code": {
             "$ref": "#/components/schemas/RoleCode"
+          },
+          "school_id": {
+            "title": "School Id",
+            "type": "string"
+          },
+          "school_name": {
+            "title": "School Name",
+            "type": "string"
           },
           "scope_ref_id": {
             "anyOf": [
@@ -942,8 +942,8 @@
         },
         "required": [
           "role_assignment_id",
-          "organization_id",
-          "organization_name",
+          "school_id",
+          "school_name",
           "role_code",
           "scope_type",
           "scope_ref_id"
@@ -1256,7 +1256,7 @@
           },
           "scope_type": {
             "$ref": "#/components/schemas/RoleScopeType",
-            "default": "ORGANIZATION"
+            "default": "SCHOOL"
           },
           "target_child_person_id": {
             "anyOf": [
@@ -1357,30 +1357,6 @@
           "reason"
         ],
         "title": "CreateMergeReviewRequest",
-        "type": "object"
-      },
-      "CreateOrganizationRequest": {
-        "properties": {
-          "name": {
-            "maxLength": 200,
-            "minLength": 2,
-            "title": "Name",
-            "type": "string"
-          },
-          "timezone": {
-            "default": "Europe/Belgrade",
-            "title": "Timezone",
-            "type": "string"
-          },
-          "type": {
-            "$ref": "#/components/schemas/OrganizationType",
-            "default": "OTHER"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "title": "CreateOrganizationRequest",
         "type": "object"
       },
       "CreatePersonRequest": {
@@ -1570,6 +1546,30 @@
         "title": "CreateRoomRequest",
         "type": "object"
       },
+      "CreateSchoolRequest": {
+        "properties": {
+          "name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "timezone": {
+            "default": "Europe/Belgrade",
+            "title": "Timezone",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SchoolType",
+            "default": "OTHER"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateSchoolRequest",
+        "type": "object"
+      },
       "DataCategory": {
         "description": "A category of stored personal data a retention period can be attached\nto. Deliberately domain-agnostic, one category may span several\ndomains' tables (e.g. DOCUMENTS covers files across the product).",
         "enum": [
@@ -1681,10 +1681,6 @@
             "title": "Id",
             "type": "string"
           },
-          "organization_id": {
-            "title": "Organization Id",
-            "type": "string"
-          },
           "owner_person_id": {
             "title": "Owner Person Id",
             "type": "string"
@@ -1698,6 +1694,10 @@
                 "type": "null"
               }
             ]
+          },
+          "school_id": {
+            "title": "School Id",
+            "type": "string"
           },
           "size_bytes": {
             "title": "Size Bytes",
@@ -1725,7 +1725,7 @@
         },
         "required": [
           "id",
-          "organization_id",
+          "school_id",
           "owner_person_id",
           "subject_person_id",
           "filename",
@@ -1751,7 +1751,7 @@
         "type": "string"
       },
       "DocumentVisibility": {
-        "description": "Who, beyond staff, who can always reach anything in their own tenant via\nthe DOCUMENTS permission, may see this document.\n\nSTAFF_ONLY: no one outside staff (e.g. internal admin paperwork).\nSUBJECT: the person named in ``subject_person_id`` may see it, and, when\nthat subject is a child, so may any guardian with active\n``GuardianOrganizationAccess`` to that child in this organization. This\nmirrors how the events domain already resolves \"which children can this\nparent act for\" (see ``app.domains.events.repository.guardian_children``).",
+        "description": "Who, beyond staff, who can always reach anything in their own tenant via\nthe DOCUMENTS permission, may see this document.\n\nSTAFF_ONLY: no one outside staff (e.g. internal admin paperwork).\nSUBJECT: the person named in ``subject_person_id`` may see it, and, when\nthat subject is a child, so may any guardian with active\n``GuardianSchoolAccess`` to that child in this school. This\nmirrors how the events domain already resolves \"which children can this\nparent act for\" (see ``app.domains.events.repository.guardian_children``).",
         "enum": [
           "STAFF_ONLY",
           "SUBJECT"
@@ -2213,7 +2213,7 @@
         "type": "string"
       },
       "GroupMembershipStatus": {
-        "description": "Mirrors :class:`app.domains.organization.enums.MembershipStatus` at group\nscope. ``ENDED`` is terminal, re-joining creates a brand-new membership row,\nnever a revived one (the unique constraint on ``(group_id, person_id)`` would\notherwise collide with history).",
+        "description": "Mirrors :class:`app.domains.school.enums.MembershipStatus` at group\nscope. ``ENDED`` is terminal, re-joining creates a brand-new membership row,\nnever a revived one (the unique constraint on ``(group_id, person_id)`` would\notherwise collide with history).",
         "enum": [
           "ACTIVE",
           "SUSPENDED",
@@ -2731,10 +2731,6 @@
             ],
             "title": "Invited By Person Id"
           },
-          "organization_id": {
-            "title": "Organization Id",
-            "type": "string"
-          },
           "person_id": {
             "anyOf": [
               {
@@ -2759,6 +2755,10 @@
           },
           "role_code": {
             "$ref": "#/components/schemas/RoleCode"
+          },
+          "school_id": {
+            "title": "School Id",
+            "type": "string"
           },
           "scope_ref_id": {
             "anyOf": [
@@ -2805,7 +2805,7 @@
         },
         "required": [
           "id",
-          "organization_id",
+          "school_id",
           "type",
           "status",
           "target_email",
@@ -3293,11 +3293,7 @@
             "type": "boolean"
           },
           "lifecycle_status": {
-            "$ref": "#/components/schemas/OrganizationLifecycleStatus"
-          },
-          "organization_id": {
-            "title": "Organization Id",
-            "type": "string"
+            "$ref": "#/components/schemas/SchoolLifecycleStatus"
           },
           "remaining_steps": {
             "items": {
@@ -3305,6 +3301,10 @@
             },
             "title": "Remaining Steps",
             "type": "array"
+          },
+          "school_id": {
+            "title": "School Id",
+            "type": "string"
           },
           "steps": {
             "items": {
@@ -3315,7 +3315,7 @@
           }
         },
         "required": [
-          "organization_id",
+          "school_id",
           "lifecycle_status",
           "steps",
           "remaining_steps",
@@ -3326,7 +3326,7 @@
         "type": "object"
       },
       "OnboardingStep": {
-        "description": "A step of guided school setup, in the order a new owner walks them.\n\n ``SCHOOL_PROFILE`` is satisfied by ``POST /organizations`` itself (name/\n type/timezone are required at creation) so it is always complete.\n ``LOCATIONS``/``ROOMS``/``PROGRAMS`` are satisfied by using the structure\n domain's own create endpoints, onboarding does not duplicate them, it only\n reports whether at least one active row exists for the school (see\n ``app.domains.onboarding.service``). ``FIRST_INVITE`` is satisfied by\n sending any invitation (in practice, during onboarding, the co-owner invite\n, see ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).\n ``ACTIVATE`` is the terminal step: leaving \"u pripremi\".\n ",
+        "description": "A step of guided school setup, in the order a new owner walks them.\n\n ``SCHOOL_PROFILE`` is satisfied by ``POST /schools`` itself (name/\n type/timezone are required at creation) so it is always complete.\n ``LOCATIONS``/``ROOMS``/``PROGRAMS`` are satisfied by using the structure\n domain's own create endpoints, onboarding does not duplicate them, it only\n reports whether at least one active row exists for the school (see\n ``app.domains.onboarding.service``). ``FIRST_INVITE`` is satisfied by\n sending any invitation (in practice, during onboarding, the co-owner invite\n, see ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).\n ``ACTIVATE`` is the terminal step: leaving \"u pripremi\".\n ",
         "enum": [
           "SCHOOL_PROFILE",
           "LOCATIONS",
@@ -3379,71 +3379,6 @@
         "title": "OrgMemberType",
         "type": "string"
       },
-      "OrganizationLifecycleStatus": {
-        "description": "Where a school is in guided onboarding (PRD 02 \u00a724/\u00a725), independent of\n``record_status`` (which is the soft-delete/deactivation axis, \u00a731).\n\nA school created through ``POST /organizations`` starts ``IN_PREPARATION``\n(\"u pripremi\"): the owner may set up structure and invite a co-owner, but\nnormal STAFF/PARENT/STUDENT invitations are blocked until ``ACTIVE`` (see\n``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).\nLegacy/seed rows default to ``ACTIVE`` so behaviour outside the real\nsignup path is unchanged.",
-        "enum": [
-          "IN_PREPARATION",
-          "ACTIVE"
-        ],
-        "title": "OrganizationLifecycleStatus",
-        "type": "string"
-      },
-      "OrganizationResponse": {
-        "properties": {
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "lifecycle_status": {
-            "$ref": "#/components/schemas/OrganizationLifecycleStatus"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "slug": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Slug"
-          },
-          "timezone": {
-            "title": "Timezone",
-            "type": "string"
-          },
-          "type": {
-            "$ref": "#/components/schemas/OrganizationType"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "type",
-          "timezone",
-          "lifecycle_status"
-        ],
-        "title": "OrganizationResponse",
-        "type": "object"
-      },
-      "OrganizationType": {
-        "enum": [
-          "SCHOOL",
-          "SPORTS_CLUB",
-          "DANCE_SCHOOL",
-          "COURSE_PROVIDER",
-          "EVENT_ORGANIZER",
-          "BUSINESS",
-          "OTHER"
-        ],
-        "title": "OrganizationType",
-        "type": "string"
-      },
       "OutstandingByStatus": {
         "properties": {
           "charge_count": {
@@ -3468,7 +3403,7 @@
         "type": "object"
       },
       "OverviewReport": {
-        "description": "Business dashboard: a snapshot of the organization's health right now,\nplus this-calendar-month billing and a recent attendance window.",
+        "description": "Business dashboard: a snapshot of the school's health right now,\nplus this-calendar-month billing and a recent attendance window.",
         "properties": {
           "active_member_count": {
             "title": "Active Member Count",
@@ -4871,16 +4806,16 @@
             "title": "Id",
             "type": "string"
           },
-          "organization_id": {
-            "title": "Organization Id",
-            "type": "string"
-          },
           "person_id": {
             "title": "Person Id",
             "type": "string"
           },
           "role_code": {
             "$ref": "#/components/schemas/RoleCode"
+          },
+          "school_id": {
+            "title": "School Id",
+            "type": "string"
           },
           "scope_ref_id": {
             "anyOf": [
@@ -4904,7 +4839,7 @@
           "id",
           "person_id",
           "display_name",
-          "organization_id",
+          "school_id",
           "role_code",
           "scope_type",
           "scope_ref_id",
@@ -4937,7 +4872,7 @@
       },
       "RoleScopeType": {
         "enum": [
-          "ORGANIZATION",
+          "SCHOOL",
           "BRANCH",
           "GROUP"
         ],
@@ -5083,6 +5018,71 @@
         ],
         "title": "SaveAttendanceResponse",
         "type": "object"
+      },
+      "SchoolLifecycleStatus": {
+        "description": "Where a school is in guided onboarding (PRD 02 \u00a724/\u00a725), independent of\n``record_status`` (which is the soft-delete/deactivation axis, \u00a731).\n\nA school created through ``POST /schools`` starts ``IN_PREPARATION``\n(\"u pripremi\"): the owner may set up structure and invite a co-owner, but\nnormal STAFF/PARENT/STUDENT invitations are blocked until ``ACTIVE`` (see\n``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).\nLegacy/seed rows default to ``ACTIVE`` so behaviour outside the real\nsignup path is unchanged.",
+        "enum": [
+          "IN_PREPARATION",
+          "ACTIVE"
+        ],
+        "title": "SchoolLifecycleStatus",
+        "type": "string"
+      },
+      "SchoolResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/SchoolLifecycleStatus"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SchoolType"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "type",
+          "timezone",
+          "lifecycle_status"
+        ],
+        "title": "SchoolResponse",
+        "type": "object"
+      },
+      "SchoolType": {
+        "enum": [
+          "SCHOOL",
+          "SPORTS_CLUB",
+          "DANCE_SCHOOL",
+          "COURSE_PROVIDER",
+          "EVENT_ORGANIZER",
+          "BUSINESS",
+          "OTHER"
+        ],
+        "title": "SchoolType",
+        "type": "string"
       },
       "SearchResponse": {
         "properties": {
@@ -5734,8 +5734,8 @@
             "title": "Name",
             "type": "string"
           },
-          "organization_id": {
-            "title": "Organization Id",
+          "school_id": {
+            "title": "School Id",
             "type": "string"
           },
           "slug": {
@@ -5744,7 +5744,7 @@
           }
         },
         "required": [
-          "organization_id",
+          "school_id",
           "name",
           "slug"
         ],
@@ -9962,146 +9962,6 @@
         ]
       }
     },
-    "/organizations": {
-      "post": {
-        "description": "Create a new organization. The caller becomes its owner. Requires\nauthentication but no prior context (this is how a tenant is bootstrapped).",
-        "operationId": "createOrganization",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateOrganizationRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrganizationResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Create Organization",
-        "tags": [
-          "organizations"
-        ]
-      }
-    },
-    "/organizations/current": {
-      "get": {
-        "operationId": "getCurrentOrganization",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrganizationResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get Current Organization",
-        "tags": [
-          "organizations"
-        ]
-      }
-    },
-    "/organizations/current/deactivate": {
-      "post": {
-        "description": "\u00a731, deactivate the caller's active school. Locks out every future\ncontext resolution against it; see ``reactivateOrganization``.",
-        "operationId": "deactivateOrganization",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrganizationResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "409": {
-            "description": "Already deactivated."
-          }
-        },
-        "summary": "Deactivate Organization",
-        "tags": [
-          "organizations"
-        ]
-      }
-    },
-    "/organizations/{organization_id}/reactivate": {
-      "post": {
-        "description": "\u00a731, a deactivated school cannot be reached through the normal\ncontext-selection path (a deactivated org is rejected at context\nresolution), so this authenticates on the principal alone and checks\nownership of the named school directly.",
-        "operationId": "reactivateOrganization",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "organization_id",
-            "required": true,
-            "schema": {
-              "title": "Organization Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrganizationResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "403": {
-            "description": "Caller is not an active owner of this school."
-          },
-          "404": {
-            "description": "School not found."
-          },
-          "409": {
-            "description": "Already active."
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Reactivate Organization",
-        "tags": [
-          "organizations"
-        ]
-      }
-    },
     "/parent/children": {
       "get": {
         "operationId": "listMyChildren",
@@ -12772,9 +12632,149 @@
         ]
       }
     },
+    "/schools": {
+      "post": {
+        "description": "Create a new school. The caller becomes its owner. Requires\nauthentication but no prior context (this is how a tenant is bootstrapped).",
+        "operationId": "createSchool",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSchoolRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create School",
+        "tags": [
+          "schools"
+        ]
+      }
+    },
+    "/schools/current": {
+      "get": {
+        "operationId": "getCurrentSchool",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Current School",
+        "tags": [
+          "schools"
+        ]
+      }
+    },
+    "/schools/current/deactivate": {
+      "post": {
+        "description": "\u00a731, deactivate the caller's active school. Locks out every future\ncontext resolution against it; see ``reactivateSchool``.",
+        "operationId": "deactivateSchool",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "Already deactivated."
+          }
+        },
+        "summary": "Deactivate School",
+        "tags": [
+          "schools"
+        ]
+      }
+    },
+    "/schools/{school_id}/reactivate": {
+      "post": {
+        "description": "\u00a731, a deactivated school cannot be reached through the normal\ncontext-selection path (a deactivated org is rejected at context\nresolution), so this authenticates on the principal alone and checks\nownership of the named school directly.",
+        "operationId": "reactivateSchool",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "school_id",
+            "required": true,
+            "schema": {
+              "title": "School Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Caller is not an active owner of this school."
+          },
+          "404": {
+            "description": "School not found."
+          },
+          "409": {
+            "description": "Already active."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reactivate School",
+        "tags": [
+          "schools"
+        ]
+      }
+    },
     "/search": {
       "get": {
-        "description": "Search is gated on ``ContextDep`` alone, no new permission area. It only\never surfaces rows each sub-query already re-scopes to ``context.\norganization_id`` the same way that domain's own list endpoint would (e.g.\n``GET /charges`` is likewise ``ContextDep``-only today, with no per-area\nguard), so this is behaviour-consistent with the codebase, not a new\nexposure. A future permission area is easy to add here if that changes.",
+        "description": "Search is gated on ``ContextDep`` alone, no new permission area. It only\never surfaces rows each sub-query already re-scopes to ``context.\nschool_id`` the same way that domain's own list endpoint would (e.g.\n``GET /charges`` is likewise ``ContextDep``-only today, with no per-area\nguard), so this is behaviour-consistent with the codebase, not a new\nexposure. A future permission area is easy to add here if that changes.",
         "operationId": "search",
         "parameters": [
           {
@@ -12855,7 +12855,7 @@
         },
         "summary": "Lookup Tenant",
         "tags": [
-          "organizations"
+          "schools"
         ]
       }
     }

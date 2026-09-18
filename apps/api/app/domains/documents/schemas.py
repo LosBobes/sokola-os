@@ -9,7 +9,7 @@ from app.domains.documents.enums import DocumentType, DocumentVisibility, Retent
 
 class DocumentResponse(BaseModel):
     id: str
-    organization_id: str
+    school_id: str
     owner_person_id: str
     subject_person_id: str | None
     filename: str

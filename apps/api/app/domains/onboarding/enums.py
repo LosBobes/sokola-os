@@ -8,7 +8,7 @@ import enum
 class OnboardingStep(enum.StrEnum):
     """A step of guided school setup, in the order a new owner walks them.
 
-    ``SCHOOL_PROFILE`` is satisfied by ``POST /organizations`` itself (name/
+    ``SCHOOL_PROFILE`` is satisfied by ``POST /schools`` itself (name/
     type/timezone are required at creation) so it is always complete.
     ``LOCATIONS``/``ROOMS``/``PROGRAMS`` are satisfied by using the structure
     domain's own create endpoints, onboarding does not duplicate them, it only

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from app.domains.identity.enums import RoleCode
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
-from app.domains.people.models import GuardianOrganizationAccess, GuardianRelationship
+from app.domains.people.models import GuardianRelationship, GuardianSchoolAccess
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -106,7 +106,7 @@ def test_ending_last_owner_is_blocked_until_a_second_owner_exists(
     assert "vlasnik" in blocked.json()["error"]["message"].lower()
 
     # A second owner lifts the protection.
-    add_actor(db, organization=owner.organization, role=RoleCode.OWNER, given="Drugi")
+    add_actor(db, school=owner.school, role=RoleCode.OWNER, given="Drugi")
     ok = client.post(
         f"/people/{owner.person.id}/membership/end", headers=owner.headers, json={}
     )
@@ -119,7 +119,7 @@ def test_ending_last_owner_is_blocked_until_a_second_owner_exists(
 # ---------------------------------------------------------------------------
 
 
-def test_local_member_code_is_unique_within_org(client: TestClient, db: Session) -> None:
+def test_local_member_code_is_unique_within_school(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
     a = _create_member(client, staff, "Ana", "A")
     b = _create_member(client, staff, "Bojan", "B")
@@ -155,10 +155,10 @@ def test_local_member_code_is_unique_within_org(client: TestClient, db: Session)
 def test_revoke_parental_access(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
     parent = add_actor(
-        db, organization=staff.organization, role=RoleCode.PARENT, given="Roditelj"
+        db, school=staff.school, role=RoleCode.PARENT, given="Roditelj"
     )
     child = make_child_with_guardian(
-        db, organization=staff.organization, guardian=parent.person, given="Dete"
+        db, school=staff.school, guardian=parent.person, given="Dete"
     )
 
     # The parent sees the child before revocation.
@@ -189,7 +189,7 @@ def test_revoke_parental_access(client: TestClient, db: Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _add_guardian(db: Session, *, organization_id: str, guardian_id: str, child_id: str) -> None:
+def _add_guardian(db: Session, *, school_id: str, guardian_id: str, child_id: str) -> None:
     db.add(
         GuardianRelationship(
             guardian_person_id=guardian_id,
@@ -198,8 +198,8 @@ def _add_guardian(db: Session, *, organization_id: str, guardian_id: str, child_
         )
     )
     db.add(
-        GuardianOrganizationAccess(
-            organization_id=organization_id,
+        GuardianSchoolAccess(
+            school_id=school_id,
             guardian_person_id=guardian_id,
             child_person_id=child_id,
             status=GuardianAccessStatus.ACTIVE,
@@ -212,11 +212,11 @@ def test_primary_contact_is_exclusive_per_child(client: TestClient, db: Session)
     staff = bootstrap_actor(db)
     g1 = make_person(db, given="Majka", family="M")
     child = make_child_with_guardian(
-        db, organization=staff.organization, guardian=g1, given="Dete"
+        db, school=staff.school, guardian=g1, given="Dete"
     )
     g2 = make_person(db, given="Otac", family="O")
     _add_guardian(
-        db, organization_id=staff.organization.id, guardian_id=g2.id, child_id=child.id
+        db, school_id=staff.school.id, guardian_id=g2.id, child_id=child.id
     )
 
     first = client.post(
@@ -333,7 +333,7 @@ def test_merge_review_dismiss_keeps_both_people(client: TestClient, db: Session)
 # ---------------------------------------------------------------------------
 
 
-def test_lifecycle_is_isolated_per_organization(client: TestClient, db: Session) -> None:
+def test_lifecycle_is_isolated_per_school(client: TestClient, db: Session) -> None:
     org_a = bootstrap_actor(db, org_name="Klub A")
     org_b = bootstrap_actor(db, org_name="Klub B")
     person_id = _create_member(client, org_a, "Nikola", "N")

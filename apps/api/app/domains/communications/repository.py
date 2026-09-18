@@ -7,27 +7,27 @@ from app.common.enums import RecordStatus
 from app.common.pagination import PageParams
 from app.domains.communications.models import Notification
 from app.domains.groups.models import Group, GroupMembership
-from app.domains.organization.enums import MembershipStatus
-from app.domains.organization.models import OrganizationMembership
+from app.domains.school.enums import MembershipStatus
+from app.domains.school.models import SchoolMembership
 
 
-def organization_recipient_ids(db: Session, organization_id: str) -> list[str]:
+def school_recipient_ids(db: Session, school_id: str) -> list[str]:
     stmt = (
-        select(OrganizationMembership.person_id)
+        select(SchoolMembership.person_id)
         .where(
-            OrganizationMembership.organization_id == organization_id,
-            OrganizationMembership.status == MembershipStatus.ACTIVE,
-            OrganizationMembership.record_status == RecordStatus.ACTIVE,
+            SchoolMembership.school_id == school_id,
+            SchoolMembership.status == MembershipStatus.ACTIVE,
+            SchoolMembership.record_status == RecordStatus.ACTIVE,
         )
-        .order_by(OrganizationMembership.person_id)
+        .order_by(SchoolMembership.person_id)
     )
     return list(db.execute(stmt).scalars().all())
 
 
-def group_exists(db: Session, organization_id: str, group_id: str) -> bool:
+def group_exists(db: Session, school_id: str, group_id: str) -> bool:
     stmt = select(Group.id).where(
         Group.id == group_id,
-        Group.organization_id == organization_id,
+        Group.school_id == school_id,
         Group.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).scalar_one_or_none() is not None
@@ -43,12 +43,12 @@ def group_recipient_ids(db: Session, group_id: str) -> list[str]:
 
 
 def list_inbox(
-    db: Session, organization_id: str, person_id: str, params: PageParams
+    db: Session, school_id: str, person_id: str, params: PageParams
 ) -> tuple[list[Notification], int]:
     """A person's own inbox, always scoped to both the caller's tenant and
     their own ``person_id``; nothing here is reachable cross-person."""
     base = select(Notification).where(
-        Notification.organization_id == organization_id,
+        Notification.school_id == school_id,
         Notification.person_id == person_id,
     )
     total = db.execute(
@@ -67,11 +67,11 @@ def list_inbox(
 
 
 def get_inbox_notification(
-    db: Session, organization_id: str, person_id: str, notification_id: str
+    db: Session, school_id: str, person_id: str, notification_id: str
 ) -> Notification | None:
     stmt = select(Notification).where(
         Notification.id == notification_id,
-        Notification.organization_id == organization_id,
+        Notification.school_id == school_id,
         Notification.person_id == person_id,
     )
     return db.execute(stmt).scalar_one_or_none()

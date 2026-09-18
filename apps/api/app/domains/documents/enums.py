@@ -19,7 +19,7 @@ class DocumentVisibility(enum.StrEnum):
     STAFF_ONLY: no one outside staff (e.g. internal admin paperwork).
     SUBJECT: the person named in ``subject_person_id`` may see it, and, when
     that subject is a child, so may any guardian with active
-    ``GuardianOrganizationAccess`` to that child in this organization. This
+    ``GuardianSchoolAccess`` to that child in this school. This
     mirrors how the events domain already resolves "which children can this
     parent act for" (see ``app.domains.events.repository.guardian_children``).
     """

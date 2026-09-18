@@ -36,7 +36,7 @@ function cx(...parts: Array<string | false | null | undefined>): string {
  */
 export function ParentMoneyPage() {
   const { activeContext } = useSession();
-  const orgName = activeContext?.organization_name ?? "";
+  const orgName = activeContext?.school_name ?? "";
 
   const children = useAsync(() => api.get<Child[]>("/parent/children"), []);
   const [selectedId, setSelectedId] = useState<string | null>(null);

@@ -8,7 +8,7 @@ import { TrainerHome } from "./trainer/TrainerHome";
 export function RoleHome() {
   const { activeContext } = useSession();
   const role = activeContext?.role_code ?? "STUDENT";
-  const org = activeContext?.organization_name ?? "";
+  const org = activeContext?.school_name ?? "";
 
   if (role === "PARENT") {
     return (

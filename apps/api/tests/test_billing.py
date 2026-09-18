@@ -198,7 +198,7 @@ def test_explicit_amount_override_still_works(client: TestClient, db: Session) -
 # ---------------------------------------------------------------------------
 
 
-def test_debts_view_aggregates_per_person_and_org(client: TestClient, db: Session) -> None:
+def test_debts_view_aggregates_per_person_and_school(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db)
     group_id = _group_with_members(client, actor, 2)
     body = _run_body(group_id)

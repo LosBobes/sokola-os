@@ -6,37 +6,37 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.common.base import Base, RecordStatusMixin, TimestampMixin
 from app.common.columns import enum_type
 from app.common.ids import new_id
-from app.domains.organization.enums import (
+from app.domains.school.enums import (
     MembershipStatus,
-    OrganizationLifecycleStatus,
-    OrganizationType,
     OrgMemberType,
+    SchoolLifecycleStatus,
+    SchoolType,
 )
 
 
-class Organization(Base, TimestampMixin, RecordStatusMixin):
+class School(Base, TimestampMixin, RecordStatusMixin):
     """A tenant. The root of the isolation boundary: nearly every other row
     carries this id and is filtered by it server-side."""
 
-    __tablename__ = "organization"
+    __tablename__ = "school"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("org"))
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     # Tenant discovery code used at login (unique). Nullable for legacy rows.
     slug: Mapped[str | None] = mapped_column(String(80), unique=True, nullable=True)
-    type: Mapped[OrganizationType] = mapped_column(
-        enum_type(OrganizationType), nullable=False, default=OrganizationType.OTHER
+    type: Mapped[SchoolType] = mapped_column(
+        enum_type(SchoolType), nullable=False, default=SchoolType.OTHER
     )
     # IANA timezone; recurring schedules are interpreted against this.
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="Europe/Belgrade")
-    # Guided-onboarding state (§24/§25), see OrganizationLifecycleStatus. Defaults
+    # Guided-onboarding state (§24/§25), see SchoolLifecycleStatus. Defaults
     # to ACTIVE so every row created outside the real signup path (fixtures,
-    # legacy data) behaves normally; only ``create_organization`` opts a fresh
+    # legacy data) behaves normally; only ``create_school`` opts a fresh
     # school into IN_PREPARATION.
-    lifecycle_status: Mapped[OrganizationLifecycleStatus] = mapped_column(
-        enum_type(OrganizationLifecycleStatus),
+    lifecycle_status: Mapped[SchoolLifecycleStatus] = mapped_column(
+        enum_type(SchoolLifecycleStatus),
         nullable=False,
-        default=OrganizationLifecycleStatus.ACTIVE,
+        default=SchoolLifecycleStatus.ACTIVE,
     )
     # Payee details printed on a payment slip (uplatnica) and encoded in its
     # NBS IPS QR. All nullable: a school can run without them, it simply cannot
@@ -47,18 +47,18 @@ class Organization(Base, TimestampMixin, RecordStatusMixin):
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
 
-class OrganizationMembership(Base, TimestampMixin, RecordStatusMixin):
-    """A person's belonging to an organization. This is the relationship that
+class SchoolMembership(Base, TimestampMixin, RecordStatusMixin):
+    """A person's belonging to an school. This is the relationship that
     makes a global Person visible inside a tenant. Ending it opens no new period;
     reactivation is a new membership period (see billing/attendance patterns)."""
 
-    __tablename__ = "organization_membership"
+    __tablename__ = "school_membership"
     __table_args__ = (
-        UniqueConstraint("organization_id", "person_id", name="uq_org_membership"),
+        UniqueConstraint("school_id", "person_id", name="uq_school_membership"),
         # School-local member code is unique within the tenant *when set* (§8/§9).
         Index(
-            "uq_org_local_member_code",
-            "organization_id",
+            "uq_school_local_member_code",
+            "school_id",
             "local_member_code",
             unique=True,
             postgresql_where=text("local_member_code IS NOT NULL"),
@@ -66,8 +66,8 @@ class OrganizationMembership(Base, TimestampMixin, RecordStatusMixin):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("mem"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False

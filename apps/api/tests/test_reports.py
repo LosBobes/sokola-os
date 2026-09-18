@@ -1,6 +1,6 @@
 """Reporting domain (PRD 13). Every report is a live aggregate over other
 domains' rows, these tests seed billing/payments/attendance/membership data
-across TWO organizations and check both the arithmetic and that org B's data
+across TWO schools and check both the arithmetic and that org B's data
 never leaks into org A's report (and vice versa)."""
 
 from __future__ import annotations
@@ -15,11 +15,11 @@ from app.domains.billing.models import Charge
 from app.domains.groups.enums import GroupMembershipStatus
 from app.domains.groups.models import Group, GroupMembership
 from app.domains.identity.enums import RoleCode
-from app.domains.organization.enums import MembershipStatus
 from app.domains.payments.enums import PaymentMethod, PaymentRecordStatus
 from app.domains.payments.models import PaymentRecord
 from app.domains.scheduling.enums import SessionStatus
 from app.domains.scheduling.models import Session as ScheduleSession
+from app.domains.school.enums import MembershipStatus
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -29,7 +29,7 @@ from tests.factories import Actor, add_membership, bootstrap_actor, make_person
 
 
 def _group(db: Session, actor: Actor, name: str = "G") -> Group:
-    group = Group(organization_id=actor.organization.id, name=name)
+    group = Group(school_id=actor.school.id, name=name)
     db.add(group)
     db.commit()
     return group
@@ -45,11 +45,11 @@ def _group_member(
     created_at: dt.datetime | None = None,
 ) -> GroupMembership:
     person = make_person(db, given=given, family="P")
-    add_membership(db, person=person, organization=actor.organization)
+    add_membership(db, person=person, school=actor.school)
     now = dt.datetime.now(tz=dt.UTC)
     membership = GroupMembership(
         group_id=group.id,
-        organization_id=actor.organization.id,
+        school_id=actor.school.id,
         person_id=person.id,
         joined_at=created_at or now,
         status=status,
@@ -72,7 +72,7 @@ def _charge(
     created_at: dt.datetime | None = None,
 ) -> Charge:
     charge = Charge(
-        organization_id=actor.organization.id,
+        school_id=actor.school.id,
         person_id=person_id,
         description="Članarina",
         currency="RSD",
@@ -96,7 +96,7 @@ def _payment(
     created_at: dt.datetime | None = None,
 ) -> PaymentRecord:
     payment = PaymentRecord(
-        organization_id=actor.organization.id,
+        school_id=actor.school.id,
         charge_id=charge_id,
         amount=amount,
         currency="RSD",
@@ -114,7 +114,7 @@ def _session(
     db: Session, actor: Actor, group: Group, *, starts_at: dt.datetime
 ) -> ScheduleSession:
     session = ScheduleSession(
-        organization_id=actor.organization.id,
+        school_id=actor.school.id,
         group_id=group.id,
         starts_at=starts_at,
         ends_at=starts_at + dt.timedelta(hours=1),
@@ -130,7 +130,7 @@ def _attendance(
 ) -> None:
     db.add(
         AttendanceRecord(
-            organization_id=actor.organization.id,
+            school_id=actor.school.id,
             session_id=session.id,
             person_id=person_id,
             status=status,
@@ -150,15 +150,15 @@ def test_overview_report(client: TestClient, db: Session) -> None:
     p1 = make_person(db, given="Ana", family="A")
     p2 = make_person(db, given="Bane", family="B")
     p3 = make_person(db, given="Ceda", family="C")
-    add_membership(db, person=p1, organization=actor.organization)
-    add_membership(db, person=p2, organization=actor.organization)
+    add_membership(db, person=p1, school=actor.school)
+    add_membership(db, person=p2, school=actor.school)
     add_membership(
-        db, person=p3, organization=actor.organization, status=MembershipStatus.SUSPENDED
+        db, person=p3, school=actor.school, status=MembershipStatus.SUSPENDED
     )
     # Noise org: different count entirely.
     for _ in range(5):
         noise_p = make_person(db, given="X", family="X")
-        add_membership(db, person=noise_p, organization=noise.organization)
+        add_membership(db, person=noise_p, school=noise.school)
 
     now = dt.datetime.now(tz=dt.UTC)
     current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -187,7 +187,7 @@ def test_overview_report(client: TestClient, db: Session) -> None:
 
     # Noise org charges must never leak into org A's totals.
     noise_person = make_person(db, given="Y", family="Y")
-    add_membership(db, person=noise_person, organization=noise.organization)
+    add_membership(db, person=noise_person, school=noise.school)
     _charge(
         db, noise, person_id=noise_person.id, amount_due=Decimal("70000.00"), created_at=this_month
     )
@@ -232,7 +232,7 @@ def test_financial_report(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db, org_name="Klub A")
     other = bootstrap_actor(db, org_name="Klub B")
     person = make_person(db, given="Ana", family="A")
-    add_membership(db, person=person, organization=actor.organization)
+    add_membership(db, person=person, school=actor.school)
 
     in_range = dt.datetime(2026, 1, 15, tzinfo=dt.UTC)
     before_range = dt.datetime(2025, 12, 20, tzinfo=dt.UTC)
@@ -263,7 +263,7 @@ def test_financial_report(client: TestClient, db: Session) -> None:
 
     # Other org's data must never leak in.
     other_person = make_person(db, given="X", family="X")
-    add_membership(db, person=other_person, organization=other.organization)
+    add_membership(db, person=other_person, school=other.school)
     _charge(
         db, other, person_id=other_person.id, amount_due=Decimal("9999.99"), created_at=in_range
     )
@@ -396,24 +396,24 @@ def test_membership_trend_report(client: TestClient, db: Session) -> None:
     mar = dt.datetime(2026, 3, 10, tzinfo=dt.UTC)
 
     p_jan = make_person(db, given="Jan", family="P")
-    add_membership(db, person=p_jan, organization=actor.organization, created_at=jan)
+    add_membership(db, person=p_jan, school=actor.school, created_at=jan)
     p_feb = make_person(db, given="Feb", family="P")
-    add_membership(db, person=p_feb, organization=actor.organization, created_at=feb)
+    add_membership(db, person=p_feb, school=actor.school, created_at=feb)
     p_mar = make_person(db, given="Mar", family="P")
-    add_membership(db, person=p_mar, organization=actor.organization, created_at=mar)
+    add_membership(db, person=p_mar, school=actor.school, created_at=mar)
     # A suspended member must never count as "active".
     p_susp = make_person(db, given="Susp", family="P")
     add_membership(
         db,
         person=p_susp,
-        organization=actor.organization,
+        school=actor.school,
         status=MembershipStatus.SUSPENDED,
         created_at=jan,
     )
 
     # Other org: must never leak in.
     other_person = make_person(db, given="X", family="X")
-    add_membership(db, person=other_person, organization=other.organization, created_at=jan)
+    add_membership(db, person=other_person, school=other.school, created_at=jan)
 
     resp = client.get(
         "/reports/membership-trend",

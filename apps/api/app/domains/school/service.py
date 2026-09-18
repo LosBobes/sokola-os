@@ -10,11 +10,11 @@ from app.common.errors import ConflictError, ForbiddenError, NotFoundError
 from app.common.slug import slugify
 from app.domains.identity.enums import RoleAssignmentStatus, RoleCode, RoleScopeType
 from app.domains.identity.models import RoleAssignment
-from app.domains.organization.enums import OrganizationLifecycleStatus, OrgMemberType
-from app.domains.organization.models import Organization, OrganizationMembership
-from app.domains.organization.schemas import (
-    CreateOrganizationRequest,
-    OrganizationResponse,
+from app.domains.school.enums import OrgMemberType, SchoolLifecycleStatus
+from app.domains.school.models import School, SchoolMembership
+from app.domains.school.schemas import (
+    CreateSchoolRequest,
+    SchoolResponse,
     TenantPublic,
 )
 from app.platform.audit.service import record_audit
@@ -27,25 +27,25 @@ def _unique_slug(db: Session, name: str) -> str:
     base = slugify(name)
     slug = base
     while db.execute(
-        select(Organization.id).where(Organization.slug == slug)
+        select(School.id).where(School.slug == slug)
     ).scalar_one_or_none():
         slug = f"{base}-{secrets.token_hex(2)}"
     return slug
 
 
-def create_organization(
-    db: Session, principal: Principal, req: CreateOrganizationRequest
-) -> OrganizationResponse:
+def create_school(
+    db: Session, principal: Principal, req: CreateSchoolRequest
+) -> SchoolResponse:
     """Bootstrap a new tenant. The creating person becomes its OWNER and first
     member, all in one transaction. The school starts ``IN_PREPARATION``
     ("u pripremi"), guided onboarding (app.domains.onboarding) walks it through
     structure setup and an optional co-owner invite before it may ``activate``."""
-    org = Organization(
+    org = School(
         name=req.name,
         slug=_unique_slug(db, req.name),
         type=req.type,
         timezone=req.timezone,
-        lifecycle_status=OrganizationLifecycleStatus.IN_PREPARATION,
+        lifecycle_status=SchoolLifecycleStatus.IN_PREPARATION,
     )
     db.add(org)
     db.flush()
@@ -54,8 +54,8 @@ def create_organization(
     # first membership is STAFF. Otherwise every brand-new school would open
     # reporting "1 aktivan član" before a single child was enrolled.
     db.add(
-        OrganizationMembership(
-            organization_id=org.id,
+        SchoolMembership(
+            school_id=org.id,
             person_id=principal.person_id,
             member_type=OrgMemberType.STAFF,
         )
@@ -63,48 +63,48 @@ def create_organization(
     db.add(
         RoleAssignment(
             person_id=principal.person_id,
-            organization_id=org.id,
+            school_id=org.id,
             role_code=RoleCode.OWNER,
-            scope_type=RoleScopeType.ORGANIZATION,
+            scope_type=RoleScopeType.SCHOOL,
         )
     )
     record_audit(
         db,
         data_class=AuditDataClass.ROLE,
-        action="organization.created",
-        entity_type="organization",
+        action="school.created",
+        entity_type="school",
         entity_id=org.id,
         summary=f"Osnovana organizacija „{org.name}“.",
-        organization_id=org.id,
+        school_id=org.id,
         actor_person_id=principal.person_id,
     )
     enqueue(
         db,
-        event_type="organization.created",
-        payload={"organization_id": org.id, "owner_person_id": principal.person_id},
-        organization_id=org.id,
+        event_type="school.created",
+        payload={"school_id": org.id, "owner_person_id": principal.person_id},
+        school_id=org.id,
     )
     db.commit()
-    return OrganizationResponse.model_validate(org)
+    return SchoolResponse.model_validate(org)
 
 
-def get_organization(db: Session, organization_id: str) -> OrganizationResponse:
-    org = db.get(Organization, organization_id)
+def get_school(db: Session, school_id: str) -> SchoolResponse:
+    org = db.get(School, school_id)
     assert org is not None  # context guarantees the active org exists
-    return OrganizationResponse.model_validate(org)
+    return SchoolResponse.model_validate(org)
 
 
 def lookup_tenant(db: Session, slug: str) -> TenantPublic:
     """Public: resolve a school code to the tenant a login should target."""
     org = db.execute(
-        select(Organization).where(
-            Organization.slug == slug,
-            Organization.record_status == RecordStatus.ACTIVE,
+        select(School).where(
+            School.slug == slug,
+            School.record_status == RecordStatus.ACTIVE,
         )
     ).scalar_one_or_none()
     if org is None or org.slug is None:
         raise NotFoundError("Škola sa ovim kodom nije pronađena.")
-    return TenantPublic(organization_id=org.id, name=org.name, slug=org.slug)
+    return TenantPublic(school_id=org.id, name=org.name, slug=org.slug)
 
 
 # ---------------------------------------------------------------------------
@@ -112,9 +112,9 @@ def lookup_tenant(db: Session, slug: str) -> TenantPublic:
 # ---------------------------------------------------------------------------
 
 
-def _is_active_owner(db: Session, organization_id: str, person_id: str) -> bool:
+def _is_active_owner(db: Session, school_id: str, person_id: str) -> bool:
     stmt = select(RoleAssignment.id).where(
-        RoleAssignment.organization_id == organization_id,
+        RoleAssignment.school_id == school_id,
         RoleAssignment.person_id == person_id,
         RoleAssignment.role_code == RoleCode.OWNER,
         RoleAssignment.status == RoleAssignmentStatus.ACTIVE,
@@ -123,12 +123,12 @@ def _is_active_owner(db: Session, organization_id: str, person_id: str) -> bool:
     return db.execute(stmt).first() is not None
 
 
-def deactivate_organization(db: Session, context: RequestContext) -> OrganizationResponse:
+def deactivate_school(db: Session, context: RequestContext) -> SchoolResponse:
     """Deactivating a school locks out every future context resolution against
     it (``app.security.deps.get_context`` rejects an ARCHIVED org), so
     reactivation cannot go through that same context-gated path; see
-    :func:`reactivate_organization`."""
-    org = db.get(Organization, context.organization_id)
+    :func:`reactivate_school`."""
+    org = db.get(School, context.school_id)
     assert org is not None  # context guarantees the active org exists
     if org.record_status is RecordStatus.ARCHIVED:
         raise ConflictError("Škola je već deaktivirana.")
@@ -137,34 +137,34 @@ def deactivate_organization(db: Session, context: RequestContext) -> Organizatio
     record_audit(
         db,
         data_class=AuditDataClass.ROLE,
-        action="organization.deactivated",
-        entity_type="organization",
+        action="school.deactivated",
+        entity_type="school",
         entity_id=org.id,
         summary=f"Škola „{org.name}“ je deaktivirana.",
-        organization_id=org.id,
+        school_id=org.id,
         actor_person_id=context.person_id,
     )
     enqueue(
         db,
-        event_type="organization.deactivated",
-        payload={"organization_id": org.id},
-        organization_id=org.id,
+        event_type="school.deactivated",
+        payload={"school_id": org.id},
+        school_id=org.id,
     )
     db.commit()
-    return OrganizationResponse.model_validate(org)
+    return SchoolResponse.model_validate(org)
 
 
-def reactivate_organization(
-    db: Session, principal: Principal, organization_id: str
-) -> OrganizationResponse:
+def reactivate_school(
+    db: Session, principal: Principal, school_id: str
+) -> SchoolResponse:
     """A deactivated org blocks ordinary context resolution (§31), so this is
     authorized directly against an ACTIVE OWNER role assignment for the named
     org, the same authority ``require_permission(ROLES)`` grants an OWNER,
     evaluated without the context the deactivation itself makes unreachable."""
-    org = db.get(Organization, organization_id)
+    org = db.get(School, school_id)
     if org is None:
         raise NotFoundError("Škola nije pronađena.")
-    if not _is_active_owner(db, organization_id, principal.person_id):
+    if not _is_active_owner(db, school_id, principal.person_id):
         raise ForbiddenError("Nemate ovlašćenje za ovu radnju.")
     if org.record_status is RecordStatus.ACTIVE:
         raise ConflictError("Škola je već aktivna.")
@@ -173,18 +173,18 @@ def reactivate_organization(
     record_audit(
         db,
         data_class=AuditDataClass.ROLE,
-        action="organization.reactivated",
-        entity_type="organization",
+        action="school.reactivated",
+        entity_type="school",
         entity_id=org.id,
         summary=f"Škola „{org.name}“ je ponovo aktivirana.",
-        organization_id=org.id,
+        school_id=org.id,
         actor_person_id=principal.person_id,
     )
     enqueue(
         db,
-        event_type="organization.reactivated",
-        payload={"organization_id": org.id},
-        organization_id=org.id,
+        event_type="school.reactivated",
+        payload={"school_id": org.id},
+        school_id=org.id,
     )
     db.commit()
-    return OrganizationResponse.model_validate(org)
+    return SchoolResponse.model_validate(org)

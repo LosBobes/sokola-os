@@ -29,22 +29,22 @@ class GuardianRelationship(Base, TimestampMixin):
     )
 
 
-class GuardianOrganizationAccess(Base, TimestampMixin):
-    """Scopes a guardian's access to a child's data to a specific organization.
+class GuardianSchoolAccess(Base, TimestampMixin):
+    """Scopes a guardian's access to a child's data to a specific school.
     A parent sees a child only through an ACTIVE access row in the active org."""
 
-    __tablename__ = "guardian_organization_access"
+    __tablename__ = "guardian_school_access"
     __table_args__ = (
         UniqueConstraint(
-            "organization_id",
+            "school_id",
             "guardian_person_id",
             "child_person_id",
-            name="uq_guardian_org_access",
+            name="uq_guardian_school_access",
         ),
         # At most one primary contact per child within a tenant (§25).
         Index(
             "uq_guardian_primary_contact",
-            "organization_id",
+            "school_id",
             "child_person_id",
             unique=True,
             postgresql_where=text("is_primary_contact"),
@@ -52,8 +52,8 @@ class GuardianOrganizationAccess(Base, TimestampMixin):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("goa"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     guardian_person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False
@@ -69,18 +69,18 @@ class GuardianOrganizationAccess(Base, TimestampMixin):
 
 
 class ExternalPersonReference(Base, TimestampMixin):
-    """An organization's external/legacy identifier for a person (import lineage)."""
+    """An school's external/legacy identifier for a person (import lineage)."""
 
     __tablename__ = "external_person_reference"
     __table_args__ = (
         UniqueConstraint(
-            "organization_id", "source", "external_id", name="uq_external_person_ref"
+            "school_id", "source", "external_id", name="uq_external_person_ref"
         ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("epr"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False

@@ -42,7 +42,7 @@ class Guard:
 
 def begin(
     session: Session,
-    organization_id: str,
+    school_id: str,
     operation: str,
     idempotency_key: str,
     params: dict[str, Any],
@@ -50,7 +50,7 @@ def begin(
     request_hash = hash_params(params)
     existing = session.execute(
         select(IdempotencyRecord).where(
-            IdempotencyRecord.organization_id == organization_id,
+            IdempotencyRecord.school_id == school_id,
             IdempotencyRecord.operation == operation,
             IdempotencyRecord.idempotency_key == idempotency_key,
         )
@@ -70,7 +70,7 @@ def begin(
         raise ConflictError("Operacija sa ovim ključem je već u toku.")
 
     record = IdempotencyRecord(
-        organization_id=organization_id,
+        school_id=school_id,
         operation=operation,
         idempotency_key=idempotency_key,
         request_hash=request_hash,

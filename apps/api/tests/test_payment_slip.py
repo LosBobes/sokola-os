@@ -10,16 +10,16 @@ import datetime as dt
 from decimal import Decimal
 
 from app.domains.identity.enums import RoleCode
-from app.domains.organization.models import Organization
 from app.domains.payments import ips_qr
+from app.domains.school.models import School
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from tests.factories import Actor, add_actor, bootstrap_actor, make_child_with_guardian
 
 
-def _set_payee(db: Session, organization_id: str) -> None:
-    org = db.get(Organization, organization_id)
+def _set_payee(db: Session, school_id: str) -> None:
+    org = db.get(School, school_id)
     assert org is not None
     org.bank_account_number = "160-0000000123456-78"
     org.address = "Ulica 1"
@@ -97,7 +97,7 @@ def test_slip_carries_the_outstanding_amount_and_a_stable_reference(
     client: TestClient, db: Session
 ) -> None:
     actor = bootstrap_actor(db)
-    _set_payee(db, actor.organization.id)
+    _set_payee(db, actor.school.id)
     child = client.post(
         "/people", headers=actor.headers, json={"given_name": "Mika", "family_name": "M"}
     ).json()["id"]
@@ -136,7 +136,7 @@ def test_generating_a_slip_never_settles_the_charge(
     client: TestClient, db: Session
 ) -> None:
     actor = bootstrap_actor(db)
-    _set_payee(db, actor.organization.id)
+    _set_payee(db, actor.school.id)
     child = client.post(
         "/people", headers=actor.headers, json={"given_name": "Mika", "family_name": "M"}
     ).json()["id"]
@@ -168,7 +168,7 @@ def test_a_school_without_an_account_number_is_told_so(
 
 def test_a_settled_charge_has_no_slip(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db)
-    _set_payee(db, actor.organization.id)
+    _set_payee(db, actor.school.id)
     child = client.post(
         "/people", headers=actor.headers, json={"given_name": "Mika", "family_name": "M"}
     ).json()["id"]
@@ -189,12 +189,12 @@ def test_a_settled_charge_has_no_slip(client: TestClient, db: Session) -> None:
 
 def test_a_parent_sees_only_their_own_childs_slip(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db)
-    _set_payee(db, actor.organization.id)
+    _set_payee(db, actor.school.id)
     parent = add_actor(
-        db, organization=actor.organization, role=RoleCode.PARENT, given="Roditelj"
+        db, school=actor.school, role=RoleCode.PARENT, given="Roditelj"
     )
     child = make_child_with_guardian(
-        db, organization=actor.organization, guardian=parent.person, given="Moje"
+        db, school=actor.school, guardian=parent.person, given="Moje"
     )
     stranger = client.post(
         "/people", headers=actor.headers, json={"given_name": "Tuđe", "family_name": "D"}
@@ -218,7 +218,7 @@ def test_a_reference_from_a_bank_statement_resolves_back_to_its_charge(
     client: TestClient, db: Session
 ) -> None:
     actor = bootstrap_actor(db)
-    _set_payee(db, actor.organization.id)
+    _set_payee(db, actor.school.id)
     child = client.post(
         "/people", headers=actor.headers, json={"given_name": "Mika", "family_name": "M"}
     ).json()["id"]

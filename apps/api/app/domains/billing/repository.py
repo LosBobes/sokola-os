@@ -10,15 +10,15 @@ from app.domains.billing.models import Charge
 from app.domains.groups.enums import GroupMemberRole
 from app.domains.groups.models import Group, GroupMembership
 from app.domains.identity.models import Person
-from app.domains.organization.models import Organization
 from app.domains.people.enums import GuardianAccessStatus
-from app.domains.people.models import GuardianOrganizationAccess
+from app.domains.people.models import GuardianSchoolAccess
+from app.domains.school.models import School
 
 
-def get_org_group(db: Session, organization_id: str, group_id: str) -> Group | None:
+def get_school_group(db: Session, school_id: str, group_id: str) -> Group | None:
     stmt = select(Group).where(
         Group.id == group_id,
-        Group.organization_id == organization_id,
+        Group.school_id == school_id,
         Group.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).scalar_one_or_none()
@@ -62,26 +62,26 @@ def active_group_members_with_discount(
     return [(row[0], row[1]) for row in db.execute(stmt).all()]
 
 
-def get_charge(db: Session, organization_id: str, charge_id: str) -> Charge | None:
+def get_charge(db: Session, school_id: str, charge_id: str) -> Charge | None:
     stmt = select(Charge).where(
-        Charge.id == charge_id, Charge.organization_id == organization_id
+        Charge.id == charge_id, Charge.school_id == school_id
     )
     return db.execute(stmt).scalar_one_or_none()
 
 
-def get_charge_for_update(db: Session, organization_id: str, charge_id: str) -> Charge | None:
+def get_charge_for_update(db: Session, school_id: str, charge_id: str) -> Charge | None:
     stmt = (
         select(Charge)
-        .where(Charge.id == charge_id, Charge.organization_id == organization_id)
+        .where(Charge.id == charge_id, Charge.school_id == school_id)
         .with_for_update()
     )
     return db.execute(stmt).scalar_one_or_none()
 
 
 def list_charges(
-    db: Session, organization_id: str, params: PageParams, person_id: str | None
+    db: Session, school_id: str, params: PageParams, person_id: str | None
 ) -> tuple[list[Charge], int]:
-    base = select(Charge).where(Charge.organization_id == organization_id)
+    base = select(Charge).where(Charge.school_id == school_id)
     if person_id is not None:
         base = base.where(Charge.person_id == person_id)
     total = db.execute(
@@ -108,7 +108,7 @@ _OUTSTANDING = Charge.amount_due - Charge.amount_paid
 
 
 def person_debts(
-    db: Session, organization_id: str, params: PageParams
+    db: Session, school_id: str, params: PageParams
 ) -> tuple[list[tuple[str, str, str, int, int]], int]:
     """Per-person outstanding balance, grouped by (person, currency), worst
     debtor first. Rows: (person_id, display_name, currency, outstanding,
@@ -123,7 +123,7 @@ def person_debts(
         )
         .join(Charge, Charge.person_id == Person.id)
         .where(
-            Charge.organization_id == organization_id,
+            Charge.school_id == school_id,
             Charge.status != ChargeStatus.CANCELLED,
         )
         .group_by(Person.id, Person.display_name, Charge.currency)
@@ -138,10 +138,10 @@ def person_debts(
     return [(r[0], r[1], r[2], r[3], r[4]) for r in rows], total
 
 
-def debt_summary(db: Session, organization_id: str) -> tuple[int, int]:
+def debt_summary(db: Session, school_id: str) -> tuple[int, int]:
     """Org-wide (total_outstanding, people_with_debt)."""
     stmt = select(func.sum(_OUTSTANDING), func.count(func.distinct(Charge.person_id))).where(
-        Charge.organization_id == organization_id,
+        Charge.school_id == school_id,
         Charge.status != ChargeStatus.CANCELLED,
         _OUTSTANDING > 0,
     )
@@ -149,12 +149,12 @@ def debt_summary(db: Session, organization_id: str) -> tuple[int, int]:
     return int(total or 0), int(people or 0)
 
 
-def get_organization(db: Session, organization_id: str) -> Organization | None:
+def get_school(db: Session, school_id: str) -> School | None:
     """The paying-in party on a payment slip. Read directly from the shared
-    model (cross-domain model access, never the organization service)."""
-    stmt = select(Organization).where(
-        Organization.id == organization_id,
-        Organization.record_status == RecordStatus.ACTIVE,
+    model (cross-domain model access, never the school service)."""
+    stmt = select(School).where(
+        School.id == school_id,
+        School.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).scalar_one_or_none()
 
@@ -167,25 +167,25 @@ def get_person(db: Session, person_id: str) -> Person | None:
 
 
 def get_charge_by_reference(
-    db: Session, organization_id: str, payment_reference: str
+    db: Session, school_id: str, payment_reference: str
 ) -> Charge | None:
     """Reconciliation lookup: find the charge a bank statement's reference
     ("poziv na broj") points at, within this school only."""
     stmt = select(Charge).where(
-        Charge.organization_id == organization_id,
+        Charge.school_id == school_id,
         Charge.payment_reference == payment_reference,
     )
     return db.execute(stmt).scalar_one_or_none()
 
 
 def is_guardian_of(
-    db: Session, organization_id: str, guardian_person_id: str, child_person_id: str
+    db: Session, school_id: str, guardian_person_id: str, child_person_id: str
 ) -> bool:
     """Whether this guardian may act for this child inside this school."""
-    stmt = select(GuardianOrganizationAccess.id).where(
-        GuardianOrganizationAccess.organization_id == organization_id,
-        GuardianOrganizationAccess.guardian_person_id == guardian_person_id,
-        GuardianOrganizationAccess.child_person_id == child_person_id,
-        GuardianOrganizationAccess.status == GuardianAccessStatus.ACTIVE,
+    stmt = select(GuardianSchoolAccess.id).where(
+        GuardianSchoolAccess.school_id == school_id,
+        GuardianSchoolAccess.guardian_person_id == guardian_person_id,
+        GuardianSchoolAccess.child_person_id == child_person_id,
+        GuardianSchoolAccess.status == GuardianAccessStatus.ACTIVE,
     )
     return db.execute(stmt).first() is not None

@@ -89,7 +89,7 @@ def test_location_tenant_isolation(client: TestClient, db: Session) -> None:
     )
     assert client.get("/locations", headers=org_a.headers).json()["total"] == 0
 
-    # Duplicate internal codes are allowed ACROSS organizations.
+    # Duplicate internal codes are allowed ACROSS schools.
     client.post("/locations", headers=org_a.headers, json={"name": "A1", "internal_code": "X"})
     other = client.post(
         "/locations", headers=org_b.headers, json={"name": "B1", "internal_code": "X"}
@@ -247,7 +247,7 @@ def test_program_and_category_tenant_isolation(client: TestClient, db: Session) 
 
 def test_non_staff_cannot_write(client: TestClient, db: Session) -> None:
     owner = bootstrap_actor(db, org_name="Klub", role=RoleCode.OWNER)
-    trainer = add_actor(db, organization=owner.organization, role=RoleCode.TRAINER)
+    trainer = add_actor(db, school=owner.school, role=RoleCode.TRAINER)
 
     # A trainer may read but not create structural entities.
     assert client.get("/locations", headers=trainer.headers).status_code == 200

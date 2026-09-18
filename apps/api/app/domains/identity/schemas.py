@@ -15,13 +15,13 @@ from app.domains.identity.enums import (
 
 
 class ContextSummary(BaseModel):
-    """One selectable acting context = an active role in one organization."""
+    """One selectable acting context = an active role in one school."""
 
     model_config = ConfigDict(from_attributes=True)
 
     role_assignment_id: str
-    organization_id: str
-    organization_name: str
+    school_id: str
+    school_name: str
     role_code: RoleCode
     scope_type: RoleScopeType
     scope_ref_id: str | None
@@ -52,7 +52,7 @@ class CreateInvitationRequest(BaseModel):
     # STAFF invites choose a role explicitly; PARENT/STUDENT invites imply their
     # own role code and this field is ignored if sent.
     role_code: RoleCode | None = None
-    scope_type: RoleScopeType = RoleScopeType.ORGANIZATION
+    scope_type: RoleScopeType = RoleScopeType.SCHOOL
     scope_ref_id: str | None = Field(default=None, max_length=64)
     # A per-invite area restriction (e.g. "ADMIN for finances only", §19.2/§25.5).
     granted_areas: list[str] | None = None
@@ -69,7 +69,7 @@ class InvitationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    organization_id: str
+    school_id: str
     type: InvitationType
     status: InvitationStatus
     target_email: str | None
@@ -114,7 +114,7 @@ class AcceptInvitationResponse(BaseModel):
 class AssignRoleRequest(BaseModel):
     person_id: str = Field(min_length=1)
     role_code: RoleCode
-    scope_type: RoleScopeType = RoleScopeType.ORGANIZATION
+    scope_type: RoleScopeType = RoleScopeType.SCHOOL
     scope_ref_id: str | None = Field(default=None, max_length=64)
     granted_areas: list[str] | None = None
 
@@ -133,7 +133,7 @@ class RoleAssignmentResponse(BaseModel):
     id: str
     person_id: str
     display_name: str
-    organization_id: str
+    school_id: str
     role_code: RoleCode
     scope_type: RoleScopeType
     scope_ref_id: str | None

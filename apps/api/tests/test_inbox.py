@@ -29,7 +29,7 @@ def _reset_handlers() -> None:
 
 
 def _enqueue(db: Session, event_type: str) -> OutboxMessage:
-    message = service.enqueue(db, event_type=event_type, payload={}, organization_id=ORG)
+    message = service.enqueue(db, event_type=event_type, payload={}, school_id=ORG)
     db.commit()
     return message
 
@@ -93,7 +93,7 @@ def test_a_failed_handler_rolls_back_its_own_writes(db: Session) -> None:
             InboxRecord(
                 consumer="side-effect",
                 message_id=message.id,
-                organization_id=ORG,
+                school_id=ORG,
                 event_type="marker",
                 processed_at=dt.datetime.now(tz=dt.UTC),
             )

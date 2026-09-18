@@ -22,13 +22,13 @@ class ProgressNote(Base, TimestampMixin):
 
     __tablename__ = "progress_note"
     __table_args__ = (
-        Index("ix_progress_note_org_person", "organization_id", "person_id"),
+        Index("ix_progress_note_school_person", "school_id", "person_id"),
         Index("ix_progress_note_group", "group_id"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("prg"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False

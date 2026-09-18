@@ -14,8 +14,8 @@ from app.common.enums import RecordStatus
 from app.common.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.domains.groups.models import Group
 from app.domains.identity.enums import InvitationType, RoleCode, RoleScopeType
-from app.domains.organization.enums import OrganizationLifecycleStatus
-from app.domains.organization.models import Organization
+from app.domains.school.enums import SchoolLifecycleStatus
+from app.domains.school.models import School
 from app.domains.structure.models import Location
 from app.security.permissions import ROLE_DEFAULT_AREAS, effective_areas, parse_granted_areas
 
@@ -38,14 +38,14 @@ def role_code_for_invitation(inv_type: InvitationType, requested: RoleCode | Non
 
 def validate_scope(
     db: Session,
-    organization_id: str,
+    school_id: str,
     role_code: RoleCode,
     scope_type: RoleScopeType,
     scope_ref_id: str | None,
 ) -> None:
     """A role's scope must be internally consistent and, when narrower than the
-    whole organization, point at a real branch/group inside THIS org (§19.3)."""
-    if scope_type is RoleScopeType.ORGANIZATION:
+    whole school, point at a real branch/group inside THIS org (§19.3)."""
+    if scope_type is RoleScopeType.SCHOOL:
         if scope_ref_id is not None:
             raise BadRequestError("Uloga na nivou organizacije ne sme imati dodatni obuhvat.")
         return
@@ -59,7 +59,7 @@ def validate_scope(
         location = db.get(Location, scope_ref_id)
         if (
             location is None
-            or location.organization_id != organization_id
+            or location.school_id != school_id
             or location.record_status is RecordStatus.ARCHIVED
         ):
             raise NotFoundError("Ogranak nije pronađen.")
@@ -69,7 +69,7 @@ def validate_scope(
     group = db.get(Group, scope_ref_id)
     if (
         group is None
-        or group.organization_id != organization_id
+        or group.school_id != school_id
         or group.record_status is RecordStatus.ARCHIVED
     ):
         raise NotFoundError("Grupa nije pronađena.")
@@ -122,7 +122,7 @@ def validate_granted_areas(
 
 
 def ensure_invitation_allowed_during_onboarding(
-    organization: Organization, role_code: RoleCode
+    school: School, role_code: RoleCode
 ) -> None:
     """§13/M2 (guided onboarding), while a school is ``IN_PREPARATION``
     ("u pripremi"), the only invitation the owner may send is a co-owner
@@ -132,7 +132,7 @@ def ensure_invitation_allowed_during_onboarding(
     members before its structure exists.
     """
     if (
-        organization.lifecycle_status is OrganizationLifecycleStatus.IN_PREPARATION
+        school.lifecycle_status is SchoolLifecycleStatus.IN_PREPARATION
         and role_code is not RoleCode.OWNER
     ):
         raise ForbiddenError(

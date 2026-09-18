@@ -35,7 +35,7 @@ def test_a_database_failure_is_described_by_schema_not_by_data(db: Session) -> N
     def insert_bad_notification(session: Session, message: OutboxMessage) -> None:
         session.add(
             Notification(
-                organization_id="org_missing",  # no such organization -> FK violation
+                school_id="org_missing",  # no such school -> FK violation
                 person_id="per_missing",
                 event_type="test.pii",
                 entity_type="event",
@@ -48,7 +48,7 @@ def test_a_database_failure_is_described_by_schema_not_by_data(db: Session) -> N
         session.flush()
 
     worker.register_handler("test.pii", insert_bad_notification)
-    message = service.enqueue(db, event_type="test.pii", payload={}, organization_id="org_x")
+    message = service.enqueue(db, event_type="test.pii", payload={}, school_id="org_x")
     db.commit()
 
     worker.process_available("w1")
@@ -68,7 +68,7 @@ def test_safe_error_keeps_the_diagnosis_for_a_database_error(db: Session) -> Non
     try:
         db.add(
             Notification(
-                organization_id="org_missing",
+                school_id="org_missing",
                 person_id="per_missing",
                 event_type="e",
                 entity_type="t",
@@ -86,7 +86,7 @@ def test_safe_error_keeps_the_diagnosis_for_a_database_error(db: Session) -> Non
         pytest.fail("expected the foreign key to reject this row")
 
     assert CHILD_NAME not in described
-    # 23503 is foreign_key_violation: the organization does not exist. The point
+    # 23503 is foreign_key_violation: the school does not exist. The point
     # is that the description names the schema object, never the row.
     assert "sqlstate=23503" in described
     assert "notification" in described
@@ -132,7 +132,7 @@ def test_a_plain_handler_failure_still_records_something_useful(db: Session) -> 
         raise RuntimeError("provider down")
 
     worker.register_handler("test.plain", boom)
-    message = service.enqueue(db, event_type="test.plain", payload={}, organization_id="org_x")
+    message = service.enqueue(db, event_type="test.plain", payload={}, school_id="org_x")
     db.commit()
 
     worker.process_available("w1")

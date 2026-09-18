@@ -13,22 +13,22 @@ from app.platform.idempotency.enums import IdempotencyStatus
 
 
 class IdempotencyRecord(Base, TimestampMixin):
-    """One row per (organization, operation, client key).
+    """One row per (school, operation, client key).
 
     Guarantees: repeated request + same key -> same stored result; same key +
-    different parameters -> rejected. Scoped per organization so keys never leak
+    different parameters -> rejected. Scoped per school so keys never leak
     across tenants.
     """
 
     __tablename__ = "idempotency_record"
     __table_args__ = (
         UniqueConstraint(
-            "organization_id", "operation", "idempotency_key", name="uq_idempotency_key"
+            "school_id", "operation", "idempotency_key", name="uq_idempotency_key"
         ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("idm"))
-    organization_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    school_id: Mapped[str] = mapped_column(String(64), nullable=False)
     operation: Mapped[str] = mapped_column(String(120), nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(200), nullable=False)
     request_hash: Mapped[str] = mapped_column(String(64), nullable=False)

@@ -9,7 +9,7 @@ class AnnouncementStatus(enum.StrEnum):
 
 
 class AnnouncementTargetType(enum.StrEnum):
-    ORGANIZATION = "ORGANIZATION"
+    SCHOOL = "SCHOOL"
     GROUP = "GROUP"
 
 

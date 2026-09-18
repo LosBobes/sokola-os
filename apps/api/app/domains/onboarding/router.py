@@ -11,9 +11,9 @@ from app.security.permissions import PermissionArea, require_permission
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
-# Activation changes the school's lifecycle, organization-management authority.
-_org_admin = require_permission(PermissionArea.ORGANIZATION)
-OrgAdminContext = Annotated[ContextDep, Depends(_org_admin)]
+# Activation changes the school's lifecycle, school-management authority.
+_school_admin = require_permission(PermissionArea.SCHOOL)
+OrgAdminContext = Annotated[ContextDep, Depends(_school_admin)]
 
 
 @router.get(

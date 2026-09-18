@@ -17,7 +17,7 @@ from app.domains.privacy.enums import (
 
 
 class ConsentRecord(Base, TimestampMixin):
-    """One person's consent for one processing purpose, in one organization.
+    """One person's consent for one processing purpose, in one school.
 
     Consents are never deleted or edited in place, withdrawal sets
     ``revoked_at`` and the row stays as evidence of what was once granted and
@@ -26,12 +26,12 @@ class ConsentRecord(Base, TimestampMixin):
 
     __tablename__ = "privacy_consent_record"
     __table_args__ = (
-        Index("ix_privacy_consent_record_org_person", "organization_id", "person_id"),
+        Index("ix_privacy_consent_record_school_person", "school_id", "person_id"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("csn"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False
@@ -55,12 +55,12 @@ class DataSubjectRequest(Base, TimestampMixin):
 
     __tablename__ = "privacy_data_subject_request"
     __table_args__ = (
-        Index("ix_privacy_dsar_org_person", "organization_id", "person_id"),
+        Index("ix_privacy_dsar_school_person", "school_id", "person_id"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("dsr"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False
@@ -79,18 +79,18 @@ class DataSubjectRequest(Base, TimestampMixin):
 
 
 class RetentionPeriod(Base, TimestampMixin, RecordStatusMixin):
-    """How long one category of data is kept, per organization.
+    """How long one category of data is kept, per school.
 
     Data model only, no automated expiry/purge job runs against this yet;
     that is a follow-up (see the PR description's scope cuts).
     """
 
     __tablename__ = "privacy_retention_period"
-    __table_args__ = (Index("ix_privacy_retention_period_org", "organization_id"),)
+    __table_args__ = (Index("ix_privacy_retention_period_school", "school_id"),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("rtp"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     data_category: Mapped[DataCategory] = mapped_column(enum_type(DataCategory), nullable=False)
     retention_period_days: Mapped[int] = mapped_column(Integer, nullable=False)

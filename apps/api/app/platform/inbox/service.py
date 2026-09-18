@@ -27,7 +27,7 @@ def claim(session: Session, *, consumer: str, message: OutboxMessage) -> bool:
     record = InboxRecord(
         consumer=consumer,
         message_id=message.id,
-        organization_id=message.organization_id,
+        school_id=message.school_id,
         event_type=message.event_type,
         processed_at=clock.now(),
     )

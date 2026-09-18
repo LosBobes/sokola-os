@@ -23,13 +23,13 @@ from app.domains.privacy.models import ConsentRecord
 
 
 def has_active_consent(
-    db: Session, organization_id: str, person_id: str, scope: ConsentScope
+    db: Session, school_id: str, person_id: str, scope: ConsentScope
 ) -> bool:
     """True iff ``person_id`` currently holds a live (granted, un-withdrawn)
-    consent for ``scope`` within ``organization_id``. Withdrawn consents
+    consent for ``scope`` within ``school_id``. Withdrawn consents
     (``revoked_at`` set) never count, regardless of when they were granted."""
     stmt = select(ConsentRecord.id).where(
-        ConsentRecord.organization_id == organization_id,
+        ConsentRecord.school_id == school_id,
         ConsentRecord.person_id == person_id,
         ConsentRecord.scope == scope,
         ConsentRecord.revoked_at.is_(None),

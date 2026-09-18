@@ -9,19 +9,19 @@ from app.common.enums import RecordStatus
 from app.domains.events.enums import EventStatus, RegistrationStatus
 from app.domains.events.models import Event, EventRegistration
 from app.domains.identity.models import Person
-from app.domains.organization.models import OrganizationMembership
 from app.domains.people.enums import GuardianAccessStatus
-from app.domains.people.models import GuardianOrganizationAccess
+from app.domains.people.models import GuardianSchoolAccess
+from app.domains.school.models import SchoolMembership
 from app.domains.structure.models import Location
 from app.platform import clock
 
 
 def get_event(
-    db: Session, organization_id: str, event_id: str, *, for_update: bool = False
+    db: Session, school_id: str, event_id: str, *, for_update: bool = False
 ) -> Event | None:
     stmt = select(Event).where(
         Event.id == event_id,
-        Event.organization_id == organization_id,
+        Event.school_id == school_id,
         Event.record_status == RecordStatus.ACTIVE,
     )
     if for_update:
@@ -29,11 +29,11 @@ def get_event(
     return db.execute(stmt).scalar_one_or_none()
 
 
-def list_published(db: Session, organization_id: str) -> list[Event]:
+def list_published(db: Session, school_id: str) -> list[Event]:
     stmt = (
         select(Event)
         .where(
-            Event.organization_id == organization_id,
+            Event.school_id == school_id,
             Event.status == EventStatus.PUBLISHED,
             Event.record_status == RecordStatus.ACTIVE,
         )
@@ -43,7 +43,7 @@ def list_published(db: Session, organization_id: str) -> list[Event]:
 
 
 def list_in_range(
-    db: Session, organization_id: str, start: dt.datetime, end: dt.datetime
+    db: Session, school_id: str, start: dt.datetime, end: dt.datetime
 ) -> list[Event]:
     """Every non-archived event starting in ``[start, end)``, whatever its status.
 
@@ -55,7 +55,7 @@ def list_in_range(
     stmt = (
         select(Event)
         .where(
-            Event.organization_id == organization_id,
+            Event.school_id == school_id,
             Event.record_status == RecordStatus.ACTIVE,
             Event.starts_at >= start,
             Event.starts_at < end,
@@ -65,23 +65,23 @@ def list_in_range(
     return list(db.execute(stmt).scalars().all())
 
 
-def is_org_location(db: Session, organization_id: str, location_id: str) -> bool:
+def is_school_location(db: Session, school_id: str, location_id: str) -> bool:
     stmt = select(Location.id).where(
         Location.id == location_id,
-        Location.organization_id == organization_id,
+        Location.school_id == school_id,
         Location.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).first() is not None
 
 
-def is_org_person(db: Session, organization_id: str, person_id: str) -> bool:
+def is_school_person(db: Session, school_id: str, person_id: str) -> bool:
     stmt = (
-        select(OrganizationMembership.id)
-        .join(Person, Person.id == OrganizationMembership.person_id)
+        select(SchoolMembership.id)
+        .join(Person, Person.id == SchoolMembership.person_id)
         .where(
-            OrganizationMembership.person_id == person_id,
-            OrganizationMembership.organization_id == organization_id,
-            OrganizationMembership.record_status == RecordStatus.ACTIVE,
+            SchoolMembership.person_id == person_id,
+            SchoolMembership.school_id == school_id,
+            SchoolMembership.record_status == RecordStatus.ACTIVE,
             Person.record_status == RecordStatus.ACTIVE,
         )
     )
@@ -89,19 +89,19 @@ def is_org_person(db: Session, organization_id: str, person_id: str) -> bool:
 
 
 def guardian_children(
-    db: Session, organization_id: str, guardian_person_id: str
+    db: Session, school_id: str, guardian_person_id: str
 ) -> dict[str, Person]:
-    """The children this guardian may act for in THIS organization, keyed by id."""
+    """The children this guardian may act for in THIS school, keyed by id."""
     stmt = (
         select(Person)
         .join(
-            GuardianOrganizationAccess,
-            GuardianOrganizationAccess.child_person_id == Person.id,
+            GuardianSchoolAccess,
+            GuardianSchoolAccess.child_person_id == Person.id,
         )
         .where(
-            GuardianOrganizationAccess.organization_id == organization_id,
-            GuardianOrganizationAccess.guardian_person_id == guardian_person_id,
-            GuardianOrganizationAccess.status == GuardianAccessStatus.ACTIVE,
+            GuardianSchoolAccess.school_id == school_id,
+            GuardianSchoolAccess.guardian_person_id == guardian_person_id,
+            GuardianSchoolAccess.status == GuardianAccessStatus.ACTIVE,
             Person.record_status == RecordStatus.ACTIVE,
         )
     )
@@ -144,12 +144,12 @@ def list_active_registrations(db: Session, event_id: str) -> list[EventRegistrat
 
 
 def get_registration(
-    db: Session, organization_id: str, event_id: str, registration_id: str
+    db: Session, school_id: str, event_id: str, registration_id: str
 ) -> EventRegistration | None:
     stmt = select(EventRegistration).where(
         EventRegistration.id == registration_id,
         EventRegistration.event_id == event_id,
-        EventRegistration.organization_id == organization_id,
+        EventRegistration.school_id == school_id,
     )
     return db.execute(stmt).scalar_one_or_none()
 

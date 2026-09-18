@@ -25,8 +25,8 @@ class BillingRun(Base, TimestampMixin):
     __tablename__ = "billing_run"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("brn"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     description: Mapped[str] = mapped_column(String(200), nullable=False)
     period_label: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -39,7 +39,7 @@ class BillingRun(Base, TimestampMixin):
 
 
 class Charge(Base, TimestampMixin):
-    """A debt owed by a person to the organization. Money is exact decimal.
+    """A debt owed by a person to the school. Money is exact decimal.
     A charge is never edited destructively; it is paid down or cancelled."""
 
     __tablename__ = "charge"
@@ -48,7 +48,7 @@ class Charge(Base, TimestampMixin):
         # exactly one charge during manual reconciliation.
         Index(
             "uq_charge_payment_reference",
-            "organization_id",
+            "school_id",
             "payment_reference",
             unique=True,
             postgresql_where=text("payment_reference IS NOT NULL"),
@@ -56,8 +56,8 @@ class Charge(Base, TimestampMixin):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("chg"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False

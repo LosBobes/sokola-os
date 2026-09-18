@@ -5,8 +5,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.domains.identity.enums import PersonIdentityStatus, PersonMergeStatus
-from app.domains.organization.enums import MembershipStatus, OrgMemberType
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
+from app.domains.school.enums import MembershipStatus, OrgMemberType
 
 
 class CreatePersonRequest(BaseModel):

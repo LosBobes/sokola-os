@@ -80,9 +80,9 @@ def test_trainer_can_record_parent_cannot(client: TestClient, db: Session) -> No
 
     # A trainer in the same org may record.
     trainer = make_person(db, given="Trener")
-    add_membership(db, person=trainer, organization=manager.organization)
+    add_membership(db, person=trainer, school=manager.school)
     trainer_assign = assign_role(
-        db, person=trainer, organization=manager.organization, role=RoleCode.TRAINER
+        db, person=trainer, school=manager.school, role=RoleCode.TRAINER
     )
     from app.security.auth import DEV_PERSON_HEADER
     from app.security.deps import CONTEXT_HEADER

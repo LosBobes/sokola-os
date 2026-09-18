@@ -97,17 +97,17 @@ def main() -> None:
     owner_id = create_identity(client, OWNER[0], OWNER[1])
     owner_headers = {DEV_PERSON_HEADER: owner_id}
 
-    print(f"Creating organization: {ORG_NAME}")
+    print(f"Creating school: {ORG_NAME}")
     org_resp = client.post(
-        "/organizations", headers=owner_headers, json={"name": ORG_NAME, "type": "SPORTS_CLUB"}
+        "/schools", headers=owner_headers, json={"name": ORG_NAME, "type": "SPORTS_CLUB"}
     )
     if org_resp.status_code != 201:
-        die(f"create organization: {org_resp.status_code} {org_resp.text}")
+        die(f"create school: {org_resp.status_code} {org_resp.text}")
     org = org_resp.json()
     org_id = org["id"]
 
     me = client.get("/me", headers=owner_headers).json()
-    owner_ctx = next(c for c in me["contexts"] if c["organization_id"] == org_id)
+    owner_ctx = next(c for c in me["contexts"] if c["school_id"] == org_id)
     owner_headers = {**owner_headers, CONTEXT_HEADER: owner_ctx["role_assignment_id"]}
     link_login_identity(owner_id, OWNER[2], OWNER[3])
 
@@ -251,7 +251,7 @@ def main() -> None:
     draft = {
         "title": "Dobrodošli u novu sezonu!",
         "body": "Treninzi počinju ovog meseca. Vidimo se na terenu!",
-        "target_type": "ORGANIZATION",
+        "target_type": "SCHOOL",
         "target_group_id": None,
     }
     preview = client.post(

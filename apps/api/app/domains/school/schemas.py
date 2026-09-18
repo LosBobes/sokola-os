@@ -2,30 +2,30 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.domains.organization.enums import OrganizationLifecycleStatus, OrganizationType
+from app.domains.school.enums import SchoolLifecycleStatus, SchoolType
 
 
-class CreateOrganizationRequest(BaseModel):
+class CreateSchoolRequest(BaseModel):
     name: str = Field(min_length=2, max_length=200)
-    type: OrganizationType = OrganizationType.OTHER
+    type: SchoolType = SchoolType.OTHER
     timezone: str = "Europe/Belgrade"
 
 
-class OrganizationResponse(BaseModel):
+class SchoolResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
     name: str
     slug: str | None
-    type: OrganizationType
+    type: SchoolType
     timezone: str
-    lifecycle_status: OrganizationLifecycleStatus
+    lifecycle_status: SchoolLifecycleStatus
 
 
 class TenantPublic(BaseModel):
     """Public tenant discovery result, the minimum needed to route a login to
     the right school. Reveals no member data."""
 
-    organization_id: str
+    school_id: str
     name: str
     slug: str

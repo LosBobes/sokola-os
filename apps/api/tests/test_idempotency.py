@@ -27,7 +27,7 @@ def test_same_key_different_params_is_rejected(db: Session) -> None:
         service.begin(db, "org_1", "payments.record", "key-2", {"amount": 9999})
 
 
-def test_keys_are_scoped_per_organization(db: Session) -> None:
+def test_keys_are_scoped_per_school(db: Session) -> None:
     params = {"amount": 5000}
     g1 = service.begin(db, "org_A", "payments.record", "shared-key", params)
     service.complete(db, g1, status=201, body={"payment_id": "pay_A"})

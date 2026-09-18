@@ -2,7 +2,7 @@
 
 The session is a signed cookie (Starlette SessionMiddleware) holding only the
 resolved ``person_id`` and a CSRF synchronizer token. A password check or Google
-proves identity; SOKOLA issues the session. The acting organization/role is still
+proves identity; SOKOLA issues the session. The acting school/role is still
 chosen separately and re-derived server-side on every request.
 """
 

@@ -5,7 +5,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 
 from app.common.pagination import Page, PageParams, page_params
-from app.domains.organization.enums import OrgMemberType
 from app.domains.people import service
 from app.domains.people.schemas import (
     CreateMergeReviewRequest,
@@ -21,6 +20,7 @@ from app.domains.people.schemas import (
     RevokeGuardianAccessRequest,
     UpdateMemberDataRequest,
 )
+from app.domains.school.enums import OrgMemberType
 from app.security.deps import ContextDep, DbDep
 from app.security.permissions import PermissionArea, require_permission
 

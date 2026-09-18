@@ -52,7 +52,7 @@ def request_review(
 
     review = DeadLetterReview(
         message_id=message_id,
-        organization_id=message.organization_id,
+        school_id=message.school_id,
         action=action,
         status=DeadLetterReviewStatus.PENDING,
         requested_by_person_id=requested_by_person_id,
@@ -69,7 +69,7 @@ def request_review(
         entity_type="outbox_message",
         entity_id=message_id,
         summary=f"Zatražen {action.value} za dead-letter poruku.",
-        organization_id=message.organization_id,
+        school_id=message.school_id,
         actor_person_id=requested_by_person_id,
         context={"action": action.value, "review_id": review.id},
     )
@@ -115,7 +115,7 @@ def approve(session: Session, *, review_id: str, approver_person_id: str) -> Dea
         entity_type="outbox_message",
         entity_id=review.message_id,
         summary=f"Odobren {review.action.value} za dead-letter poruku.",
-        organization_id=review.organization_id,
+        school_id=review.school_id,
         actor_person_id=approver_person_id,
         context={
             "action": review.action.value,
@@ -147,7 +147,7 @@ def reject(
         entity_type="outbox_message",
         entity_id=review.message_id,
         summary=f"Odbijen {review.action.value} za dead-letter poruku.",
-        organization_id=review.organization_id,
+        school_id=review.school_id,
         actor_person_id=approver_person_id,
         context={"action": review.action.value, "review_id": review.id},
     )

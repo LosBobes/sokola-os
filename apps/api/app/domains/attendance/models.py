@@ -19,8 +19,8 @@ class AttendanceRecord(Base, TimestampMixin):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("att"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     session_id: Mapped[str] = mapped_column(
         ForeignKey("session.id", ondelete="CASCADE"), nullable=False

@@ -28,7 +28,7 @@ from app.domains.events.enums import RegistrationStatus
 from app.domains.events.models import EventRegistration
 from app.domains.groups.models import GroupMembership
 from app.domains.people.enums import GuardianAccessStatus
-from app.domains.people.models import GuardianOrganizationAccess
+from app.domains.people.models import GuardianSchoolAccess
 from app.domains.scheduling.models import Session as ScheduleSession
 from app.platform.outbox.models import OutboxMessage
 from app.platform.outbox.worker import register_handler
@@ -51,7 +51,7 @@ def _reason_label(code: str | None) -> str:
     return _REASON_LABELS.get(code, "drugog razloga")
 
 
-def _group_recipients(db: Session, organization_id: str, group_id: str) -> set[str]:
+def _group_recipients(db: Session, school_id: str, group_id: str) -> set[str]:
     """A group's active members plus the active guardians of any of them."""
     member_ids = set(
         db.execute(
@@ -64,16 +64,16 @@ def _group_recipients(db: Session, organization_id: str, group_id: str) -> set[s
     )
     if not member_ids:
         return set()
-    return member_ids | _guardians_of(db, organization_id, member_ids)
+    return member_ids | _guardians_of(db, school_id, member_ids)
 
 
-def _guardians_of(db: Session, organization_id: str, child_ids: set[str]) -> set[str]:
+def _guardians_of(db: Session, school_id: str, child_ids: set[str]) -> set[str]:
     return set(
         db.execute(
-            select(GuardianOrganizationAccess.guardian_person_id).where(
-                GuardianOrganizationAccess.organization_id == organization_id,
-                GuardianOrganizationAccess.child_person_id.in_(child_ids),
-                GuardianOrganizationAccess.status == GuardianAccessStatus.ACTIVE,
+            select(GuardianSchoolAccess.guardian_person_id).where(
+                GuardianSchoolAccess.school_id == school_id,
+                GuardianSchoolAccess.child_person_id.in_(child_ids),
+                GuardianSchoolAccess.status == GuardianAccessStatus.ACTIVE,
             )
         )
         .scalars()
@@ -96,12 +96,12 @@ def _notify(
     ``source_message_id`` is kept as provenance (which event produced this
     notification), not as de-duplication: the inbox claim in the worker is what
     makes a redelivery a no-op now."""
-    if not recipients or message.organization_id is None:
+    if not recipients or message.school_id is None:
         return
     for person_id in sorted(recipients):
         db.add(
             Notification(
-                organization_id=message.organization_id,
+                school_id=message.school_id,
                 person_id=person_id,
                 event_type=message.event_type,
                 entity_type=entity_type,
@@ -119,12 +119,12 @@ def _handle_session_event(
     db: Session, message: OutboxMessage, *, title: str, body_template: str
 ) -> None:
     session_id = message.payload.get("session_id")
-    if not session_id or message.organization_id is None:
+    if not session_id or message.school_id is None:
         return
     session = db.get(ScheduleSession, session_id)
     if session is None:
         return
-    recipients = _group_recipients(db, message.organization_id, session.group_id)
+    recipients = _group_recipients(db, message.school_id, session.group_id)
     session_title = session.title or "trening"
     reason = _reason_label(message.payload.get("reason"))
     body = body_template.format(title=session_title, reason=reason)
@@ -168,7 +168,7 @@ def handle_session_reactivated(db: Session, message: OutboxMessage) -> None:
 
 def handle_billing_run_posted(db: Session, message: OutboxMessage) -> None:
     billing_run_id = message.payload.get("billing_run_id")
-    if not billing_run_id or message.organization_id is None:
+    if not billing_run_id or message.school_id is None:
         return
     charged_ids = set(
         db.execute(select(Charge.person_id).where(Charge.billing_run_id == billing_run_id))
@@ -177,7 +177,7 @@ def handle_billing_run_posted(db: Session, message: OutboxMessage) -> None:
     )
     if not charged_ids:
         return
-    recipients = charged_ids | _guardians_of(db, message.organization_id, charged_ids)
+    recipients = charged_ids | _guardians_of(db, message.school_id, charged_ids)
     _notify(
         db,
         message,
@@ -191,7 +191,7 @@ def handle_billing_run_posted(db: Session, message: OutboxMessage) -> None:
 
 def handle_event_registered(db: Session, message: OutboxMessage) -> None:
     event_id = message.payload.get("event_id")
-    if not event_id or message.organization_id is None:
+    if not event_id or message.school_id is None:
         return
     rows = db.execute(
         select(
@@ -208,7 +208,7 @@ def handle_event_registered(db: Session, message: OutboxMessage) -> None:
     recipients = (
         child_ids
         | {r.registered_by_person_id for r in rows}
-        | _guardians_of(db, message.organization_id, child_ids)
+        | _guardians_of(db, message.school_id, child_ids)
     )
     _notify(
         db,

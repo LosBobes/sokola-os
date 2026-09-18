@@ -19,8 +19,8 @@ class PaymentRecord(Base, TimestampMixin):
     __tablename__ = "payment_record"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("pay"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     charge_id: Mapped[str] = mapped_column(
         ForeignKey("charge.id", ondelete="CASCADE"), nullable=False

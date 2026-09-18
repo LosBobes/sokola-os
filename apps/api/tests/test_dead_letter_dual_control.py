@@ -28,7 +28,7 @@ APPROVER = "per_approver"
 
 
 def _dead_lettered(db: Session) -> OutboxMessage:
-    message = service.enqueue(db, event_type="test.dl", payload={}, organization_id=ORG)
+    message = service.enqueue(db, event_type="test.dl", payload={}, school_id=ORG)
     message.status = OutboxStatus.DEAD_LETTER
     message.attempts = 10
     message.last_error = "RuntimeError: provider down"
@@ -199,7 +199,7 @@ def test_a_new_request_is_allowed_once_the_previous_one_is_decided(db: Session) 
 
 
 def test_only_a_dead_lettered_message_can_be_reviewed(db: Session) -> None:
-    message = service.enqueue(db, event_type="test.dl", payload={}, organization_id=ORG)
+    message = service.enqueue(db, event_type="test.dl", payload={}, school_id=ORG)
     db.commit()
 
     with pytest.raises(ConflictError, match="dead-letter"):

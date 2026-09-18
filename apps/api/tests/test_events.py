@@ -6,7 +6,7 @@ from app.domains.events.enums import RegistrationStatus
 from app.domains.events.models import EventRegistration
 from app.domains.identity.enums import RoleCode
 from app.domains.identity.models import Person
-from app.domains.organization.models import Organization
+from app.domains.school.models import School
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -20,17 +20,17 @@ def _event(client: TestClient, staff: Actor, **overrides: object) -> str:
     return client.post("/events", headers=staff.headers, json={**EVENT, **overrides}).json()["id"]
 
 
-def _parent_of(db: Session, org: Organization, given: str = "R") -> Actor:
-    return add_actor(db, organization=org, role=RoleCode.PARENT, given=given)
+def _parent_of(db: Session, org: School, given: str = "R") -> Actor:
+    return add_actor(db, school=org, role=RoleCode.PARENT, given=given)
 
 
-def _child(db: Session, org: Organization, guardian: Actor, given: str) -> Person:
-    return make_child_with_guardian(db, organization=org, guardian=guardian.person, given=given)
+def _child(db: Session, org: School, guardian: Actor, given: str) -> Person:
+    return make_child_with_guardian(db, school=org, guardian=guardian.person, given=given)
 
 
 def test_register_and_cancel_children_journeys_3_and_4(client: TestClient, db: Session) -> None:
     manager = bootstrap_actor(db)
-    org = manager.organization
+    org = manager.school
     parent = _parent_of(db, org, "Roditelj")
     child_a = _child(db, org, parent, "Ana")
     child_b = _child(db, org, parent, "Bane")
@@ -58,7 +58,7 @@ def test_register_and_cancel_children_journeys_3_and_4(client: TestClient, db: S
 
 def test_capacity_blocks_batch_atomically(client: TestClient, db: Session) -> None:
     manager = bootstrap_actor(db)
-    org = manager.organization
+    org = manager.school
     parent = _parent_of(db, org)
     c1 = _child(db, org, parent, "Prvi")
     c2 = _child(db, org, parent, "Drugi")
@@ -82,7 +82,7 @@ def test_capacity_blocks_batch_atomically(client: TestClient, db: Session) -> No
 
 def test_parent_cannot_register_unrelated_child(client: TestClient, db: Session) -> None:
     manager = bootstrap_actor(db)
-    org = manager.organization
+    org = manager.school
     parent = _parent_of(db, org)
     other_parent = _parent_of(db, org, "Drugi")
     other_child = _child(db, org, other_parent, "Tuđe")
@@ -98,7 +98,7 @@ def test_parent_cannot_register_unrelated_child(client: TestClient, db: Session)
 
 def test_registration_is_idempotent(client: TestClient, db: Session) -> None:
     manager = bootstrap_actor(db)
-    org = manager.organization
+    org = manager.school
     parent = _parent_of(db, org)
     child = _child(db, org, parent, "Dete")
     event_id = _event(client, manager)
@@ -117,7 +117,7 @@ def test_capacity_boundary_rejects_the_registration_over_the_limit(
     """P1: once capacity is reached one at a time, the N+1th registration is
     rejected, not just the batch-overflow case."""
     manager = bootstrap_actor(db)
-    org = manager.organization
+    org = manager.school
     parent = _parent_of(db, org)
     c1 = _child(db, org, parent, "Prvi")
     c2 = _child(db, org, parent, "Drugi")
@@ -196,7 +196,7 @@ def test_update_event_rejects_capacity_below_active_registrations(
     client: TestClient, db: Session
 ) -> None:
     manager = bootstrap_actor(db)
-    org = manager.organization
+    org = manager.school
     parent = _parent_of(db, org)
     c1 = _child(db, org, parent, "Prvi")
     c2 = _child(db, org, parent, "Drugi")
@@ -219,7 +219,7 @@ def test_cancel_event_cascades_all_active_registrations_atomically(
     client: TestClient, db: Session
 ) -> None:
     manager = bootstrap_actor(db)
-    org = manager.organization
+    org = manager.school
     parent = _parent_of(db, org)
     c1 = _child(db, org, parent, "Prvi")
     c2 = _child(db, org, parent, "Drugi")
@@ -257,7 +257,7 @@ def test_cancel_event_rejects_when_already_cancelled(client: TestClient, db: Ses
     assert second.status_code == 409
 
 
-def test_event_edit_and_cancel_reject_foreign_organization(
+def test_event_edit_and_cancel_reject_foreign_school(
     client: TestClient, db: Session
 ) -> None:
     org_a = bootstrap_actor(db, org_name="Klub A")

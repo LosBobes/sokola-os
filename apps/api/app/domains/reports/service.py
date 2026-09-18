@@ -61,8 +61,8 @@ def _attendance_rate(present: int, recorded: int) -> float:
     return round(present / recorded, 4) if recorded else 0.0
 
 
-def _require_group(db: Session, organization_id: str, group_id: str) -> None:
-    if repository.get_org_group(db, organization_id, group_id) is None:
+def _require_group(db: Session, school_id: str, group_id: str) -> None:
+    if repository.get_school_group(db, school_id, group_id) is None:
         raise NotFoundError("Grupa nije pronađena.")
 
 
@@ -81,7 +81,7 @@ def overview(db: Session, context: RequestContext) -> OverviewReport:
 
     window_start = now - dt.timedelta(days=_OVERVIEW_ATTENDANCE_WINDOW_DAYS)
     counts = repository.attendance_counts(
-        db, context.organization_id, window_start, now
+        db, context.school_id, window_start, now
     )
     present = counts.get(AttendanceStatus.PRESENT, 0)
     recorded = sum(counts.values())
@@ -90,15 +90,15 @@ def overview(db: Session, context: RequestContext) -> OverviewReport:
         period_start=period_start_date,
         period_end=now.date(),
         currency=get_settings().default_currency,
-        active_member_count=repository.active_member_count(db, context.organization_id),
+        active_member_count=repository.active_member_count(db, context.school_id),
         billed_total=repository.billed_total(
-            db, context.organization_id, period_start, period_end_exclusive
+            db, context.school_id, period_start, period_end_exclusive
         ),
         collected_total=repository.collected_total(
-            db, context.organization_id, period_start, period_end_exclusive
+            db, context.school_id, period_start, period_end_exclusive
         ),
         outstanding_debt_total=repository.outstanding_debt_total(
-            db, context.organization_id
+            db, context.school_id
         ),
         attendance_window_days=_OVERVIEW_ATTENDANCE_WINDOW_DAYS,
         attendance_recorded_count=recorded,
@@ -116,7 +116,7 @@ def financial_report(
             status=status.value, charge_count=count, outstanding=outstanding
         )
         for status, count, outstanding in repository.outstanding_by_status(
-            db, context.organization_id
+            db, context.school_id
         )
     ]
     return FinancialReport(
@@ -124,13 +124,13 @@ def financial_report(
         date_to=date_to,
         currency=get_settings().default_currency,
         billed_total=repository.billed_total(
-            db, context.organization_id, start, end
+            db, context.school_id, start, end
         ),
         collected_total=repository.collected_total(
-            db, context.organization_id, start, end
+            db, context.school_id, start, end
         ),
         outstanding_debt_total=repository.outstanding_debt_total(
-            db, context.organization_id
+            db, context.school_id
         ),
         outstanding_by_status=breakdown,
     )
@@ -144,11 +144,11 @@ def attendance_report(
     group_id: str | None,
 ) -> AttendanceReport:
     if group_id is not None:
-        _require_group(db, context.organization_id, group_id)
+        _require_group(db, context.school_id, group_id)
 
     start, end = _day_bounds(date_from, date_to)
     counts = repository.attendance_counts(
-        db, context.organization_id, start, end, group_id
+        db, context.school_id, start, end, group_id
     )
     present = counts.get(AttendanceStatus.PRESENT, 0)
     absent = counts.get(AttendanceStatus.ABSENT, 0)
@@ -158,7 +158,7 @@ def attendance_report(
 
     by_group_rows: dict[str, _GroupTally] = {}
     for g_id, g_name, status, count in repository.attendance_by_group(
-        db, context.organization_id, start, end, group_id
+        db, context.school_id, start, end, group_id
     ):
         tally = by_group_rows.setdefault(g_id, _GroupTally(group_name=g_name))
         tally.recorded += count
@@ -198,7 +198,7 @@ def membership_trend(
     group_id: str | None,
 ) -> MembershipTrendReport:
     if group_id is not None:
-        _require_group(db, context.organization_id, group_id)
+        _require_group(db, context.school_id, group_id)
 
     buckets = _month_buckets(date_from, date_to)
     trend: list[MembershipTrendPoint] = []
@@ -208,10 +208,10 @@ def membership_trend(
         )
         count = (
             repository.active_group_membership_count_as_of(
-                db, context.organization_id, group_id, as_of
+                db, context.school_id, group_id, as_of
             )
             if group_id is not None
-            else repository.active_membership_count_as_of(db, context.organization_id, as_of)
+            else repository.active_membership_count_as_of(db, context.school_id, as_of)
         )
         trend.append(
             MembershipTrendPoint(
@@ -225,7 +225,7 @@ def membership_trend(
         else [
             MembershipTrendByGroup(group_id=g_id, group_name=g_name, active_member_count=count)
             for g_id, g_name, count in repository.active_membership_by_group(
-                db, context.organization_id
+                db, context.school_id
             )
         ]
     )

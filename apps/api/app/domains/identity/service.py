@@ -33,10 +33,10 @@ from app.domains.identity.schemas import (
     MeResponse,
     RevokeInvitationRequest,
 )
-from app.domains.organization.enums import MembershipStatus, OrgMemberType
-from app.domains.organization.models import Organization, OrganizationMembership
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
-from app.domains.people.models import GuardianOrganizationAccess, GuardianRelationship
+from app.domains.people.models import GuardianRelationship, GuardianSchoolAccess
+from app.domains.school.enums import MembershipStatus, OrgMemberType
+from app.domains.school.models import School, SchoolMembership
 from app.platform import clock
 from app.platform.audit.service import record_audit
 from app.platform.outbox.service import enqueue
@@ -56,13 +56,13 @@ def get_me(db: Session, principal: Principal) -> MeResponse:
     contexts = [
         ContextSummary(
             role_assignment_id=assignment.id,
-            organization_id=organization.id,
-            organization_name=organization.name,
+            school_id=school.id,
+            school_name=school.name,
             role_code=assignment.role_code,
             scope_type=assignment.scope_type,
             scope_ref_id=assignment.scope_ref_id,
         )
-        for assignment, organization in repository.list_active_contexts(db, person.id)
+        for assignment, school in repository.list_active_contexts(db, person.id)
     ]
     return MeResponse(
         person_id=person.id,
@@ -81,21 +81,21 @@ def send_invitation(
     db: Session, context: RequestContext, req: CreateInvitationRequest
 ) -> InvitationCreatedResponse:
     role_code = policy.role_code_for_invitation(req.type, req.role_code)
-    policy.validate_scope(db, context.organization_id, role_code, req.scope_type, req.scope_ref_id)
+    policy.validate_scope(db, context.school_id, role_code, req.scope_type, req.scope_ref_id)
     policy.validate_granted_areas(
         role_code,
         req.granted_areas,
         actor_role_code=context.role_code,
         actor_granted_areas=context.granted_areas,
     )
-    organization = db.get(Organization, context.organization_id)
-    assert organization is not None  # context guarantees the active org exists
-    policy.ensure_invitation_allowed_during_onboarding(organization, role_code)
+    school = db.get(School, context.school_id)
+    assert school is not None  # context guarantees the active org exists
+    policy.ensure_invitation_allowed_during_onboarding(school, role_code)
 
     if req.type is InvitationType.PARENT:
         if not req.target_child_person_id:
             raise BadRequestError("Potrebno je izabrati dete za pozivnicu roditelja.")
-        child = repository.get_org_person(db, context.organization_id, req.target_child_person_id)
+        child = repository.get_school_person(db, context.school_id, req.target_child_person_id)
         if child is None:
             raise NotFoundError("Dete nije pronađeno u ovoj školi.")
     elif req.target_child_person_id:
@@ -103,7 +103,7 @@ def send_invitation(
 
     raw_token, token_hash = generate_token()
     invitation = Invitation(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         type=req.type,
         status=InvitationStatus.PENDING,
         target_email=req.target_email,
@@ -125,15 +125,15 @@ def send_invitation(
         entity_type="invitation",
         entity_id=invitation.id,
         summary=f"Pozivnica poslata na {req.target_email} za ulogu {role_code.value}.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"type": req.type.value, "role_code": role_code.value},
     )
     enqueue(
         db,
         event_type="invitation.sent",
-        payload={"invitation_id": invitation.id, "organization_id": context.organization_id},
-        organization_id=context.organization_id,
+        payload={"invitation_id": invitation.id, "school_id": context.school_id},
+        school_id=context.school_id,
     )
     db.commit()
     return InvitationCreatedResponse(
@@ -144,12 +144,12 @@ def send_invitation(
 def list_invitations(
     db: Session, context: RequestContext, params: PageParams
 ) -> Page[InvitationResponse]:
-    items, total = repository.list_org_invitations(db, context.organization_id, params)
+    items, total = repository.list_school_invitations(db, context.school_id, params)
     return Page.build([InvitationResponse.model_validate(i) for i in items], total, params)
 
 
 def get_invitation(db: Session, context: RequestContext, invitation_id: str) -> InvitationResponse:
-    invitation = repository.get_invitation(db, context.organization_id, invitation_id)
+    invitation = repository.get_invitation(db, context.school_id, invitation_id)
     if invitation is None:
         raise NotFoundError("Pozivnica nije pronađena.")
     return InvitationResponse.model_validate(invitation)
@@ -158,7 +158,7 @@ def get_invitation(db: Session, context: RequestContext, invitation_id: str) -> 
 def revoke_invitation(
     db: Session, context: RequestContext, invitation_id: str, req: RevokeInvitationRequest
 ) -> InvitationResponse:
-    invitation = repository.get_invitation(db, context.organization_id, invitation_id)
+    invitation = repository.get_invitation(db, context.school_id, invitation_id)
     if invitation is None:
         raise NotFoundError("Pozivnica nije pronađena.")
     if invitation.status is not InvitationStatus.PENDING:
@@ -175,14 +175,14 @@ def revoke_invitation(
         entity_type="invitation",
         entity_id=invitation.id,
         summary=summary,
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     enqueue(
         db,
         event_type="invitation.revoked",
-        payload={"invitation_id": invitation.id, "organization_id": context.organization_id},
-        organization_id=context.organization_id,
+        payload={"invitation_id": invitation.id, "school_id": context.school_id},
+        school_id=context.school_id,
     )
     db.commit()
     return InvitationResponse.model_validate(invitation)
@@ -193,7 +193,7 @@ def reissue_invitation(
 ) -> InvitationCreatedResponse:
     """Void a PENDING/EXPIRED invitation and send a fresh one in its place, a
     new token and a fresh 7-day window, chained via ``reissued_from_invitation_id``."""
-    old = repository.get_invitation(db, context.organization_id, invitation_id)
+    old = repository.get_invitation(db, context.school_id, invitation_id)
     if old is None:
         raise NotFoundError("Pozivnica nije pronađena.")
     if old.status not in (InvitationStatus.PENDING, InvitationStatus.EXPIRED):
@@ -202,7 +202,7 @@ def reissue_invitation(
     old.status = InvitationStatus.REISSUED
     raw_token, token_hash = generate_token()
     new = Invitation(
-        organization_id=old.organization_id,
+        school_id=old.school_id,
         type=old.type,
         status=InvitationStatus.PENDING,
         target_email=old.target_email,
@@ -225,7 +225,7 @@ def reissue_invitation(
         entity_type="invitation",
         entity_id=new.id,
         summary=f"Pozivnica za {new.target_email} je ponovo poslata.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"reissued_from_invitation_id": old.id},
     )
@@ -235,9 +235,9 @@ def reissue_invitation(
         payload={
             "invitation_id": new.id,
             "reissued_from_invitation_id": old.id,
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
     db.commit()
     return InvitationCreatedResponse(
@@ -256,7 +256,7 @@ _INVITED_MEMBER_TYPE: dict[RoleCode, OrgMemberType] = {
 
 
 def _open_membership(
-    db: Session, organization_id: str, person_id: str, role_code: RoleCode
+    db: Session, school_id: str, person_id: str, role_code: RoleCode
 ) -> None:
     """Open (or re-open) the invitee's membership, typed by the role they accepted.
 
@@ -265,11 +265,11 @@ def _open_membership(
     its type: the school already said what this person is, and a role grant is
     not the place to silently overrule that.
     """
-    membership = repository.get_membership(db, organization_id, person_id)
+    membership = repository.get_membership(db, school_id, person_id)
     if membership is None:
         db.add(
-            OrganizationMembership(
-                organization_id=organization_id,
+            SchoolMembership(
+                school_id=school_id,
                 person_id=person_id,
                 member_type=_INVITED_MEMBER_TYPE.get(role_code, OrgMemberType.ATTENDEE),
             )
@@ -285,7 +285,7 @@ def _open_membership(
 def _grant_role(
     db: Session,
     *,
-    organization_id: str,
+    school_id: str,
     person_id: str,
     role_code: RoleCode,
     scope_type: RoleScopeType,
@@ -294,7 +294,7 @@ def _grant_role(
 ) -> RoleAssignment:
     existing = repository.find_assignment(
         db,
-        organization_id=organization_id,
+        school_id=school_id,
         person_id=person_id,
         role_code=role_code,
         scope_type=scope_type,
@@ -307,7 +307,7 @@ def _grant_role(
         return existing
     assignment = RoleAssignment(
         person_id=person_id,
-        organization_id=organization_id,
+        school_id=school_id,
         role_code=role_code,
         scope_type=scope_type,
         scope_ref_id=scope_ref_id,
@@ -319,7 +319,7 @@ def _grant_role(
 
 
 def _link_guardian(
-    db: Session, *, organization_id: str, guardian_person_id: str, child_person_id: str
+    db: Session, *, school_id: str, guardian_person_id: str, child_person_id: str
 ) -> None:
     if repository.get_guardian_relationship(db, guardian_person_id, child_person_id) is None:
         db.add(
@@ -330,12 +330,12 @@ def _link_guardian(
             )
         )
     access = repository.get_guardian_access(
-        db, organization_id, guardian_person_id, child_person_id
+        db, school_id, guardian_person_id, child_person_id
     )
     if access is None:
         db.add(
-            GuardianOrganizationAccess(
-                organization_id=organization_id,
+            GuardianSchoolAccess(
+                school_id=school_id,
                 guardian_person_id=guardian_person_id,
                 child_person_id=child_person_id,
                 status=GuardianAccessStatus.ACTIVE,
@@ -380,10 +380,10 @@ def accept_invitation(
     if person is None:
         raise UnauthorizedError("Nepoznata osoba.")
 
-    _open_membership(db, invitation.organization_id, person.id, invitation.role_code)
+    _open_membership(db, invitation.school_id, person.id, invitation.role_code)
     assignment = _grant_role(
         db,
-        organization_id=invitation.organization_id,
+        school_id=invitation.school_id,
         person_id=person.id,
         role_code=invitation.role_code,
         scope_type=invitation.scope_type,
@@ -394,7 +394,7 @@ def accept_invitation(
     if invitation.type is InvitationType.PARENT and invitation.target_child_person_id:
         _link_guardian(
             db,
-            organization_id=invitation.organization_id,
+            school_id=invitation.school_id,
             guardian_person_id=person.id,
             child_person_id=invitation.target_child_person_id,
         )
@@ -413,7 +413,7 @@ def accept_invitation(
             f"„{person.display_name}“ je prihvatio/la pozivnicu za ulogu "
             f"{invitation.role_code.value}."
         ),
-        organization_id=invitation.organization_id,
+        school_id=invitation.school_id,
         actor_person_id=person.id,
     )
     enqueue(
@@ -422,20 +422,20 @@ def accept_invitation(
         payload={
             "invitation_id": invitation.id,
             "person_id": person.id,
-            "organization_id": invitation.organization_id,
+            "school_id": invitation.school_id,
             "role_assignment_id": assignment.id,
         },
-        organization_id=invitation.organization_id,
+        school_id=invitation.school_id,
     )
     db.commit()
 
-    organization = db.get(Organization, invitation.organization_id)
-    assert organization is not None
+    school = db.get(School, invitation.school_id)
+    assert school is not None
     return AcceptInvitationResponse(
         context=ContextSummary(
             role_assignment_id=assignment.id,
-            organization_id=organization.id,
-            organization_name=organization.name,
+            school_id=school.id,
+            school_name=school.name,
             role_code=assignment.role_code,
             scope_type=assignment.scope_type,
             scope_ref_id=assignment.scope_ref_id,

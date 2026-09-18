@@ -103,9 +103,9 @@ def test_trainer_can_write_parent_cannot(client: TestClient, db: Session) -> Non
     group_id, person_id = _group_with_member(client, manager)
 
     trainer = make_person(db, given="Trener")
-    add_membership(db, person=trainer, organization=manager.organization)
+    add_membership(db, person=trainer, school=manager.school)
     trainer_assign = assign_role(
-        db, person=trainer, organization=manager.organization, role=RoleCode.TRAINER
+        db, person=trainer, school=manager.school, role=RoleCode.TRAINER
     )
     from app.security.auth import DEV_PERSON_HEADER
     from app.security.deps import CONTEXT_HEADER

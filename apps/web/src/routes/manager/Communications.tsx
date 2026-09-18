@@ -104,7 +104,7 @@ export function CommunicationsPage() {
     return {
       title,
       body,
-      target_type: (audience === ALL_AUDIENCE ? "ORGANIZATION" : "GROUP") as "ORGANIZATION" | "GROUP",
+      target_type: (audience === ALL_AUDIENCE ? "SCHOOL" : "GROUP") as "SCHOOL" | "GROUP",
       target_group_id: audience === ALL_AUDIENCE ? null : audience,
     };
   }

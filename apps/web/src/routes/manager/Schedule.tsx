@@ -6,7 +6,7 @@ import type {
   EventItem,
   Group,
   LocationSummary,
-  Organization,
+  School,
   Page,
   PersonSummary,
   SeriesGenerateResult,
@@ -237,7 +237,7 @@ const WEEKDAY_PICKER = [
 
 export function SchedulePage() {
   const { activeContext } = useSession();
-  const org = useAsync(() => api.get<Organization>("/organizations/current"), []);
+  const org = useAsync(() => api.get<School>("/schools/current"), []);
   const groups = useAsync(() => api.get<Page<Group>>("/groups?limit=100"), []);
   const people = useAsync(() => api.get<Page<PersonSummary>>("/people?limit=100"), []);
   const locations = useAsync(() => api.get<Page<LocationSummary>>("/locations?limit=100"), []);
@@ -361,7 +361,7 @@ export function SchedulePage() {
     events.reload();
   }
 
-  const orgName = org.data?.name ?? activeContext?.organization_name ?? "";
+  const orgName = org.data?.name ?? activeContext?.school_name ?? "";
   // The IANA zone id is an implementation detail; a person reads a city name.
   const city = timezoneCity(org.data?.timezone);
 

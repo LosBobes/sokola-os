@@ -62,10 +62,10 @@ def test_session_cancelled_notifies_group_members_and_guardians(
     client: TestClient, db: Session
 ) -> None:
     staff = bootstrap_actor(db)
-    org = staff.organization
-    member = add_actor(db, organization=org, role=RoleCode.STUDENT, given="Marko")
-    guardian = add_actor(db, organization=org, role=RoleCode.PARENT, given="Roditelj")
-    child = make_child_with_guardian(db, organization=org, guardian=guardian.person, given="Dete")
+    org = staff.school
+    member = add_actor(db, school=org, role=RoleCode.STUDENT, given="Marko")
+    guardian = add_actor(db, school=org, role=RoleCode.PARENT, given="Roditelj")
+    child = make_child_with_guardian(db, school=org, guardian=guardian.person, given="Dete")
 
     group_id = _group(client, staff)
     _add_member(client, staff, group_id, member.person.id)
@@ -102,7 +102,7 @@ def test_session_cancelled_notifies_group_members_and_guardians(
 
 def test_session_reactivated_notifies_group(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    member = add_actor(db, organization=staff.organization, role=RoleCode.STUDENT)
+    member = add_actor(db, school=staff.school, role=RoleCode.STUDENT)
     group_id = _group(client, staff)
     _add_member(client, staff, group_id, member.person.id)
     session_id = _schedule_session(client, staff, group_id)
@@ -124,10 +124,10 @@ def test_billing_run_posted_notifies_charged_person_and_guardian(
     client: TestClient, db: Session
 ) -> None:
     staff = bootstrap_actor(db)
-    org = staff.organization
-    member = add_actor(db, organization=org, role=RoleCode.STUDENT, given="Marko")
-    guardian = add_actor(db, organization=org, role=RoleCode.PARENT, given="Roditelj")
-    child = make_child_with_guardian(db, organization=org, guardian=guardian.person, given="Dete")
+    org = staff.school
+    member = add_actor(db, school=org, role=RoleCode.STUDENT, given="Marko")
+    guardian = add_actor(db, school=org, role=RoleCode.PARENT, given="Roditelj")
+    child = make_child_with_guardian(db, school=org, guardian=guardian.person, given="Dete")
 
     group_id = _group(client, staff)
     _add_member(client, staff, group_id, member.person.id)
@@ -159,9 +159,9 @@ def test_billing_run_posted_notifies_charged_person_and_guardian(
 
 def test_event_registration_notifies_registrant_once(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    org = staff.organization
-    parent = add_actor(db, organization=org, role=RoleCode.PARENT, given="Roditelj")
-    child = make_child_with_guardian(db, organization=org, guardian=parent.person, given="Dete")
+    org = staff.school
+    parent = add_actor(db, school=org, role=RoleCode.PARENT, given="Roditelj")
+    child = make_child_with_guardian(db, school=org, guardian=parent.person, given="Dete")
 
     event_id = client.post(
         "/events",
@@ -187,8 +187,8 @@ def test_event_registration_notifies_registrant_once(client: TestClient, db: Ses
 
 def test_inbox_scoped_to_caller_only(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    member_a = add_actor(db, organization=staff.organization, role=RoleCode.STUDENT, given="A")
-    member_b = add_actor(db, organization=staff.organization, role=RoleCode.STUDENT, given="B")
+    member_a = add_actor(db, school=staff.school, role=RoleCode.STUDENT, given="A")
+    member_b = add_actor(db, school=staff.school, role=RoleCode.STUDENT, given="B")
     group_id = _group(client, staff)
     _add_member(client, staff, group_id, member_a.person.id)
     session_id = _schedule_session(client, staff, group_id)
@@ -204,8 +204,8 @@ def test_inbox_scoped_to_caller_only(client: TestClient, db: Session) -> None:
 
 def test_mark_read_is_idempotent_and_scoped(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    member = add_actor(db, organization=staff.organization, role=RoleCode.STUDENT)
-    other = add_actor(db, organization=staff.organization, role=RoleCode.STUDENT, given="Other")
+    member = add_actor(db, school=staff.school, role=RoleCode.STUDENT)
+    other = add_actor(db, school=staff.school, role=RoleCode.STUDENT, given="Other")
     group_id = _group(client, staff)
     _add_member(client, staff, group_id, member.person.id)
     session_id = _schedule_session(client, staff, group_id)
@@ -231,22 +231,22 @@ def test_mark_read_is_idempotent_and_scoped(client: TestClient, db: Session) -> 
 
 
 def test_inbox_is_tenant_isolated(client: TestClient, db: Session) -> None:
-    """The same person can hold role assignments in two organizations; a
+    """The same person can hold role assignments in two schools; a
     notification from org 1 must never surface under the org 2 context."""
     staff1 = bootstrap_actor(db, org_name="Klub 1")
     staff2 = bootstrap_actor(db, org_name="Klub 2")
 
     person = make_person(db, given="Dvostruki")
-    add_membership(db, person=person, organization=staff1.organization)
+    add_membership(db, person=person, school=staff1.school)
     assignment1 = assign_role(
-        db, person=person, organization=staff1.organization, role=RoleCode.STUDENT
+        db, person=person, school=staff1.school, role=RoleCode.STUDENT
     )
-    add_membership(db, person=person, organization=staff2.organization)
+    add_membership(db, person=person, school=staff2.school)
     assignment2 = assign_role(
-        db, person=person, organization=staff2.organization, role=RoleCode.STUDENT
+        db, person=person, school=staff2.school, role=RoleCode.STUDENT
     )
-    actor_org1 = Actor(person=person, organization=staff1.organization, assignment=assignment1)
-    actor_org2 = Actor(person=person, organization=staff2.organization, assignment=assignment2)
+    actor_org1 = Actor(person=person, school=staff1.school, assignment=assignment1)
+    actor_org2 = Actor(person=person, school=staff2.school, assignment=assignment2)
 
     group_id = _group(client, staff1)
     _add_member(client, staff1, group_id, person.id)

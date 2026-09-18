@@ -32,7 +32,7 @@ def _send(
     type: str = "STAFF",
     target_email: str = "novi@primer.rs",
     role_code: str | None = "MANAGER",
-    scope_type: str = "ORGANIZATION",
+    scope_type: str = "SCHOOL",
     scope_ref_id: str | None = None,
     granted_areas: list[str] | None = None,
     target_child_person_id: str | None = None,
@@ -93,7 +93,7 @@ def test_accept_invitation_as_new_person_grants_context(
     resp = client.post("/invitations/accept", headers=headers, json={"token": created["token"]})
     assert resp.status_code == 200, resp.text
     ctx = resp.json()["context"]
-    assert ctx["organization_id"] == staff.organization.id
+    assert ctx["school_id"] == staff.school.id
     assert ctx["role_code"] == "TRAINER"
 
     # /me/contexts now lists it, and the new context actually works.
@@ -122,8 +122,8 @@ def test_accept_invitation_as_existing_person_adds_second_context(
     assert resp.status_code == 200, resp.text
 
     contexts = client.get("/me/contexts", headers=headers).json()
-    org_ids = {c["organization_id"] for c in contexts}
-    assert {other_org.organization.id, new_org.organization.id} <= org_ids
+    org_ids = {c["school_id"] for c in contexts}
+    assert {other_org.school.id, new_org.school.id} <= org_ids
 
 
 # ---------------------------------------------------------------------------
@@ -238,10 +238,10 @@ def test_parent_invitation_links_guardian_to_specific_child(
 ) -> None:
     staff = bootstrap_actor(db)
     existing_guardian = add_actor(
-        db, organization=staff.organization, role=RoleCode.PARENT, given="Prvi"
+        db, school=staff.school, role=RoleCode.PARENT, given="Prvi"
     )
     child = make_child_with_guardian(
-        db, organization=staff.organization, guardian=existing_guardian.person, given="Dete"
+        db, school=staff.school, guardian=existing_guardian.person, given="Dete"
     )
 
     created = _send(
@@ -283,7 +283,7 @@ def test_parent_invitation_requires_a_child_in_this_school(
         json={
             "type": "PARENT",
             "target_email": "roditelj@primer.rs",
-            "scope_type": "ORGANIZATION",
+            "scope_type": "SCHOOL",
             "target_child_person_id": "per_ne_postoji",
         },
     )
@@ -344,9 +344,9 @@ def test_owner_role_cannot_be_scoped_to_a_group(client: TestClient, db: Session)
 
 def test_only_roles_area_can_send_invitations(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    trainer = add_actor(db, organization=staff.organization, role=RoleCode.TRAINER, given="Trener")
+    trainer = add_actor(db, school=staff.school, role=RoleCode.TRAINER, given="Trener")
     finance_only = add_actor(
-        db, organization=staff.organization, role=RoleCode.ADMIN, given="Finansije",
+        db, school=staff.school, role=RoleCode.ADMIN, given="Finansije",
         granted_areas=["BILLING"],
     )
 
@@ -358,7 +358,7 @@ def test_only_roles_area_can_send_invitations(client: TestClient, db: Session) -
                 "type": "STAFF",
                 "target_email": "x@primer.rs",
                 "role_code": "MANAGER",
-                "scope_type": "ORGANIZATION",
+                "scope_type": "SCHOOL",
             },
         )
         assert resp.status_code == 403

@@ -12,9 +12,9 @@ from app.common.columns import enum_type
 from app.common.enums import AuditDataClass
 from app.common.ids import new_id
 
-# Entries whose organization is NULL (platform-level events with no tenant) still
+# Entries whose school is NULL (platform-level events with no tenant) still
 # need a chain to belong to, so they get this reserved key. It cannot collide with
-# a real organization id, which is always ``org_<ulid>``.
+# a real school id, which is always ``org_<ulid>``.
 SYSTEM_CHAIN_KEY = "__system__"
 
 
@@ -40,7 +40,7 @@ class AuditLog(Base, TimestampMixin):
 
     __tablename__ = "audit_log"
     __table_args__ = (
-        Index("ix_audit_org_created", "organization_id", "created_at"),
+        Index("ix_audit_school_created", "school_id", "created_at"),
         Index("ix_audit_entity", "entity_type", "entity_id"),
         # One sequence number per chain, which is also what makes a silently
         # re-inserted "replacement" entry impossible to hide.
@@ -48,7 +48,7 @@ class AuditLog(Base, TimestampMixin):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("aud"))
-    organization_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    school_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     actor_person_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     data_class: Mapped[AuditDataClass] = mapped_column(enum_type(AuditDataClass), nullable=False)

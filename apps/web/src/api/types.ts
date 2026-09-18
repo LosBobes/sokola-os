@@ -8,8 +8,8 @@ export type RoleCode = "OWNER" | "MANAGER" | "ADMIN" | "TRAINER" | "PARENT" | "S
 
 export interface Context {
   role_assignment_id: string;
-  organization_id: string;
-  organization_name: string;
+  school_id: string;
+  school_name: string;
   role_code: RoleCode;
   scope_type: string;
   scope_ref_id: string | null;
@@ -22,7 +22,7 @@ export interface Me {
   contexts: Context[];
 }
 
-export interface Organization {
+export interface School {
   id: string;
   name: string;
   slug: string | null;
@@ -49,7 +49,7 @@ export interface LocationSummary {
 }
 
 export interface TenantPublic {
-  organization_id: string;
+  school_id: string;
   name: string;
   slug: string;
 }

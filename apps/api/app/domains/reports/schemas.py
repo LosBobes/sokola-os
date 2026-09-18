@@ -8,7 +8,7 @@ from app.common.money import MoneyAmount
 
 
 class OverviewReport(BaseModel):
-    """Business dashboard: a snapshot of the organization's health right now,
+    """Business dashboard: a snapshot of the school's health right now,
     plus this-calendar-month billing and a recent attendance window."""
 
     period_start: dt.date
