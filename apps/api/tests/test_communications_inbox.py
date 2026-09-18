@@ -135,7 +135,7 @@ def test_billing_run_posted_notifies_charged_person_and_guardian(
 
     run_body = {
         "group_id": group_id,
-        "amount_minor": 100000,
+        "amount": 100000,
         "description": "Članarina",
         "period_label": "2026-09",
     }

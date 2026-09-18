@@ -213,7 +213,7 @@ def main() -> None:
             headers=owner_headers,
             json={
                 "group_id": group_id,
-                "amount_minor": 300000,
+                "amount": 300000,
                 "description": f"Članarina · {group_name}",
                 "period_label": "Jul 2026",
             },
@@ -226,7 +226,7 @@ def main() -> None:
             headers=owner_headers,
             json={
                 "group_id": group_id,
-                "amount_minor": 300000,
+                "amount": 300000,
                 "description": f"Članarina · {group_name}",
                 "period_label": "Jul 2026",
                 "preview_hash": pv["preview_hash"],
@@ -242,7 +242,7 @@ def main() -> None:
         resp = client.post(
             f"/charges/{first['id']}/payments",
             headers=owner_headers,
-            json={"amount_minor": 100000, "method": "CASH"},
+            json={"amount": 100000, "method": "CASH"},
         )
         if resp.status_code != 201:
             die(f"record payment: {resp.status_code} {resp.text}")

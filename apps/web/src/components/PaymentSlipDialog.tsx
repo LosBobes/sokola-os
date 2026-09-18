@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import type { PaymentSlip } from "../api/types";
 import { useAsync } from "../hooks/useAsync";
 import { formatDate } from "../lib/format";
-import { formatMinor } from "../lib/money";
+import { formatAmount } from "../lib/money";
 import { InlineNotice, LoadingState, SystemState } from "./ui";
 import "./payment-slip.css";
 
@@ -140,7 +140,7 @@ export function PaymentSlipDialog({
             <SlipRow label="Uplatilac" value={slip.data.payer_name || "-"} />
             <SlipRow
               label="Iznos"
-              value={formatMinor(slip.data.amount_minor, slip.data.currency)}
+              value={formatAmount(slip.data.amount, slip.data.currency)}
             />
             <SlipRow label="Svrha uplate" value={slip.data.purpose} />
             <SlipRow label="Šifra plaćanja" value={slip.data.payment_code} />

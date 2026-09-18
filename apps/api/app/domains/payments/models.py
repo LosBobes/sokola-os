@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, Integer, String
+from decimal import Decimal
+
+from sqlalchemy import ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, TimestampMixin
@@ -23,7 +25,7 @@ class PaymentRecord(Base, TimestampMixin):
     charge_id: Mapped[str] = mapped_column(
         ForeignKey("charge.id", ondelete="CASCADE"), nullable=False
     )
-    amount_minor: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     method: Mapped[PaymentMethod] = mapped_column(enum_type(PaymentMethod), nullable=False)
     status: Mapped[PaymentRecordStatus] = mapped_column(

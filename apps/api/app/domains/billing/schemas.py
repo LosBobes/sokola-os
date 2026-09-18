@@ -4,15 +4,16 @@ import datetime as dt
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.common.money import MoneyAmount
 from app.domains.billing.enums import ChargeCancellationReasonCode, ChargeStatus
 
 
 class BillingPreviewRequest(BaseModel):
     group_id: str
     # Explicit override, applied to every member. Omit to derive each member's
-    # amount from Group.base_monthly_price_minor minus GroupMembership.
-    # discount_minor (floored at 0), the normal, pricing-driven path.
-    amount_minor: int | None = Field(default=None, gt=0)
+    # amount from Group.base_monthly_price minus GroupMembership.
+    # discount (floored at 0), the normal, pricing-driven path.
+    amount: MoneyAmount | None = Field(default=None, gt=0)
     description: str = Field(min_length=1, max_length=200)
     period_label: str = Field(min_length=1, max_length=40)
     # When these charges fall due. Omit and it is derived from ``period_label``
@@ -25,13 +26,13 @@ class BillingPreviewRequest(BaseModel):
 class BillingPreviewItem(BaseModel):
     person_id: str
     display_name: str
-    amount_minor: int
+    amount: MoneyAmount
 
 
 class BillingPreviewResponse(BaseModel):
     preview_hash: str
     currency: str
-    total_minor: int
+    total: MoneyAmount
     items: list[BillingPreviewItem]
 
 
@@ -48,7 +49,7 @@ class BillingRunResponse(BaseModel):
     description: str
     period_label: str
     currency: str
-    total_minor: int
+    total: MoneyAmount
     charge_count: int
 
 
@@ -59,8 +60,8 @@ class ChargeResponse(BaseModel):
     person_id: str
     description: str
     currency: str
-    amount_due_minor: int
-    amount_paid_minor: int
+    amount_due: MoneyAmount
+    amount_paid: MoneyAmount
     due_date: dt.date | None = None
     payment_reference: str | None = None
     status: ChargeStatus
@@ -80,7 +81,7 @@ class PersonDebtItem(BaseModel):
     person_id: str
     display_name: str
     currency: str
-    outstanding_minor: int
+    outstanding: MoneyAmount
     open_charge_count: int
 
 
@@ -88,7 +89,7 @@ class DebtSummaryResponse(BaseModel):
     """Org-wide roll-up of :class:`PersonDebtItem`, the "dugovanja" total."""
 
     currency: str
-    total_outstanding_minor: int
+    total_outstanding: MoneyAmount
     people_with_debt: int
 
 
@@ -109,7 +110,7 @@ class PaymentSlipResponse(BaseModel):
     account_number: str
     payer_name: str
     currency: str
-    amount_minor: int
+    amount: MoneyAmount
     purpose: str
     payment_code: str
     reference_number: str

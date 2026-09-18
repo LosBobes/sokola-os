@@ -47,9 +47,9 @@ def active_group_members_with_discount(
 ) -> list[tuple[Person, int]]:
     """Same roster as :func:`active_group_people`, paired with each member's
     per-membership discount, the pricing source for :func:`billing.service.
-    _compute` when no explicit ``amount_minor`` override is supplied."""
+    _compute` when no explicit ``amount`` override is supplied."""
     stmt = (
-        select(Person, GroupMembership.discount_minor)
+        select(Person, GroupMembership.discount)
         .join(GroupMembership, GroupMembership.person_id == Person.id)
         .where(
             GroupMembership.group_id == group_id,
@@ -99,19 +99,19 @@ def list_charges(
 
 # ---------------------------------------------------------------------------
 # Debts / dugovanja, aggregated outstanding balance. A charge's own
-# ``amount_due_minor - amount_paid_minor`` is never negative (payments are
+# ``amount_due - amount_paid`` is never negative (payments are
 # rejected past the outstanding balance), and CANCELLED charges never owe
 # anything, so both queries below simply exclude CANCELLED and sum the rest.
 # ---------------------------------------------------------------------------
 
-_OUTSTANDING = Charge.amount_due_minor - Charge.amount_paid_minor
+_OUTSTANDING = Charge.amount_due - Charge.amount_paid
 
 
 def person_debts(
     db: Session, organization_id: str, params: PageParams
 ) -> tuple[list[tuple[str, str, str, int, int]], int]:
     """Per-person outstanding balance, grouped by (person, currency), worst
-    debtor first. Rows: (person_id, display_name, currency, outstanding_minor,
+    debtor first. Rows: (person_id, display_name, currency, outstanding,
     open_charge_count)."""
     base = (
         select(
@@ -139,14 +139,14 @@ def person_debts(
 
 
 def debt_summary(db: Session, organization_id: str) -> tuple[int, int]:
-    """Org-wide (total_outstanding_minor, people_with_debt)."""
+    """Org-wide (total_outstanding, people_with_debt)."""
     stmt = select(func.sum(_OUTSTANDING), func.count(func.distinct(Charge.person_id))).where(
         Charge.organization_id == organization_id,
         Charge.status != ChargeStatus.CANCELLED,
         _OUTSTANDING > 0,
     )
-    total_minor, people = db.execute(stmt).one()
-    return int(total_minor or 0), int(people or 0)
+    total, people = db.execute(stmt).one()
+    return int(total or 0), int(people or 0)
 
 
 def get_organization(db: Session, organization_id: str) -> Organization | None:

@@ -14,7 +14,7 @@ def _one_charge(client: TestClient, actor: Actor) -> str:
     client.post(f"/groups/{group_id}/members", headers=actor.headers, json={"person_id": pid})
     body = {
         "group_id": group_id,
-        "amount_minor": 300000,
+        "amount": "3000.00",
         "description": "Članarina",
         "period_label": "2026-09",
     }
@@ -34,7 +34,7 @@ def test_record_payment_journey6(client: TestClient, db: Session) -> None:
     partial = client.post(
         f"/charges/{charge_id}/payments",
         headers=actor.headers,
-        json={"amount_minor": 100000, "method": "CASH"},
+        json={"amount": "1000.00", "method": "CASH"},
     )
     assert partial.status_code == 201
     assert partial.json()["charge_status"] == "PARTIALLY_PAID"
@@ -42,10 +42,10 @@ def test_record_payment_journey6(client: TestClient, db: Session) -> None:
     rest = client.post(
         f"/charges/{charge_id}/payments",
         headers=actor.headers,
-        json={"amount_minor": 200000, "method": "BANK_TRANSFER"},
+        json={"amount": "2000.00", "method": "BANK_TRANSFER"},
     )
     assert rest.json()["charge_status"] == "PAID"
-    assert rest.json()["charge_amount_paid_minor"] == 300000
+    assert rest.json()["charge_amount_paid"] == "3000.00"
 
 
 def test_overpayment_and_double_settlement_are_refused(client: TestClient, db: Session) -> None:
@@ -55,7 +55,7 @@ def test_overpayment_and_double_settlement_are_refused(client: TestClient, db: S
     over = client.post(
         f"/charges/{charge_id}/payments",
         headers=actor.headers,
-        json={"amount_minor": 400000, "method": "CASH"},
+        json={"amount": "4000.00", "method": "CASH"},
     )
     assert over.status_code == 409
     assert over.json()["error"]["details"]["code"] == "OVERPAYMENT"
@@ -63,12 +63,12 @@ def test_overpayment_and_double_settlement_are_refused(client: TestClient, db: S
     client.post(
         f"/charges/{charge_id}/payments",
         headers=actor.headers,
-        json={"amount_minor": 300000, "method": "CASH"},
+        json={"amount": "3000.00", "method": "CASH"},
     )
     already = client.post(
         f"/charges/{charge_id}/payments",
         headers=actor.headers,
-        json={"amount_minor": 1, "method": "CASH"},
+        json={"amount": "0.01", "method": "CASH"},
     )
     assert already.status_code == 409
 
@@ -77,7 +77,7 @@ def test_payment_is_idempotent(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db)
     charge_id = _one_charge(client, actor)
     headers = {**actor.headers, "Idempotency-Key": "pay-key-1"}
-    payload = {"amount_minor": 100000, "method": "CASH"}
+    payload = {"amount": "1000.00", "method": "CASH"}
 
     first = client.post(f"/charges/{charge_id}/payments", headers=headers, json=payload)
     second = client.post(f"/charges/{charge_id}/payments", headers=headers, json=payload)
@@ -85,11 +85,11 @@ def test_payment_is_idempotent(client: TestClient, db: Session) -> None:
     # Applied once, not twice.
     items = client.get("/charges", headers=actor.headers).json()["items"]
     charge = next(c for c in items if c["id"] == charge_id)
-    assert charge["amount_paid_minor"] == 100000
+    assert charge["amount_paid"] == "1000.00"
 
 
 # ---------------------------------------------------------------------------
-# P2, payment void/refund: reverses amount_paid_minor and recomputes status.
+# P2, payment void/refund: reverses amount_paid and recomputes status.
 # ---------------------------------------------------------------------------
 
 
@@ -99,7 +99,7 @@ def test_void_partial_payment_reverses_amount_paid(client: TestClient, db: Sessi
     payment = client.post(
         f"/charges/{charge_id}/payments",
         headers=actor.headers,
-        json={"amount_minor": 100000, "method": "CASH"},
+        json={"amount": "1000.00", "method": "CASH"},
     ).json()
     assert payment["charge_status"] == "PARTIALLY_PAID"
 
@@ -108,12 +108,12 @@ def test_void_partial_payment_reverses_amount_paid(client: TestClient, db: Sessi
     )
     assert voided.status_code == 200
     assert voided.json()["status"] == "VOIDED"
-    assert voided.json()["charge_amount_paid_minor"] == 0
+    assert voided.json()["charge_amount_paid"] == "0.00"
     assert voided.json()["charge_status"] == "OPEN"
 
     items = client.get("/charges", headers=actor.headers).json()["items"]
     charge = next(c for c in items if c["id"] == charge_id)
-    assert charge["amount_paid_minor"] == 0
+    assert charge["amount_paid"] == "0.00"
     assert charge["status"] == "OPEN"
 
 
@@ -125,7 +125,7 @@ def test_void_full_payment_reopens_charge_and_allows_repayment(
     payment = client.post(
         f"/charges/{charge_id}/payments",
         headers=actor.headers,
-        json={"amount_minor": 300000, "method": "CASH"},
+        json={"amount": "3000.00", "method": "CASH"},
     ).json()
     assert payment["charge_status"] == "PAID"
 
@@ -133,13 +133,13 @@ def test_void_full_payment_reopens_charge_and_allows_repayment(
         f"/payments/{payment['id']}/void", headers=actor.headers, json={"reason": "REFUNDED"}
     )
     assert voided.json()["charge_status"] == "OPEN"
-    assert voided.json()["charge_amount_paid_minor"] == 0
+    assert voided.json()["charge_amount_paid"] == "0.00"
 
     # The charge accepts a fresh payment again now that it's reopened.
     again = client.post(
         f"/charges/{charge_id}/payments",
         headers=actor.headers,
-        json={"amount_minor": 300000, "method": "CASH"},
+        json={"amount": "3000.00", "method": "CASH"},
     )
     assert again.status_code == 201
     assert again.json()["charge_status"] == "PAID"
@@ -151,7 +151,7 @@ def test_void_already_voided_payment_is_refused(client: TestClient, db: Session)
     payment = client.post(
         f"/charges/{charge_id}/payments",
         headers=actor.headers,
-        json={"amount_minor": 100000, "method": "CASH"},
+        json={"amount": "1000.00", "method": "CASH"},
     ).json()
 
     first = client.post(
@@ -170,7 +170,7 @@ def test_void_is_idempotent(client: TestClient, db: Session) -> None:
     payment = client.post(
         f"/charges/{charge_id}/payments",
         headers=actor.headers,
-        json={"amount_minor": 100000, "method": "CASH"},
+        json={"amount": "1000.00", "method": "CASH"},
     ).json()
     headers = {**actor.headers, "Idempotency-Key": "void-key-1"}
 

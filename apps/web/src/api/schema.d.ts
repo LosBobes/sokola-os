@@ -2198,8 +2198,8 @@ export interface components {
         };
         /** BillingPreviewItem */
         BillingPreviewItem: {
-            /** Amount Minor */
-            amount_minor: number;
+            /** Amount */
+            amount: string;
             /** Display Name */
             display_name: string;
             /** Person Id */
@@ -2207,8 +2207,8 @@ export interface components {
         };
         /** BillingPreviewRequest */
         BillingPreviewRequest: {
-            /** Amount Minor */
-            amount_minor?: number | null;
+            /** Amount */
+            amount?: (number | string) | null;
             /** Description */
             description: string;
             /** Due Date */
@@ -2226,8 +2226,8 @@ export interface components {
             items: components["schemas"]["BillingPreviewItem"][];
             /** Preview Hash */
             preview_hash: string;
-            /** Total Minor */
-            total_minor: number;
+            /** Total */
+            total: string;
         };
         /** BillingRunResponse */
         BillingRunResponse: {
@@ -2241,8 +2241,8 @@ export interface components {
             id: string;
             /** Period Label */
             period_label: string;
-            /** Total Minor */
-            total_minor: number;
+            /** Total */
+            total: string;
         };
         /** Body_createImportUpload */
         Body_createImportUpload: {
@@ -2282,10 +2282,10 @@ export interface components {
         ChargeCancellationReasonCode: "WAIVED" | "ERROR" | "DUPLICATE" | "OTHER";
         /** ChargeResponse */
         ChargeResponse: {
-            /** Amount Due Minor */
-            amount_due_minor: number;
-            /** Amount Paid Minor */
-            amount_paid_minor: number;
+            /** Amount Due */
+            amount_due: string;
+            /** Amount Paid */
+            amount_paid: string;
             cancellation_reason?: components["schemas"]["ChargeCancellationReasonCode"] | null;
             /** Currency */
             currency: string;
@@ -2413,8 +2413,8 @@ export interface components {
         };
         /** CreateGroupRequest */
         CreateGroupRequest: {
-            /** Base Monthly Price Minor */
-            base_monthly_price_minor?: number | null;
+            /** Base Monthly Price */
+            base_monthly_price?: (number | string) | null;
             /** Capacity */
             capacity?: number | null;
             /** @default UNLIMITED */
@@ -2546,8 +2546,8 @@ export interface components {
             currency: string;
             /** People With Debt */
             people_with_debt: number;
-            /** Total Outstanding Minor */
-            total_outstanding_minor: number;
+            /** Total Outstanding */
+            total_outstanding: string;
         };
         /**
          * DecideDsarRequest
@@ -2724,10 +2724,10 @@ export interface components {
          *     balance, not something that happened "in" the range).
          */
         FinancialReport: {
-            /** Billed Total Minor */
-            billed_total_minor: number;
-            /** Collected Total Minor */
-            collected_total_minor: number;
+            /** Billed Total */
+            billed_total: string;
+            /** Collected Total */
+            collected_total: string;
             /** Currency */
             currency: string;
             /**
@@ -2742,8 +2742,8 @@ export interface components {
             date_to: string;
             /** Outstanding By Status */
             outstanding_by_status: components["schemas"]["OutstandingByStatus"][];
-            /** Outstanding Debt Total Minor */
-            outstanding_debt_total_minor: number;
+            /** Outstanding Debt Total */
+            outstanding_debt_total: string;
         };
         /**
          * GroupCapacityMode
@@ -2752,8 +2752,8 @@ export interface components {
         GroupCapacityMode: "UNLIMITED" | "LIMITED";
         /** GroupMemberResponse */
         GroupMemberResponse: {
-            /** Discount Minor */
-            discount_minor: number;
+            /** Discount */
+            discount: string;
             /** Display Name */
             display_name: string;
             end_reason: components["schemas"]["GroupMembershipEndReason"] | null;
@@ -2811,8 +2811,8 @@ export interface components {
         };
         /** GroupResponse */
         GroupResponse: {
-            /** Base Monthly Price Minor */
-            base_monthly_price_minor: number | null;
+            /** Base Monthly Price */
+            base_monthly_price: string | null;
             /** Capacity */
             capacity: number | null;
             capacity_mode: components["schemas"]["GroupCapacityMode"];
@@ -3285,8 +3285,8 @@ export interface components {
         OutstandingByStatus: {
             /** Charge Count */
             charge_count: number;
-            /** Outstanding Minor */
-            outstanding_minor: number;
+            /** Outstanding */
+            outstanding: string;
             /** Status */
             status: string;
         };
@@ -3306,14 +3306,14 @@ export interface components {
             attendance_recorded_count: number;
             /** Attendance Window Days */
             attendance_window_days: number;
-            /** Billed Total Minor */
-            billed_total_minor: number;
-            /** Collected Total Minor */
-            collected_total_minor: number;
+            /** Billed Total */
+            billed_total: string;
+            /** Collected Total */
+            collected_total: string;
             /** Currency */
             currency: string;
-            /** Outstanding Debt Total Minor */
-            outstanding_debt_total_minor: number;
+            /** Outstanding Debt Total */
+            outstanding_debt_total: string;
             /**
              * Period End
              * Format: date
@@ -3538,12 +3538,12 @@ export interface components {
         PaymentRecordStatus: "RECORDED" | "VOIDED";
         /** PaymentResponse */
         PaymentResponse: {
-            /** Amount Minor */
-            amount_minor: number;
-            /** Charge Amount Due Minor */
-            charge_amount_due_minor: number;
-            /** Charge Amount Paid Minor */
-            charge_amount_paid_minor: number;
+            /** Amount */
+            amount: string;
+            /** Charge Amount Due */
+            charge_amount_due: string;
+            /** Charge Amount Paid */
+            charge_amount_paid: string;
             /** Charge Id */
             charge_id: string;
             charge_status: components["schemas"]["ChargeStatus"];
@@ -3567,8 +3567,8 @@ export interface components {
         PaymentSlipResponse: {
             /** Account Number */
             account_number: string;
-            /** Amount Minor */
-            amount_minor: number;
+            /** Amount */
+            amount: string;
             /** Charge Id */
             charge_id: string;
             /** Currency */
@@ -3609,8 +3609,8 @@ export interface components {
             display_name: string;
             /** Open Charge Count */
             open_charge_count: number;
-            /** Outstanding Minor */
-            outstanding_minor: number;
+            /** Outstanding */
+            outstanding: string;
             /** Person Id */
             person_id: string;
         };
@@ -3651,8 +3651,8 @@ export interface components {
         };
         /** PostBillingRunRequest */
         PostBillingRunRequest: {
-            /** Amount Minor */
-            amount_minor?: number | null;
+            /** Amount */
+            amount?: (number | string) | null;
             /** Description */
             description: string;
             /** Due Date */
@@ -3739,8 +3739,8 @@ export interface components {
         };
         /** RecordPaymentRequest */
         RecordPaymentRequest: {
-            /** Amount Minor */
-            amount_minor: number;
+            /** Amount */
+            amount: number | string;
             method: components["schemas"]["PaymentMethod"];
         };
         /**
@@ -4131,12 +4131,12 @@ export interface components {
         /**
          * SetMembershipDiscountRequest
          * @description Absolute discount in minor currency units against the group's
-         *     ``base_monthly_price_minor``, see :class:`app.domains.groups.models.
+         *     ``base_monthly_price``, see :class:`app.domains.groups.models.
          *     GroupMembership` for why this is absolute rather than a percentage.
          */
         SetMembershipDiscountRequest: {
-            /** Discount Minor */
-            discount_minor: number;
+            /** Discount */
+            discount: number | string;
         };
         /** SkippedOccurrence */
         SkippedOccurrence: {
@@ -4224,8 +4224,8 @@ export interface components {
          *     defaults are copied onto a session at create time, never read through.
          */
         UpdateGroupRequest: {
-            /** Base Monthly Price Minor */
-            base_monthly_price_minor?: number | null;
+            /** Base Monthly Price */
+            base_monthly_price?: (number | string) | null;
             /** Default Location Id */
             default_location_id?: string | null;
             /** Default Trainer Person Id */

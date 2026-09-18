@@ -4,6 +4,8 @@ import datetime as dt
 
 from pydantic import BaseModel
 
+from app.common.money import MoneyAmount
+
 
 class OverviewReport(BaseModel):
     """Business dashboard: a snapshot of the organization's health right now,
@@ -13,9 +15,9 @@ class OverviewReport(BaseModel):
     period_end: dt.date
     currency: str
     active_member_count: int
-    billed_total_minor: int
-    collected_total_minor: int
-    outstanding_debt_total_minor: int
+    billed_total: MoneyAmount
+    collected_total: MoneyAmount
+    outstanding_debt_total: MoneyAmount
     attendance_window_days: int
     attendance_recorded_count: int
     attendance_present_count: int
@@ -25,7 +27,7 @@ class OverviewReport(BaseModel):
 class OutstandingByStatus(BaseModel):
     status: str
     charge_count: int
-    outstanding_minor: int
+    outstanding: MoneyAmount
 
 
 class FinancialReport(BaseModel):
@@ -36,9 +38,9 @@ class FinancialReport(BaseModel):
     date_from: dt.date
     date_to: dt.date
     currency: str
-    billed_total_minor: int
-    collected_total_minor: int
-    outstanding_debt_total_minor: int
+    billed_total: MoneyAmount
+    collected_total: MoneyAmount
+    outstanding_debt_total: MoneyAmount
     outstanding_by_status: list[OutstandingByStatus]
 
 

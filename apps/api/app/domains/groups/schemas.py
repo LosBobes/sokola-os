@@ -4,6 +4,7 @@ import datetime as dt
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.common.money import MoneyAmount
 from app.domains.groups.enums import (
     GroupCapacityMode,
     GroupMemberRole,
@@ -18,7 +19,7 @@ class CreateGroupRequest(BaseModel):
     capacity: int | None = Field(default=None, ge=1)
     program_id: str | None = None
     location_id: str | None = None
-    base_monthly_price_minor: int | None = Field(default=None, ge=0)
+    base_monthly_price: MoneyAmount | None = Field(default=None, ge=0)
     default_trainer_person_id: str | None = None
     default_location_id: str | None = None
 
@@ -42,7 +43,7 @@ class UpdateGroupRequest(BaseModel):
 
     program_id: str | None = None
     location_id: str | None = None
-    base_monthly_price_minor: int | None = Field(default=None, ge=0)
+    base_monthly_price: MoneyAmount | None = Field(default=None, ge=0)
     default_trainer_person_id: str | None = None
     default_location_id: str | None = None
 
@@ -56,7 +57,7 @@ class GroupResponse(BaseModel):
     capacity: int | None
     program_id: str | None
     location_id: str | None
-    base_monthly_price_minor: int | None
+    base_monthly_price: MoneyAmount | None
     default_trainer_person_id: str | None
     default_location_id: str | None
 
@@ -79,7 +80,7 @@ class GroupMemberResponse(BaseModel):
     display_name: str
     role: GroupMemberRole
     status: GroupMembershipStatus
-    discount_minor: int
+    discount: MoneyAmount
     joined_at: dt.datetime
     ended_at: dt.datetime | None
     end_reason: GroupMembershipEndReason | None
@@ -98,7 +99,7 @@ class EndGroupMembershipRequest(BaseModel):
 
 class SetMembershipDiscountRequest(BaseModel):
     """Absolute discount in minor currency units against the group's
-    ``base_monthly_price_minor``, see :class:`app.domains.groups.models.
+    ``base_monthly_price``, see :class:`app.domains.groups.models.
     GroupMembership` for why this is absolute rather than a percentage."""
 
-    discount_minor: int = Field(ge=0)
+    discount: MoneyAmount = Field(ge=0)

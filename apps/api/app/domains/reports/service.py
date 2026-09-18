@@ -91,13 +91,13 @@ def overview(db: Session, context: RequestContext) -> OverviewReport:
         period_end=now.date(),
         currency=get_settings().default_currency,
         active_member_count=repository.active_member_count(db, context.organization_id),
-        billed_total_minor=repository.billed_total_minor(
+        billed_total=repository.billed_total(
             db, context.organization_id, period_start, period_end_exclusive
         ),
-        collected_total_minor=repository.collected_total_minor(
+        collected_total=repository.collected_total(
             db, context.organization_id, period_start, period_end_exclusive
         ),
-        outstanding_debt_total_minor=repository.outstanding_debt_total_minor(
+        outstanding_debt_total=repository.outstanding_debt_total(
             db, context.organization_id
         ),
         attendance_window_days=_OVERVIEW_ATTENDANCE_WINDOW_DAYS,
@@ -113,7 +113,7 @@ def financial_report(
     start, end = _day_bounds(date_from, date_to)
     breakdown = [
         OutstandingByStatus(
-            status=status.value, charge_count=count, outstanding_minor=outstanding
+            status=status.value, charge_count=count, outstanding=outstanding
         )
         for status, count, outstanding in repository.outstanding_by_status(
             db, context.organization_id
@@ -123,13 +123,13 @@ def financial_report(
         date_from=date_from,
         date_to=date_to,
         currency=get_settings().default_currency,
-        billed_total_minor=repository.billed_total_minor(
+        billed_total=repository.billed_total(
             db, context.organization_id, start, end
         ),
-        collected_total_minor=repository.collected_total_minor(
+        collected_total=repository.collected_total(
             db, context.organization_id, start, end
         ),
-        outstanding_debt_total_minor=repository.outstanding_debt_total_minor(
+        outstanding_debt_total=repository.outstanding_debt_total(
             db, context.organization_id
         ),
         outstanding_by_status=breakdown,

@@ -19,7 +19,7 @@ import {
 import { PaymentSlipDialog } from "../../components/PaymentSlipDialog";
 import { useAsync } from "../../hooks/useAsync";
 import { formatDate, formatPeriodLabel, isPastDue, toPeriodLabel } from "../../lib/format";
-import { formatMinor } from "../../lib/money";
+import { amountFromInput, formatAmount, formatMinor, fromMinor, toMinor } from "../../lib/money";
 import "./Money.css";
 
 /*
@@ -132,9 +132,9 @@ export function MoneyPage() {
     const debtors = new Set<string>();
     for (const c of items) {
       if (c.status === "CANCELLED") continue;
-      totalDue += c.amount_due_minor;
-      totalPaid += c.amount_paid_minor;
-      const rest = c.amount_due_minor - c.amount_paid_minor;
+      totalDue += toMinor(c.amount_due);
+      totalPaid += toMinor(c.amount_paid);
+      const rest = toMinor(c.amount_due) - toMinor(c.amount_paid);
       if (rest > 0) {
         outstanding += rest;
         debtors.add(c.person_id);
@@ -229,7 +229,7 @@ export function MoneyPage() {
 
 function BillingRunForm({ groups, onPosted }: { groups: Group[]; onPosted: () => void }) {
   const [groupId, setGroupId] = useState("");
-  const [amountMajor, setAmountMajor] = useState(3000);
+  const [amountInput, setAmountInput] = useState("3000,00");
   const [description, setDescription] = useState("Članarina");
   const [period, setPeriod] = useState(() => toPeriodLabel(new Date()));
   const [dueDate, setDueDate] = useState("");
@@ -240,7 +240,7 @@ function BillingRunForm({ groups, onPosted }: { groups: Group[]; onPosted: () =>
   function body() {
     return {
       group_id: groupId,
-      amount_minor: Math.round(amountMajor * 100),
+      amount: amountFromInput(amountInput),
       description,
       period_label: period,
       // Omitted (not null) when left blank, so the server derives it from the
@@ -307,10 +307,10 @@ function BillingRunForm({ groups, onPosted }: { groups: Group[]; onPosted: () =>
           <label htmlFor="b-amount">Iznos po članu (RSD)</label>
           <input
             id="b-amount"
-            type="number"
-            min={1}
-            value={amountMajor}
-            onChange={(e) => setAmountMajor(Number(e.target.value))}
+            type="text"
+            inputMode="decimal"
+            value={amountInput}
+            onChange={(e) => setAmountInput(e.target.value)}
             data-cy="billing-amount"
           />
         </div>
@@ -364,7 +364,7 @@ function BillingRunForm({ groups, onPosted }: { groups: Group[]; onPosted: () =>
       >
         <p data-cy="billing-preview-summary">
           Biće kreirano <strong>{preview?.items.length ?? 0}</strong> zaduženja, ukupno{" "}
-          <strong>{preview ? formatMinor(preview.total_minor, preview.currency) : ""}</strong>.
+          <strong>{preview ? formatAmount(preview.total, preview.currency) : ""}</strong>.
         </p>
       </ConfirmDialog>
     </Card>
@@ -412,7 +412,7 @@ function ChargeList({
           </thead>
           <tbody>
             {items.map((c) => {
-              const remaining = c.amount_due_minor - c.amount_paid_minor;
+              const remaining = toMinor(c.amount_due) - toMinor(c.amount_paid);
               const status = chargeStatusView(c);
               const settled = c.status === "PAID" || c.status === "CANCELLED";
               return (
@@ -425,10 +425,10 @@ function ChargeList({
                   <td data-label="Opis">{c.description}</td>
                   <td data-label="Dospeva">{c.due_date ? formatDate(c.due_date) : "-"}</td>
                   <td className="money-amount" data-label="Dug">
-                    {formatMinor(c.amount_due_minor, c.currency)}
+                    {formatAmount(c.amount_due, c.currency)}
                   </td>
                   <td className="money-amount" data-label="Plaćeno">
-                    {formatMinor(c.amount_paid_minor, c.currency)}
+                    {formatAmount(c.amount_paid, c.currency)}
                   </td>
                   <td
                     className={`money-amount ${remaining > 0 ? "money-amount--debt" : "money-amount--clear"}`}
@@ -490,8 +490,8 @@ function PaymentDialog({
   onClose: () => void;
   onPaid: () => void;
 }) {
-  const outstanding = charge.amount_due_minor - charge.amount_paid_minor;
-  const [amountMajor, setAmountMajor] = useState(outstanding / 100);
+  const outstanding = toMinor(charge.amount_due) - toMinor(charge.amount_paid);
+  const [amountInput, setAmountInput] = useState(() => fromMinor(outstanding).replace(".", ","));
   const [method, setMethod] = useState("CASH");
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
@@ -502,7 +502,7 @@ function PaymentDialog({
     try {
       await api.post<Payment>(
         `/charges/${charge.id}/payments`,
-        { amount_minor: Math.round(amountMajor * 100), method },
+        { amount: amountFromInput(amountInput), method },
         newIdempotencyKey(),
       );
       onPaid();
@@ -538,10 +538,10 @@ function PaymentDialog({
         <label htmlFor="pay-amount">Iznos (RSD)</label>
         <input
           id="pay-amount"
-          type="number"
-          min={1}
-          value={amountMajor}
-          onChange={(e) => setAmountMajor(Number(e.target.value))}
+          type="text"
+          inputMode="decimal"
+          value={amountInput}
+          onChange={(e) => setAmountInput(e.target.value)}
           data-cy="pay-amount"
         />
       </div>

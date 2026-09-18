@@ -7,6 +7,7 @@ paying family) may see it.
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 
 from app.domains.identity.enums import RoleCode
 from app.domains.organization.models import Organization
@@ -33,7 +34,7 @@ def _charge_for(client: TestClient, actor: Actor, person_id: str) -> dict:
     )
     body = {
         "group_id": group_id,
-        "amount_minor": 300000,
+        "amount": "3000.00",
         "description": "Članarina",
         "period_label": "2026-09",
     }
@@ -58,10 +59,10 @@ def test_mod97_control_digits_follow_the_nbs_rule() -> None:
     assert control == 98 - (int(base + "00") % 97)
 
 
-def test_amount_is_formatted_from_minor_units_without_float_rounding() -> None:
-    assert ips_qr.format_amount(300000, "RSD") == "RSD3000,00"
-    assert ips_qr.format_amount(305, "RSD") == "RSD3,05"
-    assert ips_qr.format_amount(1, "RSD") == "RSD0,01"
+def test_amount_is_formatted_from_the_exact_decimal_without_float_rounding() -> None:
+    assert ips_qr.format_amount(Decimal("3000.00"), "RSD") == "RSD3000,00"
+    assert ips_qr.format_amount(Decimal("3.05"), "RSD") == "RSD3,05"
+    assert ips_qr.format_amount(Decimal("0.01"), "RSD") == "RSD0,01"
 
 
 def test_field_separators_in_user_text_cannot_forge_a_payload() -> None:
@@ -70,7 +71,7 @@ def test_field_separators_in_user_text_cannot_forge_a_payload() -> None:
         payee_name="Klub|I:RSD999999,00",
         payee_address=None,
         payee_city=None,
-        amount_minor=300000,
+        amount=Decimal("3000.00"),
         currency="RSD",
         purpose="Članarina",
         reference="123456789012",
@@ -108,7 +109,7 @@ def test_slip_carries_the_outstanding_amount_and_a_stable_reference(
     slip = client.get(f"/charges/{charge['id']}/payment-slip", headers=actor.headers)
     assert slip.status_code == 200, slip.text
     body = slip.json()
-    assert body["amount_minor"] == 300000
+    assert body["amount"] == "3000.00"
     assert body["account_number"] == "160000000012345678"
     assert body["reference_number"].startswith("97")
     assert "K:PR|V:01|C:1|" in body["ips_qr_payload"]
@@ -122,12 +123,12 @@ def test_slip_carries_the_outstanding_amount_and_a_stable_reference(
     client.post(
         f"/charges/{charge['id']}/payments",
         headers=actor.headers,
-        json={"amount_minor": 100000, "method": "CASH"},
+        json={"amount": "1000.00", "method": "CASH"},
     )
     remainder = client.get(
         f"/charges/{charge['id']}/payment-slip", headers=actor.headers
     ).json()
-    assert remainder["amount_minor"] == 200000
+    assert remainder["amount"] == "2000.00"
     assert "I:RSD2000,00" in remainder["ips_qr_payload"]
 
 
@@ -148,7 +149,7 @@ def test_generating_a_slip_never_settles_the_charge(
         if c["id"] == charge["id"]
     )
     assert after["status"] == "OPEN"
-    assert after["amount_paid_minor"] == 0
+    assert after["amount_paid"] == "0.00"
 
 
 def test_a_school_without_an_account_number_is_told_so(
@@ -175,7 +176,7 @@ def test_a_settled_charge_has_no_slip(client: TestClient, db: Session) -> None:
     client.post(
         f"/charges/{charge['id']}/payments",
         headers=actor.headers,
-        json={"amount_minor": 300000, "method": "CASH"},
+        json={"amount": "3000.00", "method": "CASH"},
     )
 
     assert (
@@ -254,7 +255,7 @@ def test_an_unparseable_period_label_leaves_the_charge_without_a_due_date(
     )
     body = {
         "group_id": group_id,
-        "amount_minor": 300000,
+        "amount": "3000.00",
         "description": "Članarina",
         "period_label": "Jesenja sezona",
     }
@@ -283,7 +284,7 @@ def test_an_explicit_due_date_overrides_the_period_label(
     due = dt.date(2026, 9, 15).isoformat()
     body = {
         "group_id": group_id,
-        "amount_minor": 300000,
+        "amount": "3000.00",
         "description": "Članarina",
         "period_label": "2026-09",
         "due_date": due,

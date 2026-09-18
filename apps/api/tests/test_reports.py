@@ -6,6 +6,7 @@ never leaks into org A's report (and vice versa)."""
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 
 from app.domains.attendance.enums import AttendanceStatus
 from app.domains.attendance.models import AttendanceRecord
@@ -65,8 +66,8 @@ def _charge(
     actor: Actor,
     *,
     person_id: str,
-    amount_due_minor: int,
-    amount_paid_minor: int = 0,
+    amount_due: str,
+    amount_paid: str = "0.00",
     status: ChargeStatus = ChargeStatus.OPEN,
     created_at: dt.datetime | None = None,
 ) -> Charge:
@@ -75,8 +76,8 @@ def _charge(
         person_id=person_id,
         description="Članarina",
         currency="RSD",
-        amount_due_minor=amount_due_minor,
-        amount_paid_minor=amount_paid_minor,
+        amount_due=amount_due,
+        amount_paid=amount_paid,
         status=status,
     )
     if created_at is not None:
@@ -91,13 +92,13 @@ def _payment(
     actor: Actor,
     *,
     charge_id: str,
-    amount_minor: int,
+    amount: Decimal,
     created_at: dt.datetime | None = None,
 ) -> PaymentRecord:
     payment = PaymentRecord(
         organization_id=actor.organization.id,
         charge_id=charge_id,
-        amount_minor=amount_minor,
+        amount=amount,
         currency="RSD",
         method=PaymentMethod.CASH,
         status=PaymentRecordStatus.RECORDED,
@@ -167,27 +168,29 @@ def test_overview_report(client: TestClient, db: Session) -> None:
     this_month = current_month_start
     last_month_end = current_month_start - dt.timedelta(seconds=1)
 
-    # This period: 2 charges billed (100000 + 50000), 1 payment collected (100000).
-    c1 = _charge(db, actor, person_id=p1.id, amount_due_minor=100000, created_at=this_month)
-    _charge(db, actor, person_id=p2.id, amount_due_minor=50000, created_at=this_month)
-    _payment(db, actor, charge_id=c1.id, amount_minor=100000, created_at=this_month)
+    # This period: 2 charges billed (1.000,00 + 500,00), 1 payment collected (1.000,00).
+    c1 = _charge(db, actor, person_id=p1.id, amount_due=Decimal("1000.00"), created_at=this_month)
+    _charge(db, actor, person_id=p2.id, amount_due=Decimal("500.00"), created_at=this_month)
+    _payment(db, actor, charge_id=c1.id, amount=Decimal("1000.00"), created_at=this_month)
     # Reflect the payment on the charge itself (a real payment flow would do this
     # via payments.service; here we seed both ledgers directly for report math).
-    c1.amount_paid_minor = 100000
+    c1.amount_paid = Decimal("1000.00")
     c1.status = ChargeStatus.PAID
     db.commit()
 
     # Last period: must NOT be counted in "this period" billed/collected.
-    _charge(db, actor, person_id=p1.id, amount_due_minor=999999, created_at=last_month_end)
+    _charge(db, actor, person_id=p1.id, amount_due=Decimal("9999.99"), created_at=last_month_end)
 
     # Outstanding debt is a point-in-time balance (not period-scoped): the second
-    # charge (50000 due, 0 paid) plus the older one (999999 due, 0 paid).
-    expected_outstanding = 50000 + 999999
+    # charge (500,00 due, 0 paid) plus the older one (9.999,99 due, 0 paid).
+    expected_outstanding = "10499.99"  # 500,00 + 9.999,99
 
     # Noise org charges must never leak into org A's totals.
     noise_person = make_person(db, given="Y", family="Y")
     add_membership(db, person=noise_person, organization=noise.organization)
-    _charge(db, noise, person_id=noise_person.id, amount_due_minor=7_000_000, created_at=this_month)
+    _charge(
+        db, noise, person_id=noise_person.id, amount_due=Decimal("70000.00"), created_at=this_month
+    )
 
     # Attendance in the recent (30-day) window: 3 present, 1 absent.
     group = _group(db, actor)
@@ -207,9 +210,9 @@ def test_overview_report(client: TestClient, db: Session) -> None:
     body = resp.json()
 
     assert body["active_member_count"] == 4  # actor + p1 + p2 + m1's own person
-    assert body["billed_total_minor"] == 150000
-    assert body["collected_total_minor"] == 100000
-    assert body["outstanding_debt_total_minor"] == expected_outstanding
+    assert body["billed_total"] == "1500.00"
+    assert body["collected_total"] == "1000.00"
+    assert body["outstanding_debt_total"] == expected_outstanding
     assert body["attendance_recorded_count"] == 4
     assert body["attendance_present_count"] == 3
     assert body["attendance_rate"] == 0.75
@@ -218,8 +221,8 @@ def test_overview_report(client: TestClient, db: Session) -> None:
     # (its actor + 5 seeded + noise_person) and none of org A's money.
     other = client.get("/reports/overview", headers=noise.headers).json()
     assert other["active_member_count"] == 7
-    assert other["billed_total_minor"] == 7_000_000
-    assert other["collected_total_minor"] == 0
+    assert other["billed_total"] == "70000.00"
+    assert other["collected_total"] == "0.00"
 
 
 # --- Financial --------------------------------------------------------------
@@ -236,10 +239,10 @@ def test_financial_report(client: TestClient, db: Session) -> None:
     after_range = dt.datetime(2026, 2, 5, tzinfo=dt.UTC)
 
     open_charge = _charge(
-        db, actor, person_id=person.id, amount_due_minor=100000, created_at=in_range
+        db, actor, person_id=person.id, amount_due=Decimal("1000.00"), created_at=in_range
     )
-    _payment(db, actor, charge_id=open_charge.id, amount_minor=40000, created_at=in_range)
-    open_charge.amount_paid_minor = 40000
+    _payment(db, actor, charge_id=open_charge.id, amount=Decimal("400.00"), created_at=in_range)
+    open_charge.amount_paid = Decimal("400.00")
     open_charge.status = ChargeStatus.PARTIALLY_PAID
     db.commit()
 
@@ -247,21 +250,23 @@ def test_financial_report(client: TestClient, db: Session) -> None:
         db,
         actor,
         person_id=person.id,
-        amount_due_minor=60000,
-        amount_paid_minor=60000,
+        amount_due=Decimal("600.00"),
+        amount_paid=Decimal("600.00"),
         status=ChargeStatus.PAID,
         created_at=in_range,
     )
-    _payment(db, actor, charge_id=paid_charge.id, amount_minor=60000, created_at=in_range)
+    _payment(db, actor, charge_id=paid_charge.id, amount=Decimal("600.00"), created_at=in_range)
 
     # Out-of-range charges/payments must not affect the totals.
-    _charge(db, actor, person_id=person.id, amount_due_minor=500000, created_at=before_range)
-    _charge(db, actor, person_id=person.id, amount_due_minor=800000, created_at=after_range)
+    _charge(db, actor, person_id=person.id, amount_due=Decimal("5000.00"), created_at=before_range)
+    _charge(db, actor, person_id=person.id, amount_due=Decimal("8000.00"), created_at=after_range)
 
     # Other org's data must never leak in.
     other_person = make_person(db, given="X", family="X")
     add_membership(db, person=other_person, organization=other.organization)
-    _charge(db, other, person_id=other_person.id, amount_due_minor=999999, created_at=in_range)
+    _charge(
+        db, other, person_id=other_person.id, amount_due=Decimal("9999.99"), created_at=in_range
+    )
 
     resp = client.get(
         "/reports/financial",
@@ -270,16 +275,16 @@ def test_financial_report(client: TestClient, db: Session) -> None:
     )
     assert resp.status_code == 200
     body = resp.json()
-    assert body["billed_total_minor"] == 160000  # 100000 + 60000, in-range only
-    assert body["collected_total_minor"] == 100000  # 40000 + 60000, in-range only
+    assert body["billed_total"] == "1600.00"  # 1.000,00 + 600,00, in-range only
+    assert body["collected_total"] == "1000.00"  # 400,00 + 600,00, in-range only
 
-    # Outstanding debt is point-in-time: open_charge (60000 outstanding) plus the
-    # two out-of-range OPEN charges (500000 + 800000), never the other org's.
+    # Outstanding debt is point-in-time: open_charge (600,00 outstanding) plus the
+    # two out-of-range OPEN charges (5.000,00 + 8.000,00), never the other org's.
     by_status = {row["status"]: row for row in body["outstanding_by_status"]}
-    assert body["outstanding_debt_total_minor"] == 60000 + 500000 + 800000
-    assert by_status["PARTIALLY_PAID"]["outstanding_minor"] == 60000
+    assert body["outstanding_debt_total"] == "13600.00"
+    assert by_status["PARTIALLY_PAID"]["outstanding"] == "600.00"
     assert by_status["PARTIALLY_PAID"]["charge_count"] == 1
-    assert by_status["OPEN"]["outstanding_minor"] == 500000 + 800000
+    assert by_status["OPEN"]["outstanding"] == "13000.00"
     assert by_status["OPEN"]["charge_count"] == 2
 
     other_resp = client.get(
@@ -287,8 +292,8 @@ def test_financial_report(client: TestClient, db: Session) -> None:
         headers=other.headers,
         params={"date_from": "2026-01-01", "date_to": "2026-01-31"},
     ).json()
-    assert other_resp["billed_total_minor"] == 999999
-    assert other_resp["collected_total_minor"] == 0
+    assert other_resp["billed_total"] == "9999.99"
+    assert other_resp["collected_total"] == "0.00"
 
 
 def test_financial_report_rejects_inverted_range(client: TestClient, db: Session) -> None:

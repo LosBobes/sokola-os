@@ -16,7 +16,7 @@ import {
   SystemState,
 } from "../../components/ui";
 import { useAsync } from "../../hooks/useAsync";
-import { formatMinor } from "../../lib/money";
+import { formatMinor, toMinor } from "../../lib/money";
 import "./Reports.css";
 
 /*
@@ -234,7 +234,7 @@ export function ReportsPage() {
     (c) => c.status === "OPEN" || c.status === "PARTIALLY_PAID",
   );
   const outstandingMinor = openCharges.reduce(
-    (sum, c) => sum + (c.amount_due_minor - c.amount_paid_minor),
+    (sum, c) => sum + (toMinor(c.amount_due) - toMinor(c.amount_paid)),
     0,
   );
   const outstandingCurrency = openCharges[0]?.currency ?? "RSD";

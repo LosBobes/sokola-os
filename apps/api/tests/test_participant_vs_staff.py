@@ -82,14 +82,14 @@ def test_billing_run_charges_participants_only(client: TestClient, db: Session) 
         headers=actor.headers,
         json={
             "group_id": group_id,
-            "amount_minor": 300000,
+            "amount": "3000.00",
             "description": "Članarina",
             "period_label": "2026-09",
         },
     ).json()
 
     assert [item["person_id"] for item in preview["items"]] == [child]
-    assert preview["total_minor"] == 300000
+    assert preview["total"] == "3000.00"
 
 
 def test_staff_do_not_fill_a_limited_group(client: TestClient, db: Session) -> None:

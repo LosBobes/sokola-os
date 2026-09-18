@@ -12,6 +12,7 @@ read-only, but tenant isolation is never relaxed.
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -108,10 +109,10 @@ def active_membership_by_group(
 # --- Billing / payments --------------------------------------------------------
 
 
-def billed_total_minor(
+def billed_total(
     db: Session, organization_id: str, start: dt.datetime, end: dt.datetime
-) -> int:
-    stmt = select(func.coalesce(func.sum(Charge.amount_due_minor), 0)).where(
+) -> Decimal:
+    stmt = select(func.coalesce(func.sum(Charge.amount_due), 0)).where(
         Charge.organization_id == organization_id,
         Charge.status != ChargeStatus.CANCELLED,
         Charge.created_at >= start,
@@ -120,10 +121,10 @@ def billed_total_minor(
     return db.execute(stmt).scalar_one()
 
 
-def collected_total_minor(
+def collected_total(
     db: Session, organization_id: str, start: dt.datetime, end: dt.datetime
-) -> int:
-    stmt = select(func.coalesce(func.sum(PaymentRecord.amount_minor), 0)).where(
+) -> Decimal:
+    stmt = select(func.coalesce(func.sum(PaymentRecord.amount), 0)).where(
         PaymentRecord.organization_id == organization_id,
         PaymentRecord.status == PaymentRecordStatus.RECORDED,
         PaymentRecord.created_at >= start,
@@ -132,9 +133,9 @@ def collected_total_minor(
     return db.execute(stmt).scalar_one()
 
 
-def outstanding_debt_total_minor(db: Session, organization_id: str) -> int:
+def outstanding_debt_total(db: Session, organization_id: str) -> Decimal:
     stmt = select(
-        func.coalesce(func.sum(Charge.amount_due_minor - Charge.amount_paid_minor), 0)
+        func.coalesce(func.sum(Charge.amount_due - Charge.amount_paid), 0)
     ).where(
         Charge.organization_id == organization_id,
         Charge.status.in_(_OPEN_CHARGE_STATUSES),
@@ -149,7 +150,7 @@ def outstanding_by_status(
         select(
             Charge.status,
             func.count(),
-            func.coalesce(func.sum(Charge.amount_due_minor - Charge.amount_paid_minor), 0),
+            func.coalesce(func.sum(Charge.amount_due - Charge.amount_paid), 0),
         )
         .where(
             Charge.organization_id == organization_id,

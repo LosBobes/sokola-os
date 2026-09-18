@@ -15,7 +15,7 @@ import {
 import { PaymentSlipDialog } from "../../components/PaymentSlipDialog";
 import { useAsync } from "../../hooks/useAsync";
 import { formatDate, isPastDue } from "../../lib/format";
-import { formatMinor } from "../../lib/money";
+import { formatAmount, formatMinor, toMinor } from "../../lib/money";
 import "./money.css";
 
 interface Child {
@@ -181,7 +181,7 @@ function BalanceHero({ state }: { state: ReturnType<typeof useAsync<Page<Charge>
   const currency = items[0]?.currency ?? "RSD";
   const remainingMinor = items
     .filter((c) => c.status !== "CANCELLED")
-    .reduce((sum, c) => sum + (c.amount_due_minor - c.amount_paid_minor), 0);
+    .reduce((sum, c) => sum + (toMinor(c.amount_due) - toMinor(c.amount_paid)), 0);
   const outstanding = items.filter(
     (c) => c.status === "OPEN" || c.status === "PARTIALLY_PAID",
   );
@@ -263,7 +263,7 @@ function ObligationsList({ state }: { state: ReturnType<typeof useAsync<Page<Cha
     <div className="money-oblig-list" data-cy="obligation-list">
       {items.map((c) => {
         const meta = chargeStatusView(c);
-        const remaining = c.amount_due_minor - c.amount_paid_minor;
+        const remaining = toMinor(c.amount_due) - toMinor(c.amount_paid);
         const settled = c.status === "PAID" || c.status === "CANCELLED";
         return (
           <section className="money-oblig-row" key={c.id} data-cy="obligation-row">
@@ -276,11 +276,11 @@ function ObligationsList({ state }: { state: ReturnType<typeof useAsync<Page<Cha
             <div className="money-oblig-row__grid">
               <div>
                 <span className="money-oblig-row__field-label">Ukupno</span>
-                <span className="money-oblig-row__field-value">{formatMinor(c.amount_due_minor, c.currency)}</span>
+                <span className="money-oblig-row__field-value">{formatAmount(c.amount_due, c.currency)}</span>
               </div>
               <div>
                 <span className="money-oblig-row__field-label">Evidentirano</span>
-                <span className="money-oblig-row__field-value">{formatMinor(c.amount_paid_minor, c.currency)}</span>
+                <span className="money-oblig-row__field-value">{formatAmount(c.amount_paid, c.currency)}</span>
               </div>
               <div>
                 <span className="money-oblig-row__field-label">Preostalo</span>

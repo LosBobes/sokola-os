@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
+from app.common import money
 from app.common.enums import AuditDataClass
 from app.common.errors import ConflictError, NotFoundError
 from app.domains.billing.enums import ChargeStatus
@@ -39,28 +40,30 @@ def record_payment(
     if charge.status is ChargeStatus.CANCELLED:
         raise ConflictError("Zaduženje je otkazano; uplata nije moguća.")
 
-    outstanding = charge.amount_due_minor - charge.amount_paid_minor
+    outstanding = charge.amount_due - charge.amount_paid
     if outstanding <= 0:
         raise ConflictError("Zaduženje je već izmireno.")
-    if req.amount_minor > outstanding:
+    if req.amount > outstanding:
         raise ConflictError(
             "Iznos uplate premašuje preostali dug.",
-            details={"code": "OVERPAYMENT", "outstanding_minor": outstanding},
+            # The wire format, like every other amount the API emits: a raw
+            # Decimal is not JSON-serialisable and would turn a 409 into a 500.
+            details={"code": "OVERPAYMENT", "outstanding": money.format_amount(outstanding)},
         )
 
     payment = PaymentRecord(
         organization_id=context.organization_id,
         charge_id=charge_id,
-        amount_minor=req.amount_minor,
+        amount=req.amount,
         currency=charge.currency,
         method=req.method,
     )
     db.add(payment)
 
-    charge.amount_paid_minor += req.amount_minor
+    charge.amount_paid += req.amount
     charge.status = (
         ChargeStatus.PAID
-        if charge.amount_paid_minor >= charge.amount_due_minor
+        if charge.amount_paid >= charge.amount_due
         else ChargeStatus.PARTIALLY_PAID
     )
     db.flush()
@@ -68,13 +71,13 @@ def record_payment(
     result = PaymentResponse(
         id=payment.id,
         charge_id=charge_id,
-        amount_minor=payment.amount_minor,
+        amount=payment.amount,
         currency=payment.currency,
         method=payment.method,
         status=payment.status,
         charge_status=charge.status,
-        charge_amount_due_minor=charge.amount_due_minor,
-        charge_amount_paid_minor=charge.amount_paid_minor,
+        charge_amount_due=charge.amount_due,
+        charge_amount_paid=charge.amount_paid,
     )
     record_audit(
         db,
@@ -82,7 +85,7 @@ def record_payment(
         action="payment.recorded",
         entity_type="charge",
         entity_id=charge_id,
-        summary=f"Evidentirana uplata {req.amount_minor} ({req.method}).",
+        summary=f"Evidentirana uplata {req.amount} ({req.method}).",
         organization_id=context.organization_id,
         actor_person_id=context.person_id,
     )
@@ -110,7 +113,7 @@ def void_payment(
     idempotency_key: str | None,
 ) -> PaymentResponse:
     """PRD 07 P2. Reverses a recorded payment: the amount it applied is
-    subtracted back out of the charge's ``amount_paid_minor`` and the charge's
+    subtracted back out of the charge's ``amount_paid`` and the charge's
     status is recomputed from what remains. A CANCELLED charge stays
     CANCELLED, cancellation is terminal regardless of the ledger."""
     params = {"payment_id": payment_id, **req.model_dump()}
@@ -132,11 +135,11 @@ def void_payment(
     if charge is None:
         raise NotFoundError("Zaduženje nije pronađeno.")
 
-    charge.amount_paid_minor = max(charge.amount_paid_minor - payment.amount_minor, 0)
+    charge.amount_paid = max(charge.amount_paid - payment.amount, money.zero())
     if charge.status is not ChargeStatus.CANCELLED:
-        if charge.amount_paid_minor <= 0:
+        if charge.amount_paid <= 0:
             charge.status = ChargeStatus.OPEN
-        elif charge.amount_paid_minor < charge.amount_due_minor:
+        elif charge.amount_paid < charge.amount_due:
             charge.status = ChargeStatus.PARTIALLY_PAID
         else:
             charge.status = ChargeStatus.PAID
@@ -148,13 +151,13 @@ def void_payment(
     result = PaymentResponse(
         id=payment.id,
         charge_id=payment.charge_id,
-        amount_minor=payment.amount_minor,
+        amount=payment.amount,
         currency=payment.currency,
         method=payment.method,
         status=payment.status,
         charge_status=charge.status,
-        charge_amount_due_minor=charge.amount_due_minor,
-        charge_amount_paid_minor=charge.amount_paid_minor,
+        charge_amount_due=charge.amount_due,
+        charge_amount_paid=charge.amount_paid,
     )
     record_audit(
         db,
@@ -162,7 +165,7 @@ def void_payment(
         action="payment.voided",
         entity_type="charge",
         entity_id=charge.id,
-        summary=f"Poništena uplata {payment.amount_minor} ({req.reason.value}).",
+        summary=f"Poništena uplata {payment.amount} ({req.reason.value}).",
         organization_id=context.organization_id,
         actor_person_id=context.person_id,
     )
