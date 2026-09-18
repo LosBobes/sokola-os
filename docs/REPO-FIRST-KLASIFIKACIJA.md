@@ -71,7 +71,7 @@ svako čitanje koda mora znati da `organization_id` i dalje znači *School*.
 | Dead-letter dual control | **`PRESERVE` (uvedeno u ovom radu)** | `app/platform/outbox/dead_letter.py` — request/approve/reject, odobravalac ne sme biti podnosilac, replay/discard efekat, sve u zapečaćenom audit lancu. HTTP vezivanje čeka M05 support access (vidi F-09) |
 | Idempotency receipt | `PRESERVE` | `app/platform/idempotency/service.py:hash_params` već radi kanonski hash (sortirani ključevi, kompaktni separatori) i odbija isti ključ sa drugim podacima. Expected-version semantika ostaje `VERIFY_IN_REPO` |
 | **Clock** | **`PRESERVE` (uvedeno u ovom radu)** | `app/platform/clock.py` — UTC-aware, freezable; svih 17 zatečenih `datetime.now` mesta prevedeno |
-| Exact decimal | **`REMOVE_CONFLICT`** | `app/common/money.py` — vidi F-03 |
+| Exact decimal | **`PRESERVE` (uvedeno u ovom radu)** | `app/common/money.py` — Decimal, `NUMERIC(18,2)`, decimal string na žici; float se odbija. Vidi F-03 |
 | Storage | `ADAPT` | `app/domains/documents/storage.py` — lokalni FS; nema tenant particije ni signed URL-a |
 | PII-free observability | **`PRESERVE` (uvedeno u ovom radu)** | `app/platform/observability.py` — `safe_error`/`redact`; outbox `last_error` i log linija više ne nose PII. Vidi F-10 |
 
@@ -95,7 +95,7 @@ svako čitanje koda mora znati da `organization_id` i dalje znači *School*.
 | M09 Grupe/programi/upisi | `ADAPT` | `domains/groups/` — `Group`, `GroupMembership` sa lifecycle-om |
 | M10 Raspored i termini | `ADAPT` | `domains/scheduling/` — `SessionSeries` + `Session`, recurrence, scoped edit. **DST resolver čuva lokalnu nameru, ali gap/overlap nije testiran** |
 | M11 Prisustvo | `ADAPT` | `domains/attendance/`. **Offline mutation queue ne postoji** — M11 je jedini H0 offline write |
-| M12 Finansije | **`REMOVE_CONFLICT`** | `domains/billing/`, `domains/payments/` — vidi F-03. Nema append-only ledger/credit modela |
+| M12 Finansije | `ADAPT` | `domains/billing/`, `domains/payments/` — reprezentacija novca usklađena sa §3 (F-03 otklonjen). I dalje nema append-only ledger/credit modela |
 | M13 Komunikacija | `ADAPT` | `domains/communications/` — `Announcement`, ručno slanje |
 | M14 Sistemske notifikacije | `ADAPT` | `communications.Notification` + outbox handleri. **M13 i M14 dele domen**, a ugovor traži da M14 bude zaseban idempotentni outbox consumer |
 | M15 Dokumenti | `ADAPT` | `domains/documents/`. Nema immutable version/evidence ni session-bound re-autorizacije download range-a |
@@ -139,13 +139,15 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Primenjeno rešenje:** `workspaces` je sada samo `apps/web` (jedini stvarni npm paket); mrtvi `verify:*` script-ovi su uklonjeni; `verify` poziva stvarni harness (`verify:spec` → `verify:api` → web typecheck/build). Root ostaje tanak omotač i ne postaje drugi izvor istine.
 - **Status:** `APPLIED`.
 
-### F-03 — novac je integer minor-unit master (protivreči §3)
+### F-03 — novac je bio integer minor-unit master (OTKLONJENO)
 
-- **Dokument:** `00-CLAUDE-CODE-IZVRSI.md` §3: „Novac je `NUMERIC(18,2)` ili dokazivo ekvivalentan exact decimal […] nema float/double, skrivene FX konverzije **ni paralelnog minor-unit mastera**."
-- **Repo dokaz:** `app/common/money.py` definiše `Money(amount_minor: int, currency: str)`. Šest kolona u bazi su `integer` minor units: `billing_run.total_minor`, `charge.amount_due_minor`, `charge.amount_paid_minor`, `group.base_monthly_price_minor`, `group_membership.discount_minor`, `payment_record.amount_minor`.
-- **Posledica:** ovo *jeste* exact (nema float), pa ne gubi tačnost, ali je tačno onaj „paralelni minor-unit master" koji ugovor zabranjuje. Utiče na M12 API/import/export decimal-string ugovor i na budući M12 append-only ledger.
-- **Minimalni predlog:** migracija `integer → NUMERIC(18,2)` je backward-safe u jednom smeru (deljenje sa 100), uz decimal-string na API granici. To je M12 (Talas 3) posao sa sopstvenom reconciliation obavezom — **ne** usputna izmena.
-- **Status:** `CHALLENGE_NOT_APPLIED` — evidentirano, čeka Talas 3. Nije bezbednosni problem, pa ne zaustavlja nijednu nezavisnu stavku.
+- **Dokument:** `00-CLAUDE-CODE-IZVRSI.md` §3: „Novac je `NUMERIC(18,2)` […] nema float/double […] ni paralelnog minor-unit mastera".
+- **Repo dokaz (pre):** `Money(amount_minor: int)` i šest `integer` kolona: `billing_run.total_minor`, `charge.amount_due_minor`, `charge.amount_paid_minor`, `group.base_monthly_price_minor`, `group_membership.discount_minor`, `payment_record.amount_minor`.
+- **Posledica:** bilo je tačno (nema float), ali je bio upravo zabranjeni paralelni master: svaka granica je morala da pamti da 12500 znači 125,00, a svaki čitalac koji zaboravi dobija iznos sto puta pogrešan koji i dalje izgleda uverljivo.
+- **Primenjeno rešenje (odluka O-02, izvan reda talasa):** kolone su `NUMERIC(18,2)`, API nosi decimal string, `app/common/money.py` odbija `float` umesto da ga konvertuje (jer je `Decimal(0.1)` = 0.1000000000000000055511151231257827) i odbija veću preciznost od dozvoljene skale. Migracija `e8b47a3c9d16` deli sa 100 u NUMERIC aritmetici, u mestu preko `USING`, pa ne postoji trenutak u kome kolona drži oba zapisa. **Dokazano na stvarnim redovima:** 12500 → 125.00, 1 → 0.01, 0 → 0.00, 999999999 → 9999999.99; downgrade vraća.
+- **Dve tačke koje nisu bile puka promena tipa:** billing preview hash je poslovni otisak, a `Decimal` nije JSON-serializabilan i nema stabilan `repr` kroz skale, pa se hešira wire format; `OVERPAYMENT` envelope je nosio iznos, što bi 409 pretvorilo u 500.
+- **Web:** klijent radi aritmetiku nad novcem, pa ima sopstveni egzaktni pomoćnik — iznosi ostaju string, a jedina aritmetika je nad celobrojnim minor jedinicama (koje double predstavlja tačno daleko iznad bilo kog iznosa koji škola naplaćuje). `Math.round(amountMajor * 100)` je uklonjen; polja za iznos primaju tekst i prihvataju zarez kao decimalni separator.
+- **Status:** `APPLIED`. 333 testa, web build zelen, OpenAPI i `schema.d.ts` regenerisani. Cypress se ne može pokrenuti ovde, pa je novčani tok odigran u stvarnom browseru preko Playwright-a: preview 3000,00 → zaduženje 3000,00 → uplata 1000 ostavlja 2000,00 i `Delimično plaćeno`, bez minor jedinica i bez `NaN` na ekranu.
 
 ### F-04 — `Organization` znači dve različite stvari
 
@@ -200,6 +202,13 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Primenjeno rešenje:** `app/platform/observability.py`. Opis greške se **gradi iz strukture**, ne čisti iz teksta: tip izuzetka + SQLSTATE + tabela/kolona/ograničenje. Za bazu je to i precizniji dijagnostički podatak. Slobodan tekst je samo fallback i prolazi kroz `redact` (uklanja `[SQL:]`, `[parameters:]` i `DETAIL:` blokove, maskira email i duge nizove cifara, skraćuje). Skrabovanje samo po obrascima se **ne** oslanja da prepozna ime — zato se primarni put uopšte ne oslanja na tekst.
 - **Status:** `APPLIED`. 7 testova, uključujući stvarni put pada worker-a sa imenom deteta, kontaktom i bankarskom referencom u redu.
 
+### F-11 — `npm run typecheck` ne radi u celom repou
+
+- **Repo dokaz:** `apps/web/package.json` ima `typecheck: tsc -b --noEmit`, ali repo nema `src/vite-env.d.ts`, pa TypeScript ne učitava `vite/client` tipove i svaki `import "./nesto.css"` puca sa `TS2882`. **Provereno na čistom `origin/main` u zasebnom worktree-u** — dakle zatečeno, ne posledica ovih izmena.
+- **Posledica:** CI ne poziva `typecheck` (poziva `build`, koji prolazi jer `tsc -b` bez `--noEmit` emituje i razrešava drugačije), pa je ostalo neprimećeno. Ali root `verify` lanac koji sam dodao u F-02 poziva `typecheck:web`, pa je i on time polomljen.
+- **Minimalni predlog:** dodati `apps/web/src/vite-env.d.ts` sa `/// <reference types="vite/client" />`.
+- **Status:** `CHALLENGE_NOT_APPLIED` — ne širim PR o novcu time; ide uz sledeći harness PR.
+
 ## 5. Šta je u ovom radu stvarno urađeno
 
 **Talas 0 — baseline i klasifikacija**
@@ -231,7 +240,7 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 
 Redosled je potvrdio vlasnik proizvoda 2026-09-18:
 
-1. **F-03** — novac na `NUMERIC(18,2)`, kao zaseban PR, pre Talasa 2. Obim: 116 referenci u API-ju (16 fajlova), 56 u web-u (6 fajlova), 49 u OpenAPI dokumentu, 10 test fajlova.
+1. ~~**F-03** — novac na `NUMERIC(18,2)`~~ — urađeno.
 2. **F-04** — preimenovanje `Organization` → `School`, kao zaseban PR. Vidi ODLUKE ispod.
 3. Talas 2 (M04 → M06 → M01 → M03 → M05 → M07 → M02).
 
