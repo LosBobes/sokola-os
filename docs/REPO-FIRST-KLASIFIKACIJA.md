@@ -203,12 +203,13 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Primenjeno rešenje:** `app/platform/observability.py`. Opis greške se **gradi iz strukture**, ne čisti iz teksta: tip izuzetka + SQLSTATE + tabela/kolona/ograničenje. Za bazu je to i precizniji dijagnostički podatak. Slobodan tekst je samo fallback i prolazi kroz `redact` (uklanja `[SQL:]`, `[parameters:]` i `DETAIL:` blokove, maskira email i duge nizove cifara, skraćuje). Skrabovanje samo po obrascima se **ne** oslanja da prepozna ime — zato se primarni put uopšte ne oslanja na tekst.
 - **Status:** `APPLIED`. 7 testova, uključujući stvarni put pada worker-a sa imenom deteta, kontaktom i bankarskom referencom u redu.
 
-### F-11 — `npm run typecheck` ne radi u celom repou
+### F-11 — `npm run typecheck` ne radi u celom repou (POVUČENO — nalaz je bio pogrešan)
 
-- **Repo dokaz:** `apps/web/package.json` ima `typecheck: tsc -b --noEmit`, ali repo nema `src/vite-env.d.ts`, pa TypeScript ne učitava `vite/client` tipove i svaki `import "./nesto.css"` puca sa `TS2882`. **Provereno na čistom `origin/main` u zasebnom worktree-u** — dakle zatečeno, ne posledica ovih izmena.
-- **Posledica:** CI ne poziva `typecheck` (poziva `build`, koji prolazi jer `tsc -b` bez `--noEmit` emituje i razrešava drugačije), pa je ostalo neprimećeno. Ali root `verify` lanac koji sam dodao u F-02 poziva `typecheck:web`, pa je i on time polomljen.
-- **Minimalni predlog:** dodati `apps/web/src/vite-env.d.ts` sa `/// <reference types="vite/client" />`.
-- **Status:** `CHALLENGE_NOT_APPLIED` — ne širim PR o novcu time; ide uz sledeći harness PR.
+- **Šta je tvrđeno:** da `apps/web` nema `src/vite-env.d.ts`, pa svaki `import "./nesto.css"` puca sa `TS2882`, i da je time i root `verify` lanac polomljen.
+- **Šta je zapravo izmereno:** provera je pokrenuta u zasebnom worktree-u **u kojem `apps/web/node_modules` nije bio instaliran**. Greške koje sam video bile su `TS2307: Cannot find module 'react'`, `'react-router-dom'`, `react/jsx-runtime` — dakle nedostajuće zavisnosti, ne nedostajuća Vite deklaracija. Zaključak o `vite-env.d.ts` je izveden iz pogrešno pročitanog izlaza.
+- **Provereno na čistom `origin/main` sa instaliranim zavisnostima:** `npm run typecheck` (`tsc -b --noEmit`, TypeScript 5.9.3) prolazi, `tsc --noEmit -p tsconfig.json` prolazi, i root lanac (`verify:spec`, `typecheck:web`, `build:web`) prolazi. Pod `moduleResolution: bundler` TypeScript uopšte ne razrešava `.css` import kao modul — dodat probni `import "./nepostojece.css"` takođe prolazi — pa `vite-env.d.ts` ovde ne bi ispravio ništa.
+- **Šta stvarno stoji:** `src/vite-env.d.ts` zaista ne postoji, ali ništa u `src/` ne koristi `import.meta.env`, pa trenutno nema šta da tipizira. To je konvencija, ne kvar.
+- **Status:** `WITHDRAWN`. Nalaz je bio moja greška u merenju, a ne stanje repoa. Zapisujem ga umesto da ga tiho obrišem, jer je bio i u opisu PR-a #74.
 
 ### F-12 — samouslužno kreiranje škole protivreči M04 §3.2.1
 
@@ -259,12 +260,11 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 
 ## 6. Šta NIJE urađeno
 
-- Nijedan v5.7 QA scenario nije implementiran. Zatečeni testovi pokrivaju zatečeni proizvod.
-- **Talas 1 je završen osim exact decimal porta**, koji se isporučuje kroz F-03 kao zaseban PR (odluka O-02).
+- Nijedan v5.7 QA scenario nije implementiran kao takav. Zatečeni testovi pokrivaju zatečeni proizvod; M04 anchor testovi gađaju invarijante iz ugovora, ali nisu numerisani QA scenariji iz `02-M04-QA-I-TRACEABILITY.md`.
+- **Nijedan modul nije `IMPLEMENTED`.** Talas 1 jeste završen, a od Talasa 2 postoji samo M04 anchor (§2.1–2.5). M04 sam po sebi nije gotov: nedostaju §2.6–2.7 (owner nomination, primary term), §2.8–2.10 (entitlement, usage, korekcije), §2.12–2.20 (komercijalni sloj) i SCH-01..06 / ORG-01..04 kao stvarne komande sa permisijama i step-up-om.
 - Dead-letter dual control nema HTTP vezivanje dok M05 support access ne postoji (F-09).
-- Talasi 2–5 nisu započeti. **Nijedan modul nije `IMPLEMENTED`.**
-- F-03 (novac) i F-04 (imenovanje) i dalje čekaju — vidi ispod.
-- Web `npm ci` nije uspeo u ovom okruženju (mrežna greška), pa web typecheck/build i Cypress **nisu izvršeni lokalno**; za njih je dokaz jedino CI.
+- Talasi 3–5 nisu započeti.
+- **Cypress se u ovom okruženju ne može pokrenuti** (binarni paket se ne preuzima), pa su korisničke putanje dokazivane pokretanjem stvarnog stack-a i pravim HTTP pozivima, odnosno Playwright-om uz predinstalirani Chromium. Web `typecheck` i `build` **se izvršavaju lokalno i prolaze** (raniji nalaz o suprotnom povučen — vidi F-11).
 
 ## 7. Predloženi sledeći korak
 
@@ -272,7 +272,9 @@ Redosled je potvrdio vlasnik proizvoda 2026-09-18:
 
 1. ~~**F-03** — novac na `NUMERIC(18,2)`~~ — urađeno.
 2. ~~**F-04** — preimenovanje `Organization` → `School`~~ — urađeno.
-3. Talas 2 (M04 → M06 → M01 → M03 → M05 → M07 → M02).
+3. ~~M04 anchor (§2.1–2.5) i contact protection port~~ — urađeno.
+4. Ostatak M04: owner nomination i primary term (§2.6–2.7), pa entitlement i usage (§2.8–2.10). Komercijalni sloj (§2.12–2.20) je najveći deo i ide posle njih.
+5. Nastavak Talasa 2 redosledom iz `DCR-20260903-07`: M06 → M01 → M03 → M05 → M07 → M02. M02 i M05 su ujedno uslov da se F-09 i F-12 zatvore.
 
 ## 8. Odluke vlasnika proizvoda (2026-09-18)
 
