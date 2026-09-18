@@ -25,6 +25,7 @@ from app.domains.people import models as _people_models  # noqa: F401
 from app.domains.privacy import models as _privacy_models  # noqa: F401
 from app.domains.progress import models as _progress_models  # noqa: F401
 from app.domains.scheduling import models as _scheduling_models  # noqa: F401
+from app.domains.school import entitlement_models as _entitlement_models  # noqa: F401
 from app.domains.school import models as _school_models  # noqa: F401
 from app.domains.school import ownership_models as _ownership_models  # noqa: F401
 from app.domains.structure import models as _structure_models  # noqa: F401
