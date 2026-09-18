@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
+from app.platform import observability
 from app.platform.inbox import service as inbox
 from app.platform.outbox import service
 from app.platform.outbox.models import OutboxMessage
@@ -90,19 +91,22 @@ def process_available(worker_id: str, *, batch_size: int = 20) -> int:
                 # Discard whatever the handler managed to write, including its
                 # inbox claim, so the retry starts from a clean slate.
                 session.rollback()
-                _record_failure(message_id, exc)
-                logger.warning("outbox delivery failed id=%s: %r", message_id, exc)
+                # Never the raw exception: it quotes row values, and this line
+                # and the stored error are both covered by the PII-free rule.
+                description = observability.safe_error(exc)
+                _record_failure(message_id, description)
+                logger.warning("outbox delivery failed id=%s: %s", message_id, description)
             processed += 1
     return processed
 
 
-def _record_failure(message_id: str, exc: Exception) -> None:
+def _record_failure(message_id: str, description: str) -> None:
     """Record the failure in its own transaction, after the rollback above."""
     with SessionLocal() as session:
         message = session.get(OutboxMessage, message_id, with_for_update=True)
         if message is None:
             return
-        service.mark_failed(session, message, repr(exc))
+        service.mark_failed(session, message, description)
         session.commit()
 
 
