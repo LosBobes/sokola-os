@@ -37,6 +37,7 @@ from app.domains.scheduling.router import router as scheduling_router
 from app.domains.school.router import router as school_router
 from app.domains.search.router import router as search_router
 from app.domains.structure.router import router as structure_router
+from app.platform import crypto
 from app.security.csrf import CsrfMiddleware
 
 API_TITLE = "SOKOLA OS P0 API"
@@ -50,6 +51,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     settings = settings or get_settings()
     _guard_dev_auth(settings)
+    _guard_contact_keys(settings)
 
     app = FastAPI(
         title=API_TITLE,
@@ -124,6 +126,27 @@ def _guard_dev_auth(settings: Settings) -> None:
         and "insecure" in settings.password_pepper
     ):
         raise RuntimeError("SOKOLA_PASSWORD_PEPPER must be set in staging/production.")
+
+
+def _guard_contact_keys(settings: Settings) -> None:
+    """Contact keyrings must parse at boot, and must not be the dev defaults.
+
+    Parsing here rather than on first use turns a mistyped key into a refused
+    start, instead of a school that provisions fine and whose contact column
+    cannot be read back. And a published default key protecting real contacts is
+    the same failure as a published session secret, so it is refused the same way.
+    """
+    for what, raw in (
+        ("SOKOLA_CONTACT_ENCRYPTION_KEYS", settings.contact_encryption_keys),
+        ("SOKOLA_CONTACT_FINGERPRINT_KEYS", settings.contact_fingerprint_keys),
+    ):
+        keyring = crypto.parse_keyring(raw, what=what)
+        if settings.is_production_like and any(
+            b"insecure" in key for key in keyring.keys.values()
+        ):
+            # The marker is in the key *material*, not in the base64 text, so
+            # re-encoding the published default does not get past this.
+            raise RuntimeError(f"{what} must be set in staging/production.")
 
 
 app = create_app()

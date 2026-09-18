@@ -16,6 +16,9 @@ dependencies = [
     "httpx>=0.28",
     "itsdangerous>=2.2",
     "python-multipart>=0.0.12",
+    # Contact AEAD (app.platform.crypto). Already present transitively via
+    # authlib; declared here because this code imports it directly.
+    "cryptography>=41.0",
 ]
 
 [project.optional-dependencies]
