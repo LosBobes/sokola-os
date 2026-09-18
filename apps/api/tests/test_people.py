@@ -54,7 +54,7 @@ def test_duplicate_is_blocked_then_allowed_with_reason(client: TestClient, db: S
     assert ok.json()["id"] != first.json()["id"]
 
 
-def test_people_are_isolated_per_organization(client: TestClient, db: Session) -> None:
+def test_people_are_isolated_per_school(client: TestClient, db: Session) -> None:
     org_a = bootstrap_actor(db, org_name="Klub A")
     org_b = bootstrap_actor(db, org_name="Klub B")
 

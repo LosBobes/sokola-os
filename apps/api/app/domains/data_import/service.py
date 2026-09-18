@@ -54,7 +54,7 @@ from app.domains.data_import.schemas import (
 from app.domains.groups.models import GroupMembership
 from app.domains.identity.enums import PersonIdentityStatus
 from app.domains.identity.models import Person
-from app.domains.organization.models import OrganizationMembership
+from app.domains.school.models import SchoolMembership
 from app.platform import clock
 from app.platform.audit.service import record_audit
 from app.platform.outbox.service import enqueue
@@ -69,7 +69,7 @@ def _batch_response(batch: ImportBatch) -> ImportBatchResponse:
 
 
 def _get_batch_or_404(db: Session, context: RequestContext, batch_id: str) -> ImportBatch:
-    batch = repository.get_org_batch(db, context.organization_id, batch_id)
+    batch = repository.get_school_batch(db, context.school_id, batch_id)
     if batch is None:
         raise NotFoundError("Uvoz nije pronađen.")
     return batch
@@ -100,7 +100,7 @@ def create_upload(
         )
 
     batch = ImportBatch(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         source_filename=filename or "upload.csv",
         created_by_person_id=context.person_id,
     )
@@ -116,7 +116,7 @@ def create_upload(
         db.add(
             ImportRow(
                 batch_id=batch.id,
-                organization_id=context.organization_id,
+                school_id=context.school_id,
                 row_number=row_number,
                 given_name=given,
                 family_name=family,
@@ -134,7 +134,7 @@ def create_upload(
         entity_type="import_batch",
         entity_id=batch.id,
         summary=f"Učitan fajl za uvoz „{batch.source_filename}“ ({total} redova).",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     db.commit()
@@ -148,7 +148,7 @@ def get_upload(db: Session, context: RequestContext, batch_id: str) -> ImportBat
 def list_uploads(
     db: Session, context: RequestContext, params: PageParams
 ) -> Page[ImportBatchResponse]:
-    batches, total = repository.list_org_batches(db, context.organization_id, params)
+    batches, total = repository.list_school_batches(db, context.school_id, params)
     return Page.build([_batch_response(b) for b in batches], total, params)
 
 
@@ -167,13 +167,13 @@ def _validate_row(
         reasons.append("Ime i prezime su obavezni.")
 
     if row.group_name:
-        group = repository.find_group_by_name(db, context.organization_id, row.group_name)
+        group = repository.find_group_by_name(db, context.school_id, row.group_name)
         if group is None:
             reasons.append(f"Grupa „{row.group_name}“ ne postoji u ovoj školi.")
 
     if row.local_member_code:
         code = row.local_member_code
-        if repository.find_local_code_owner(db, context.organization_id, code) is not None:
+        if repository.find_local_code_owner(db, context.school_id, code) is not None:
             reasons.append(f"Lokalna šifra člana „{code}“ se već koristi u ovoj školi.")
         elif code in seen_codes:
             reasons.append(
@@ -185,7 +185,7 @@ def _validate_row(
     duplicates: list[str] = []
     if given and family:
         candidates = repository.find_duplicate_people(
-            db, context.organization_id, given, family
+            db, context.school_id, given, family
         )
         duplicates = [p.id for p in candidates]
 
@@ -224,7 +224,7 @@ def preview_batch(
             f"Pregledan uvoz „{batch.source_filename}“: {valid} validno, "
             f"{batch.invalid_rows} nevalidno."
         ),
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     db.commit()
@@ -292,20 +292,20 @@ def commit_batch(db: Session, context: RequestContext, batch_id: str) -> ImportC
         db.add(person)
         db.flush()
         db.add(
-            OrganizationMembership(
-                organization_id=context.organization_id,
+            SchoolMembership(
+                school_id=context.school_id,
                 person_id=person.id,
                 local_member_code=row.local_member_code,
             )
         )
 
         if row.group_name:
-            group = repository.find_group_by_name(db, context.organization_id, row.group_name)
+            group = repository.find_group_by_name(db, context.school_id, row.group_name)
             if group is not None:
                 db.add(
                     GroupMembership(
                         group_id=group.id,
-                        organization_id=context.organization_id,
+                        school_id=context.school_id,
                         person_id=person.id,
                         joined_at=clock.now(),
                     )
@@ -332,15 +332,15 @@ def commit_batch(db: Session, context: RequestContext, batch_id: str) -> ImportC
             entity_type="person",
             entity_id=person.id,
             summary=f"Dodata osoba „{person.display_name}“ uvozom fajla „{batch.source_filename}“.",
-            organization_id=context.organization_id,
+            school_id=context.school_id,
             actor_person_id=context.person_id,
             context={"import_batch_id": batch.id, "row_number": row.row_number},
         )
         enqueue(
             db,
             event_type="person.created",
-            payload={"person_id": person.id, "organization_id": context.organization_id},
-            organization_id=context.organization_id,
+            payload={"person_id": person.id, "school_id": context.school_id},
+            school_id=context.school_id,
         )
 
     batch.status = ImportBatchStatus.COMMITTED
@@ -357,7 +357,7 @@ def commit_batch(db: Session, context: RequestContext, batch_id: str) -> ImportC
         summary=(
             f"Potvrđen uvoz „{batch.source_filename}“: {created} kreirano, {skipped} preskočeno."
         ),
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     enqueue(
@@ -365,11 +365,11 @@ def commit_batch(db: Session, context: RequestContext, batch_id: str) -> ImportC
         event_type="import.committed",
         payload={
             "batch_id": batch.id,
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
             "created_rows": created,
             "skipped_rows": skipped,
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
     db.commit()
 

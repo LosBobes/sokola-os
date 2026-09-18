@@ -29,12 +29,12 @@ def record_payment(
     guard = None
     if idempotency_key:
         guard = idempotency.begin(
-            db, context.organization_id, "payments.record", idempotency_key, params
+            db, context.school_id, "payments.record", idempotency_key, params
         )
         if guard.replay is not None:
             return PaymentResponse.model_validate(guard.replay["body"])
 
-    charge = repository.get_charge_for_update(db, context.organization_id, charge_id)
+    charge = repository.get_charge_for_update(db, context.school_id, charge_id)
     if charge is None:
         raise NotFoundError("Zaduženje nije pronađeno.")
     if charge.status is ChargeStatus.CANCELLED:
@@ -52,7 +52,7 @@ def record_payment(
         )
 
     payment = PaymentRecord(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         charge_id=charge_id,
         amount=req.amount,
         currency=charge.currency,
@@ -86,7 +86,7 @@ def record_payment(
         entity_type="charge",
         entity_id=charge_id,
         summary=f"Evidentirana uplata {req.amount} ({req.method}).",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     enqueue(
@@ -95,9 +95,9 @@ def record_payment(
         payload={
             "payment_id": payment.id,
             "charge_id": charge_id,
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
     if guard is not None:
         idempotency.complete(db, guard, status=201, body=result.model_dump(mode="json"))
@@ -120,18 +120,18 @@ def void_payment(
     guard = None
     if idempotency_key:
         guard = idempotency.begin(
-            db, context.organization_id, "payments.void", idempotency_key, params
+            db, context.school_id, "payments.void", idempotency_key, params
         )
         if guard.replay is not None:
             return PaymentResponse.model_validate(guard.replay["body"])
 
-    payment = repository.get_payment_for_update(db, context.organization_id, payment_id)
+    payment = repository.get_payment_for_update(db, context.school_id, payment_id)
     if payment is None:
         raise NotFoundError("Uplata nije pronađena.")
     if payment.status is PaymentRecordStatus.VOIDED:
         raise ConflictError("Uplata je već poništena.")
 
-    charge = repository.get_charge_for_update(db, context.organization_id, payment.charge_id)
+    charge = repository.get_charge_for_update(db, context.school_id, payment.charge_id)
     if charge is None:
         raise NotFoundError("Zaduženje nije pronađeno.")
 
@@ -166,7 +166,7 @@ def void_payment(
         entity_type="charge",
         entity_id=charge.id,
         summary=f"Poništena uplata {payment.amount} ({req.reason.value}).",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     enqueue(
@@ -175,9 +175,9 @@ def void_payment(
         payload={
             "payment_id": payment.id,
             "charge_id": charge.id,
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
     if guard is not None:
         idempotency.complete(db, guard, status=200, body=result.model_dump(mode="json"))

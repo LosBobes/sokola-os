@@ -12,20 +12,20 @@ from app.domains.structure.models import Category, Location, Program, Room
 # ---------------------------------------------------------------------------
 
 
-def get_org_category(db: Session, organization_id: str, category_id: str) -> Category | None:
+def get_school_category(db: Session, school_id: str, category_id: str) -> Category | None:
     stmt = select(Category).where(
         Category.id == category_id,
-        Category.organization_id == organization_id,
+        Category.school_id == school_id,
         Category.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).scalar_one_or_none()
 
 
-def list_org_categories(
-    db: Session, organization_id: str, params: PageParams
+def list_school_categories(
+    db: Session, school_id: str, params: PageParams
 ) -> tuple[list[Category], int]:
     base = select(Category).where(
-        Category.organization_id == organization_id,
+        Category.school_id == school_id,
         Category.record_status == RecordStatus.ACTIVE,
     )
     total = db.execute(
@@ -44,20 +44,20 @@ def list_org_categories(
 # ---------------------------------------------------------------------------
 
 
-def get_org_program(db: Session, organization_id: str, program_id: str) -> Program | None:
+def get_school_program(db: Session, school_id: str, program_id: str) -> Program | None:
     stmt = select(Program).where(
         Program.id == program_id,
-        Program.organization_id == organization_id,
+        Program.school_id == school_id,
         Program.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).scalar_one_or_none()
 
 
-def list_org_programs(
-    db: Session, organization_id: str, params: PageParams
+def list_school_programs(
+    db: Session, school_id: str, params: PageParams
 ) -> tuple[list[Program], int]:
     base = select(Program).where(
-        Program.organization_id == organization_id,
+        Program.school_id == school_id,
         Program.record_status == RecordStatus.ACTIVE,
     )
     total = db.execute(
@@ -72,10 +72,10 @@ def list_org_programs(
 
 
 def program_code_taken(
-    db: Session, organization_id: str, internal_code: str, *, exclude_id: str | None = None
+    db: Session, school_id: str, internal_code: str, *, exclude_id: str | None = None
 ) -> bool:
     stmt = select(Program.id).where(
-        Program.organization_id == organization_id,
+        Program.school_id == school_id,
         Program.internal_code == internal_code,
         Program.record_status == RecordStatus.ACTIVE,
     )
@@ -89,20 +89,20 @@ def program_code_taken(
 # ---------------------------------------------------------------------------
 
 
-def get_org_location(db: Session, organization_id: str, location_id: str) -> Location | None:
+def get_school_location(db: Session, school_id: str, location_id: str) -> Location | None:
     stmt = select(Location).where(
         Location.id == location_id,
-        Location.organization_id == organization_id,
+        Location.school_id == school_id,
         Location.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).scalar_one_or_none()
 
 
-def list_org_locations(
-    db: Session, organization_id: str, params: PageParams
+def list_school_locations(
+    db: Session, school_id: str, params: PageParams
 ) -> tuple[list[Location], int]:
     base = select(Location).where(
-        Location.organization_id == organization_id,
+        Location.school_id == school_id,
         Location.record_status == RecordStatus.ACTIVE,
     )
     total = db.execute(
@@ -117,10 +117,10 @@ def list_org_locations(
 
 
 def location_code_taken(
-    db: Session, organization_id: str, internal_code: str, *, exclude_id: str | None = None
+    db: Session, school_id: str, internal_code: str, *, exclude_id: str | None = None
 ) -> bool:
     stmt = select(Location.id).where(
-        Location.organization_id == organization_id,
+        Location.school_id == school_id,
         Location.internal_code == internal_code,
         Location.record_status == RecordStatus.ACTIVE,
     )
@@ -134,20 +134,20 @@ def location_code_taken(
 # ---------------------------------------------------------------------------
 
 
-def get_org_room(db: Session, organization_id: str, room_id: str) -> Room | None:
+def get_school_room(db: Session, school_id: str, room_id: str) -> Room | None:
     stmt = select(Room).where(
         Room.id == room_id,
-        Room.organization_id == organization_id,
+        Room.school_id == school_id,
         Room.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).scalar_one_or_none()
 
 
-def list_org_rooms(
-    db: Session, organization_id: str, params: PageParams, *, location_id: str | None = None
+def list_school_rooms(
+    db: Session, school_id: str, params: PageParams, *, location_id: str | None = None
 ) -> tuple[list[Room], int]:
     base = select(Room).where(
-        Room.organization_id == organization_id,
+        Room.school_id == school_id,
         Room.record_status == RecordStatus.ACTIVE,
     )
     if location_id is not None:
@@ -164,10 +164,10 @@ def list_org_rooms(
 
 
 def room_code_taken(
-    db: Session, organization_id: str, internal_code: str, *, exclude_id: str | None = None
+    db: Session, school_id: str, internal_code: str, *, exclude_id: str | None = None
 ) -> bool:
     stmt = select(Room.id).where(
-        Room.organization_id == organization_id,
+        Room.school_id == school_id,
         Room.internal_code == internal_code,
         Room.record_status == RecordStatus.ACTIVE,
     )

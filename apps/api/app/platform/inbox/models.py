@@ -32,6 +32,6 @@ class InboxRecord(Base, TimestampMixin):
 
     # Carried for operator queries ("what did this school's consumers do?"); the
     # uniqueness that makes the record useful is on (consumer, message_id) alone.
-    organization_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    school_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     event_type: Mapped[str] = mapped_column(String(120), nullable=False)
     processed_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)

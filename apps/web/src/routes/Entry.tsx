@@ -3,7 +3,7 @@ import { ApiError, api, setAuthHeaders } from "../api/client";
 import { NoTenantAccessError, useSession } from "../auth/session";
 import { BrandMark } from "../components/shell";
 import { InlineNotice, SegmentedControl, SystemState } from "../components/ui";
-import type { AuthConfig, Organization, TenantPublic } from "../api/types";
+import type { AuthConfig, School, TenantPublic } from "../api/types";
 import "./Entry.css";
 
 interface DevIdentityResponse {
@@ -61,15 +61,15 @@ function GoogleButton({ onClick }: { onClick: () => void }) {
  *  - "signin": email + password.
  *  - "signup": email + password + name, registers a new account, then signs in.
  *
- * `organizationId` (signin only) pre-selects that school once `/me` loads,
- * mirroring `signInWithGoogle(organizationId)`.
+ * `schoolId` (signin only) pre-selects that school once `/me` loads,
+ * mirroring `signInWithGoogle(schoolId)`.
  */
 function PasswordForm({
   mode,
-  organizationId,
+  schoolId,
 }: {
   mode: "signin" | "signup";
-  organizationId?: string;
+  schoolId?: string;
 }) {
   const { signInWithPassword, registerWithPassword } = useSession();
   const [email, setEmail] = useState("");
@@ -92,7 +92,7 @@ function PasswordForm({
           familyName: family.trim(),
         });
       } else {
-        await signInWithPassword(email.trim(), password, organizationId);
+        await signInWithPassword(email.trim(), password, schoolId);
       }
       // On success the session is set and <App> re-renders into the shell.
     } catch (err) {
@@ -171,22 +171,22 @@ function PasswordForm({
  */
 function EmailAuth({
   mode,
-  organizationId,
+  schoolId,
   passwordEnabled,
 }: {
   mode: "signin" | "signup";
-  organizationId?: string;
+  schoolId?: string;
   passwordEnabled: boolean;
 }) {
   if (!passwordEnabled) return null;
-  return <PasswordForm mode={mode} organizationId={organizationId} />;
+  return <PasswordForm mode={mode} schoolId={schoolId} />;
 }
 
 /**
  * Unauthenticated entry. Email+password is the default sign-in in every
  * environment, with Google beside it where it's configured. Signing up needs
  * no school code: a new account authenticates first and then lands in
- * CreateSchool, because a person exists before any organization does. Naming a school up front (`login-code`) stays available for people
+ * CreateSchool, because a person exists before any school does. Naming a school up front (`login-code`) stays available for people
  * joining an existing one. The old raw-ID dev flow only remains reachable when
  * Google isn't configured (`showDevAuth`), which keeps it alive for Cypress/CI
  * without showing it to a real user.
@@ -277,7 +277,7 @@ export function Entry({ initialMessage }: { initialMessage?: string }) {
               tenant={tenant}
               config={config}
               showDevAuth={showDevAuth}
-              onGoogle={() => signInWithGoogle(tenant.organization_id)}
+              onGoogle={() => signInWithGoogle(tenant.school_id)}
               onBack={() => setView("login-code")}
             />
           )}
@@ -405,7 +405,7 @@ function TenantLogin({
     setBusy(true);
     setError(null);
     try {
-      await signInToTenant(personId.trim(), tenant.organization_id);
+      await signInToTenant(personId.trim(), tenant.school_id);
       // On success the app re-renders into the tenant's shell.
     } catch (err) {
       setError(err);
@@ -435,7 +435,7 @@ function TenantLogin({
 
       <EmailAuth
         mode="signin"
-        organizationId={tenant.organization_id}
+        schoolId={tenant.school_id}
         passwordEnabled={config.password_enabled}
       />
 
@@ -478,7 +478,7 @@ function Register({ onCreated, onBack }: { onCreated: (slug: string, personId: s
         family_name: family,
       });
       setAuthHeaders(identity.person_id, null);
-      const org = await api.post<Organization>("/organizations", { name: school, type: "SPORTS_CLUB" });
+      const org = await api.post<School>("/schools", { name: school, type: "SPORTS_CLUB" });
       onCreated(org.slug ?? "", identity.person_id);
     } catch (err) {
       setError(err);

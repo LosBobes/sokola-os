@@ -19,7 +19,7 @@ from app.domains.groups.enums import (
 
 
 class Group(Base, TimestampMixin, RecordStatusMixin):
-    """A training group inside one organization. Rosters for scheduling and
+    """A training group inside one school. Rosters for scheduling and
     attendance are derived from active group memberships.
 
     ``program_id``/``location_id`` link the group into the structure domain
@@ -38,8 +38,8 @@ class Group(Base, TimestampMixin, RecordStatusMixin):
     __tablename__ = "group"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("grp"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     capacity_mode: Mapped[GroupCapacityMode] = mapped_column(
@@ -96,8 +96,8 @@ class GroupMembership(Base, TimestampMixin):
     group_id: Mapped[str] = mapped_column(
         ForeignKey("group.id", ondelete="CASCADE"), nullable=False
     )
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False

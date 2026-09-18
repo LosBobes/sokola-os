@@ -12,7 +12,7 @@ and reports the first position where it stops adding up. The database also
 refuses ``UPDATE`` and ``DELETE`` outright, so tampering means going around the
 application, and even then it cannot be made to look consistent.
 
-Chains are keyed per organization (plus one reserved chain for entries with no
+Chains are keyed per school (plus one reserved chain for entries with no
 tenant), so appending serializes only against other writes in the same school.
 """
 
@@ -32,8 +32,8 @@ from app.platform import clock
 from app.platform.audit.models import SYSTEM_CHAIN_KEY, AuditChainHead, AuditLog
 
 
-def chain_key_for(organization_id: str | None) -> str:
-    return organization_id or SYSTEM_CHAIN_KEY
+def chain_key_for(school_id: str | None) -> str:
+    return school_id or SYSTEM_CHAIN_KEY
 
 
 def compute_digest(
@@ -41,7 +41,7 @@ def compute_digest(
     chain_key: str,
     sequence_no: int,
     prev_hash: str | None,
-    organization_id: str | None,
+    school_id: str | None,
     actor_person_id: str | None,
     data_class: AuditDataClass | str,
     action: str,
@@ -62,7 +62,7 @@ def compute_digest(
         "chain_key": chain_key,
         "sequence_no": sequence_no,
         "prev_hash": prev_hash,
-        "organization_id": organization_id,
+        "school_id": school_id,
         "actor_person_id": actor_person_id,
         "data_class": data_class.value if isinstance(data_class, AuditDataClass) else data_class,
         "action": action,
@@ -110,12 +110,12 @@ def record_audit(
     entity_type: str,
     entity_id: str,
     summary: str,
-    organization_id: str | None = None,
+    school_id: str | None = None,
     actor_person_id: str | None = None,
     context: dict[str, Any] | None = None,
 ) -> AuditLog:
     """Append a sealed audit entry within the caller's transaction."""
-    chain_key = chain_key_for(organization_id)
+    chain_key = chain_key_for(school_id)
     last_sequence_no, last_hash = _claim_chain_head(session, chain_key)
 
     sequence_no = last_sequence_no + 1
@@ -124,7 +124,7 @@ def record_audit(
         chain_key=chain_key,
         sequence_no=sequence_no,
         prev_hash=last_hash,
-        organization_id=organization_id,
+        school_id=school_id,
         actor_person_id=actor_person_id,
         data_class=data_class,
         action=action,
@@ -136,7 +136,7 @@ def record_audit(
     )
 
     entry = AuditLog(
-        organization_id=organization_id,
+        school_id=school_id,
         actor_person_id=actor_person_id,
         data_class=data_class,
         action=action,
@@ -220,7 +220,7 @@ def verify_chain(session: Session, chain_key: str) -> ChainVerification:
             chain_key=entry.chain_key,
             sequence_no=entry.sequence_no,
             prev_hash=entry.prev_hash,
-            organization_id=entry.organization_id,
+            school_id=entry.school_id,
             actor_person_id=entry.actor_person_id,
             data_class=entry.data_class,
             action=entry.action,

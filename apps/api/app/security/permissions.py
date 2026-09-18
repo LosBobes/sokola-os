@@ -24,7 +24,7 @@ preserved exactly:
     DOCUMENTS       | OWNER, MANAGER, ADMIN            (documents _staff, new area, no
                     |                                    require_roles precedent to audit)
 
-ORGANIZATION and ROLES have no ``require_roles`` guard today (the organization
+SCHOOL and ROLES have no ``require_roles`` guard today (the school
 and identity routers gate on context alone), so including them in the
 administrative roles' defaults is behaviour-neutral: no route consults them yet.
 They are granted to OWNER/MANAGER/ADMIN so that a future area guard and the
@@ -64,7 +64,7 @@ class PermissionArea(enum.StrEnum):
     PAYMENTS = "PAYMENTS"
     EVENTS = "EVENTS"
     COMMUNICATIONS = "COMMUNICATIONS"
-    ORGANIZATION = "ORGANIZATION"
+    SCHOOL = "SCHOOL"
     ROLES = "ROLES"  # role / invitation administration
     PRIVACY = "PRIVACY"  # consent, DSAR, and retention-period administration
     DOCUMENTS = "DOCUMENTS"
@@ -72,7 +72,7 @@ class PermissionArea(enum.StrEnum):
     REPORTS = "REPORTS"  # read-only cross-domain reporting (PRD 13)
 
 
-# Everything a staff role administers by default. ORGANIZATION/ROLES/PRIVACY are
+# Everything a staff role administers by default. SCHOOL/ROLES/PRIVACY are
 # behaviour-neutral today except where their own domain's routes now guard on
 # them (PRIVACY does), see module docstring.
 _STAFF_AREAS: frozenset[PermissionArea] = frozenset(
@@ -85,7 +85,7 @@ _STAFF_AREAS: frozenset[PermissionArea] = frozenset(
         PermissionArea.PAYMENTS,
         PermissionArea.EVENTS,
         PermissionArea.COMMUNICATIONS,
-        PermissionArea.ORGANIZATION,
+        PermissionArea.SCHOOL,
         PermissionArea.ROLES,
         PermissionArea.PRIVACY,
         PermissionArea.DOCUMENTS,

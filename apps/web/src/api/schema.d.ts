@@ -1178,88 +1178,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create Organization
-         * @description Create a new organization. The caller becomes its owner. Requires
-         *     authentication but no prior context (this is how a tenant is bootstrapped).
-         */
-        post: operations["createOrganization"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/current": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Current Organization */
-        get: operations["getCurrentOrganization"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/current/deactivate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Deactivate Organization
-         * @description §31, deactivate the caller's active school. Locks out every future
-         *     context resolution against it; see ``reactivateOrganization``.
-         */
-        post: operations["deactivateOrganization"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/{organization_id}/reactivate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reactivate Organization
-         * @description §31, a deactivated school cannot be reached through the normal
-         *     context-selection path (a deactivated org is rejected at context
-         *     resolution), so this authenticates on the principal alone and checks
-         *     ownership of the named school directly.
-         */
-        post: operations["reactivateOrganization"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/parent/children": {
         parameters: {
             query?: never;
@@ -1971,6 +1889,88 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/schools": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create School
+         * @description Create a new school. The caller becomes its owner. Requires
+         *     authentication but no prior context (this is how a tenant is bootstrapped).
+         */
+        post: operations["createSchool"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schools/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Current School */
+        get: operations["getCurrentSchool"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schools/current/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deactivate School
+         * @description §31, deactivate the caller's active school. Locks out every future
+         *     context resolution against it; see ``reactivateSchool``.
+         */
+        post: operations["deactivateSchool"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schools/{school_id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivate School
+         * @description §31, a deactivated school cannot be reached through the normal
+         *     context-selection path (a deactivated org is rejected at context
+         *     resolution), so this authenticates on the principal alone and checks
+         *     ownership of the named school directly.
+         */
+        post: operations["reactivateSchool"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/search": {
         parameters: {
             query?: never;
@@ -1982,7 +1982,7 @@ export interface paths {
          * Search
          * @description Search is gated on ``ContextDep`` alone, no new permission area. It only
          *     ever surfaces rows each sub-query already re-scopes to ``context.
-         *     organization_id`` the same way that domain's own list endpoint would (e.g.
+         *     school_id`` the same way that domain's own list endpoint would (e.g.
          *     ``GET /charges`` is likewise ``ContextDep``-only today, with no per-area
          *     guard), so this is behaviour-consistent with the codebase, not a new
          *     exposure. A future permission area is easy to add here if that changes.
@@ -2076,7 +2076,7 @@ export interface components {
          * AnnouncementTargetType
          * @enum {string}
          */
-        AnnouncementTargetType: "ORGANIZATION" | "GROUP";
+        AnnouncementTargetType: "SCHOOL" | "GROUP";
         /** AssignRoleRequest */
         AssignRoleRequest: {
             /** Granted Areas */
@@ -2086,7 +2086,7 @@ export interface components {
             role_code: components["schemas"]["RoleCode"];
             /** Scope Ref Id */
             scope_ref_id?: string | null;
-            /** @default ORGANIZATION */
+            /** @default SCHOOL */
             scope_type: components["schemas"]["RoleScopeType"];
         };
         /** AttendanceByGroup */
@@ -2349,16 +2349,16 @@ export interface components {
         ConsentScope: "DATA_PROCESSING" | "MARKETING_COMMUNICATIONS" | "PHOTO_VIDEO" | "THIRD_PARTY_SHARING";
         /**
          * ContextSummary
-         * @description One selectable acting context = an active role in one organization.
+         * @description One selectable acting context = an active role in one school.
          */
         ContextSummary: {
-            /** Organization Id */
-            organization_id: string;
-            /** Organization Name */
-            organization_name: string;
             /** Role Assignment Id */
             role_assignment_id: string;
             role_code: components["schemas"]["RoleCode"];
+            /** School Id */
+            school_id: string;
+            /** School Name */
+            school_name: string;
             /** Scope Ref Id */
             scope_ref_id: string | null;
             scope_type: components["schemas"]["RoleScopeType"];
@@ -2437,7 +2437,7 @@ export interface components {
             role_code?: components["schemas"]["RoleCode"] | null;
             /** Scope Ref Id */
             scope_ref_id?: string | null;
-            /** @default ORGANIZATION */
+            /** @default SCHOOL */
             scope_type: components["schemas"]["RoleScopeType"];
             /** Target Child Person Id */
             target_child_person_id?: string | null;
@@ -2464,18 +2464,6 @@ export interface components {
             source_person_id: string;
             /** Target Person Id */
             target_person_id: string;
-        };
-        /** CreateOrganizationRequest */
-        CreateOrganizationRequest: {
-            /** Name */
-            name: string;
-            /**
-             * Timezone
-             * @default Europe/Belgrade
-             */
-            timezone: string;
-            /** @default OTHER */
-            type: components["schemas"]["OrganizationType"];
         };
         /** CreatePersonRequest */
         CreatePersonRequest: {
@@ -2529,6 +2517,18 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** CreateSchoolRequest */
+        CreateSchoolRequest: {
+            /** Name */
+            name: string;
+            /**
+             * Timezone
+             * @default Europe/Belgrade
+             */
+            timezone: string;
+            /** @default OTHER */
+            type: components["schemas"]["SchoolType"];
+        };
         /**
          * DataCategory
          * @description A category of stored personal data a retention period can be attached
@@ -2578,11 +2578,11 @@ export interface components {
             filename: string;
             /** Id */
             id: string;
-            /** Organization Id */
-            organization_id: string;
             /** Owner Person Id */
             owner_person_id: string;
             retention_period: components["schemas"]["RetentionPeriod"] | null;
+            /** School Id */
+            school_id: string;
             /** Size Bytes */
             size_bytes: number;
             /** Subject Person Id */
@@ -2610,7 +2610,7 @@ export interface components {
          *     STAFF_ONLY: no one outside staff (e.g. internal admin paperwork).
          *     SUBJECT: the person named in ``subject_person_id`` may see it, and, when
          *     that subject is a child, so may any guardian with active
-         *     ``GuardianOrganizationAccess`` to that child in this organization. This
+         *     ``GuardianSchoolAccess`` to that child in this school. This
          *     mirrors how the events domain already resolves "which children can this
          *     parent act for" (see ``app.domains.events.repository.guardian_children``).
          * @enum {string}
@@ -2794,7 +2794,7 @@ export interface components {
         GroupMembershipEndReason: "LEFT" | "MOVED" | "REMOVED" | "SEASON_END";
         /**
          * GroupMembershipStatus
-         * @description Mirrors :class:`app.domains.organization.enums.MembershipStatus` at group
+         * @description Mirrors :class:`app.domains.school.enums.MembershipStatus` at group
          *     scope. ``ENDED`` is terminal, re-joining creates a brand-new membership row,
          *     never a revived one (the unique constraint on ``(group_id, person_id)`` would
          *     otherwise collide with history).
@@ -2979,13 +2979,13 @@ export interface components {
             id: string;
             /** Invited By Person Id */
             invited_by_person_id: string | null;
-            /** Organization Id */
-            organization_id: string;
             /** Person Id */
             person_id: string | null;
             /** Reissued From Invitation Id */
             reissued_from_invitation_id: string | null;
             role_code: components["schemas"]["RoleCode"];
+            /** School Id */
+            school_id: string;
             /** Scope Ref Id */
             scope_ref_id: string | null;
             scope_type: components["schemas"]["RoleScopeType"];
@@ -3201,11 +3201,11 @@ export interface components {
             activated_at: string | null;
             /** Can Activate */
             can_activate: boolean;
-            lifecycle_status: components["schemas"]["OrganizationLifecycleStatus"];
-            /** Organization Id */
-            organization_id: string;
+            lifecycle_status: components["schemas"]["SchoolLifecycleStatus"];
             /** Remaining Steps */
             remaining_steps: components["schemas"]["OnboardingStep"][];
+            /** School Id */
+            school_id: string;
             /** Steps */
             steps: components["schemas"]["OnboardingStepStatus"][];
         };
@@ -3213,7 +3213,7 @@ export interface components {
          * OnboardingStep
          * @description A step of guided school setup, in the order a new owner walks them.
          *
-         *      ``SCHOOL_PROFILE`` is satisfied by ``POST /organizations`` itself (name/
+         *      ``SCHOOL_PROFILE`` is satisfied by ``POST /schools`` itself (name/
          *      type/timezone are required at creation) so it is always complete.
          *      ``LOCATIONS``/``ROOMS``/``PROGRAMS`` are satisfied by using the structure
          *      domain's own create endpoints, onboarding does not duplicate them, it only
@@ -3249,38 +3249,6 @@ export interface components {
          * @enum {string}
          */
         OrgMemberType: "ATTENDEE" | "STAFF" | "GUARDIAN" | "CONTACT";
-        /**
-         * OrganizationLifecycleStatus
-         * @description Where a school is in guided onboarding (PRD 02 §24/§25), independent of
-         *     ``record_status`` (which is the soft-delete/deactivation axis, §31).
-         *
-         *     A school created through ``POST /organizations`` starts ``IN_PREPARATION``
-         *     ("u pripremi"): the owner may set up structure and invite a co-owner, but
-         *     normal STAFF/PARENT/STUDENT invitations are blocked until ``ACTIVE`` (see
-         *     ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).
-         *     Legacy/seed rows default to ``ACTIVE`` so behaviour outside the real
-         *     signup path is unchanged.
-         * @enum {string}
-         */
-        OrganizationLifecycleStatus: "IN_PREPARATION" | "ACTIVE";
-        /** OrganizationResponse */
-        OrganizationResponse: {
-            /** Id */
-            id: string;
-            lifecycle_status: components["schemas"]["OrganizationLifecycleStatus"];
-            /** Name */
-            name: string;
-            /** Slug */
-            slug: string | null;
-            /** Timezone */
-            timezone: string;
-            type: components["schemas"]["OrganizationType"];
-        };
-        /**
-         * OrganizationType
-         * @enum {string}
-         */
-        OrganizationType: "SCHOOL" | "SPORTS_CLUB" | "DANCE_SCHOOL" | "COURSE_PROVIDER" | "EVENT_ORGANIZER" | "BUSINESS" | "OTHER";
         /** OutstandingByStatus */
         OutstandingByStatus: {
             /** Charge Count */
@@ -3292,7 +3260,7 @@ export interface components {
         };
         /**
          * OverviewReport
-         * @description Business dashboard: a snapshot of the organization's health right now,
+         * @description Business dashboard: a snapshot of the school's health right now,
          *     plus this-calendar-month billing and a recent attendance window.
          */
         OverviewReport: {
@@ -3809,11 +3777,11 @@ export interface components {
             granted_areas: string[] | null;
             /** Id */
             id: string;
-            /** Organization Id */
-            organization_id: string;
             /** Person Id */
             person_id: string;
             role_code: components["schemas"]["RoleCode"];
+            /** School Id */
+            school_id: string;
             /** Scope Ref Id */
             scope_ref_id: string | null;
             scope_type: components["schemas"]["RoleScopeType"];
@@ -3833,7 +3801,7 @@ export interface components {
          * RoleScopeType
          * @enum {string}
          */
-        RoleScopeType: "ORGANIZATION" | "BRANCH" | "GROUP";
+        RoleScopeType: "SCHOOL" | "BRANCH" | "GROUP";
         /** RoleTransitionRequest */
         RoleTransitionRequest: {
             /** Reason */
@@ -3882,6 +3850,38 @@ export interface components {
             /** Session Id */
             session_id: string;
         };
+        /**
+         * SchoolLifecycleStatus
+         * @description Where a school is in guided onboarding (PRD 02 §24/§25), independent of
+         *     ``record_status`` (which is the soft-delete/deactivation axis, §31).
+         *
+         *     A school created through ``POST /schools`` starts ``IN_PREPARATION``
+         *     ("u pripremi"): the owner may set up structure and invite a co-owner, but
+         *     normal STAFF/PARENT/STUDENT invitations are blocked until ``ACTIVE`` (see
+         *     ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).
+         *     Legacy/seed rows default to ``ACTIVE`` so behaviour outside the real
+         *     signup path is unchanged.
+         * @enum {string}
+         */
+        SchoolLifecycleStatus: "IN_PREPARATION" | "ACTIVE";
+        /** SchoolResponse */
+        SchoolResponse: {
+            /** Id */
+            id: string;
+            lifecycle_status: components["schemas"]["SchoolLifecycleStatus"];
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string | null;
+            /** Timezone */
+            timezone: string;
+            type: components["schemas"]["SchoolType"];
+        };
+        /**
+         * SchoolType
+         * @enum {string}
+         */
+        SchoolType: "SCHOOL" | "SPORTS_CLUB" | "DANCE_SCHOOL" | "COURSE_PROVIDER" | "EVENT_ORGANIZER" | "BUSINESS" | "OTHER";
         /** SearchResponse */
         SearchResponse: {
             /** Query */
@@ -4156,8 +4156,8 @@ export interface components {
         TenantPublic: {
             /** Name */
             name: string;
-            /** Organization Id */
-            organization_id: string;
+            /** School Id */
+            school_id: string;
             /** Slug */
             slug: string;
         };
@@ -6947,138 +6947,6 @@ export interface operations {
             };
         };
     };
-    createOrganization: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateOrganizationRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrganizationResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    getCurrentOrganization: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrganizationResponse"];
-                };
-            };
-        };
-    };
-    deactivateOrganization: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrganizationResponse"];
-                };
-            };
-            /** @description Already deactivated. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    reactivateOrganization: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                organization_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrganizationResponse"];
-                };
-            };
-            /** @description Caller is not an active owner of this school. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description School not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Already active. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     listMyChildren: {
         parameters: {
             query?: never;
@@ -8930,6 +8798,138 @@ export interface operations {
                 };
             };
             /** @description Time conflict with an existing session. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createSchool: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSchoolRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchoolResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getCurrentSchool: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchoolResponse"];
+                };
+            };
+        };
+    };
+    deactivateSchool: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchoolResponse"];
+                };
+            };
+            /** @description Already deactivated. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reactivateSchool: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                school_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchoolResponse"];
+                };
+            };
+            /** @description Caller is not an active owner of this school. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description School not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Already active. */
             409: {
                 headers: {
                     [name: string]: unknown;

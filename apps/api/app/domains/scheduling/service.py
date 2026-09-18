@@ -36,10 +36,10 @@ from app.security.context import RequestContext
 def check_conflicts(
     db: DbSession, context: RequestContext, draft: SessionDraft
 ) -> ConflictCheckResponse:
-    if repository.get_org_group(db, context.organization_id, draft.group_id) is None:
+    if repository.get_school_group(db, context.school_id, draft.group_id) is None:
         raise NotFoundError("Grupa nije pronađena.")
     conflicts = repository.find_conflicts(
-        db, context.organization_id, draft.group_id, draft.starts_at, draft.ends_at
+        db, context.school_id, draft.group_id, draft.starts_at, draft.ends_at
     )
     return ConflictCheckResponse(
         has_conflict=bool(conflicts),
@@ -66,12 +66,12 @@ def create_session(
     guard = None
     if idempotency_key:
         guard = idempotency.begin(
-            db, context.organization_id, "scheduling.create_session", idempotency_key, params
+            db, context.school_id, "scheduling.create_session", idempotency_key, params
         )
         if guard.replay is not None:
             return SessionSummary.model_validate(guard.replay["body"])
 
-    group = repository.get_org_group(db, context.organization_id, draft.group_id)
+    group = repository.get_school_group(db, context.school_id, draft.group_id)
     if group is None:
         raise NotFoundError("Grupa nije pronađena.")
 
@@ -89,11 +89,11 @@ def create_session(
         if "location_id" in draft.model_fields_set
         else group.default_location_id
     )
-    _require_trainer_in_org(db, context, trainer_person_id)
-    _require_location_in_org(db, context, location_id)
+    _require_trainer_in_school(db, context, trainer_person_id)
+    _require_location_in_school(db, context, location_id)
 
     conflicts = repository.find_conflicts(
-        db, context.organization_id, draft.group_id, draft.starts_at, draft.ends_at
+        db, context.school_id, draft.group_id, draft.starts_at, draft.ends_at
     )
     if conflicts:
         raise ConflictError(
@@ -107,7 +107,7 @@ def create_session(
         )
 
     session = Session(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         group_id=draft.group_id,
         trainer_person_id=trainer_person_id,
         location_id=location_id,
@@ -126,14 +126,14 @@ def create_session(
         entity_type="session",
         entity_id=session.id,
         summary=f"Kreiran termin {session.starts_at.isoformat()}.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     enqueue(
         db,
         event_type="session.created",
-        payload={"session_id": session.id, "organization_id": context.organization_id},
-        organization_id=context.organization_id,
+        payload={"session_id": session.id, "school_id": context.school_id},
+        school_id=context.school_id,
     )
     if guard is not None:
         idempotency.complete(db, guard, status=201, body=result.model_dump(mode="json"))
@@ -144,7 +144,7 @@ def create_session(
 def list_schedule(
     db: DbSession, context: RequestContext, start: dt.datetime, end: dt.datetime
 ) -> list[SessionSummary]:
-    sessions = repository.list_sessions_in_range(db, context.organization_id, start, end)
+    sessions = repository.list_sessions_in_range(db, context.school_id, start, end)
     return [SessionSummary.model_validate(s) for s in sessions]
 
 
@@ -180,22 +180,22 @@ def _occurrence_dates(
     return dates
 
 
-def _require_trainer_in_org(
+def _require_trainer_in_school(
     db: DbSession, context: RequestContext, trainer_person_id: str | None
 ) -> None:
     if trainer_person_id is None:
         return
-    if not repository.is_org_trainer(db, context.organization_id, trainer_person_id):
+    if not repository.is_school_trainer(db, context.school_id, trainer_person_id):
         # Same error for foreign/nonexistent, never leak cross-tenant existence.
         raise NotFoundError("Trener nije pronađen.")
 
 
-def _require_location_in_org(
+def _require_location_in_school(
     db: DbSession, context: RequestContext, location_id: str | None
 ) -> None:
     if location_id is None:
         return
-    if not repository.is_org_location(db, context.organization_id, location_id):
+    if not repository.is_school_location(db, context.school_id, location_id):
         # Same error for foreign/nonexistent, never leak cross-tenant existence.
         raise NotFoundError("Lokacija nije pronađena.")
 
@@ -205,7 +205,7 @@ def create_series(
 ) -> SessionSeriesSummary:
     """M1. Create a weekly recurrence rule and activate it (concrete sessions are
     materialized by a subsequent generate call)."""
-    group = repository.get_org_group(db, context.organization_id, body.group_id)
+    group = repository.get_school_group(db, context.school_id, body.group_id)
     if group is None:
         raise NotFoundError("Grupa nije pronađena.")
     if body.frequency is SessionSeriesFrequency.MONTHLY:
@@ -223,11 +223,11 @@ def create_series(
         if "location_id" in body.model_fields_set
         else group.default_location_id
     )
-    _require_trainer_in_org(db, context, trainer_person_id)
-    _require_location_in_org(db, context, location_id)
+    _require_trainer_in_school(db, context, trainer_person_id)
+    _require_location_in_school(db, context, location_id)
 
     series = SessionSeries(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         group_id=body.group_id,
         trainer_person_id=trainer_person_id,
         location_id=location_id,
@@ -249,14 +249,14 @@ def create_series(
         entity_type="session_series",
         entity_id=series.id,
         summary=f"Kreirana serija termina '{series.title}'.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     enqueue(
         db,
         event_type="session_series.created",
-        payload={"series_id": series.id, "organization_id": context.organization_id},
-        organization_id=context.organization_id,
+        payload={"series_id": series.id, "school_id": context.school_id},
+        school_id=context.school_id,
     )
     db.commit()
     return SessionSeriesSummary.model_validate(series)
@@ -265,7 +265,7 @@ def create_series(
 def list_series(db: DbSession, context: RequestContext) -> list[SessionSeriesSummary]:
     return [
         SessionSeriesSummary.model_validate(s)
-        for s in repository.list_series(db, context.organization_id)
+        for s in repository.list_series(db, context.school_id)
     ]
 
 
@@ -275,7 +275,7 @@ def generate_sessions(
     """M2. Materialize concrete sessions over a rolling ``weeks``-week horizon.
     Idempotent: existing occurrences are skipped (natural key = series + start),
     and occurrences that would clash with another booking are flagged, not created."""
-    series = repository.get_org_series(db, context.organization_id, series_id)
+    series = repository.get_school_series(db, context.school_id, series_id)
     if series is None:
         raise NotFoundError("Serija termina nije pronađena.")
     if series.frequency is SessionSeriesFrequency.MONTHLY:
@@ -297,7 +297,7 @@ def generate_sessions(
             skipped_existing += 1
             continue
         conflicts = repository.find_conflicts(
-            db, context.organization_id, series.group_id, starts_at, ends_at
+            db, context.school_id, series.group_id, starts_at, ends_at
         )
         if conflicts:
             skipped_conflicts.append(
@@ -305,7 +305,7 @@ def generate_sessions(
             )
             continue
         session = Session(
-            organization_id=context.organization_id,
+            school_id=context.school_id,
             group_id=series.group_id,
             series_id=series.id,
             trainer_person_id=series.trainer_person_id,
@@ -337,7 +337,7 @@ def generate_sessions(
             f"Generisano {created} termina za seriju '{series.title}' "
             f"({len(skipped_conflicts)} preskočeno zbog preklapanja)."
         ),
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     if created or skipped_conflicts:
@@ -346,11 +346,11 @@ def generate_sessions(
             event_type="session_series.generated",
             payload={
                 "series_id": series.id,
-                "organization_id": context.organization_id,
+                "school_id": context.school_id,
                 "created_count": created,
                 "skipped_conflicts": len(skipped_conflicts),
             },
-            organization_id=context.organization_id,
+            school_id=context.school_id,
         )
     db.commit()
     return result
@@ -381,7 +381,7 @@ def _apply_field_changes(session: Session, edit: SessionEdit, tz_name: str) -> b
 def _guard_no_conflict(db: DbSession, context: RequestContext, session: Session) -> None:
     conflicts = repository.find_conflicts(
         db,
-        context.organization_id,
+        context.school_id,
         session.group_id,
         session.starts_at,
         session.ends_at,
@@ -404,19 +404,19 @@ def edit_session(
 ) -> list[SessionSummary]:
     """M3. Edit a session at SINGLE / THIS_AND_FUTURE / ALL_FUTURE scope. A scoped
     edit updates the series template and every affected scheduled occurrence."""
-    session = repository.get_org_session(db, context.organization_id, session_id)
+    session = repository.get_school_session(db, context.school_id, session_id)
     if session is None:
         raise NotFoundError("Termin nije pronađen.")
     if session.status is not SessionStatus.SCHEDULED:
         raise ConflictError("Samo zakazani termin može biti izmenjen.")
-    _require_trainer_in_org(db, context, edit.trainer_person_id)
-    _require_location_in_org(db, context, edit.location_id)
+    _require_trainer_in_school(db, context, edit.trainer_person_id)
+    _require_location_in_school(db, context, edit.location_id)
 
     series: SessionSeries | None = None
     if edit.scope is not SessionEditScope.SINGLE:
         if session.series_id is None:
             raise BadRequestError("Termin nije deo serije, moguća je samo pojedinačna izmena.")
-        series = repository.get_org_series(db, context.organization_id, session.series_id)
+        series = repository.get_school_series(db, context.school_id, session.series_id)
         if series is None:
             raise NotFoundError("Serija termina nije pronađena.")
 
@@ -443,7 +443,7 @@ def edit_session(
             boundary = clock.now()
         targets = repository.list_series_sessions(
             db,
-            context.organization_id,
+            context.school_id,
             series.id,
             status=SessionStatus.SCHEDULED,
             starts_from=boundary,
@@ -463,7 +463,7 @@ def edit_session(
         entity_type="session",
         entity_id=session.id,
         summary=f"Izmenjen termin ({edit.scope.value}), razlog {edit.reason.value}.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"scope": edit.scope.value, "reason": edit.reason.value},
     )
@@ -475,9 +475,9 @@ def edit_session(
             "series_id": session.series_id,
             "scope": edit.scope.value,
             "reason": edit.reason.value,
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
     db.commit()
     return [SessionSummary.model_validate(t) for t in targets]
@@ -487,7 +487,7 @@ def cancel_session(
     db: DbSession, context: RequestContext, session_id: str, body: SessionCancel
 ) -> SessionSummary:
     """M5. Cancel a scheduled session with a reason. The slot frees up for others."""
-    session = repository.get_org_session(db, context.organization_id, session_id)
+    session = repository.get_school_session(db, context.school_id, session_id)
     if session is None:
         raise NotFoundError("Termin nije pronađen.")
     if session.status is SessionStatus.CANCELLED:
@@ -506,7 +506,7 @@ def cancel_session(
         entity_type="session",
         entity_id=session.id,
         summary=f"Otkazan termin, razlog {body.reason.value}.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"reason": body.reason.value, "note": body.note},
     )
@@ -516,9 +516,9 @@ def cancel_session(
         payload={
             "session_id": session.id,
             "reason": body.reason.value,
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
     db.commit()
     return SessionSummary.model_validate(session)
@@ -528,7 +528,7 @@ def reactivate_session(
     db: DbSession, context: RequestContext, session_id: str
 ) -> SessionSummary:
     """M5. Reactivate a cancelled session, refused if the slot is no longer free."""
-    session = repository.get_org_session(db, context.organization_id, session_id)
+    session = repository.get_school_session(db, context.school_id, session_id)
     if session is None:
         raise NotFoundError("Termin nije pronađen.")
     if session.status is not SessionStatus.CANCELLED:
@@ -536,7 +536,7 @@ def reactivate_session(
 
     conflicts = repository.find_conflicts(
         db,
-        context.organization_id,
+        context.school_id,
         session.group_id,
         session.starts_at,
         session.ends_at,
@@ -564,14 +564,14 @@ def reactivate_session(
         entity_type="session",
         entity_id=session.id,
         summary="Termin ponovo aktiviran.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     enqueue(
         db,
         event_type="session.reactivated",
-        payload={"session_id": session.id, "organization_id": context.organization_id},
-        organization_id=context.organization_id,
+        payload={"session_id": session.id, "school_id": context.school_id},
+        school_id=context.school_id,
     )
     db.commit()
     return SessionSummary.model_validate(session)

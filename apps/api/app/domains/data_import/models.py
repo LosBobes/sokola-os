@@ -29,8 +29,8 @@ class ImportBatch(Base, TimestampMixin):
     __tablename__ = "import_batch"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("imb"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     status: Mapped[ImportBatchStatus] = mapped_column(
         enum_type(ImportBatchStatus), nullable=False, default=ImportBatchStatus.PENDING
@@ -50,7 +50,7 @@ class ImportBatch(Base, TimestampMixin):
 
 class ImportRow(Base, TimestampMixin):
     """One staged CSV data row, parsed at upload time and re-checked on every
-    preview. ``organization_id`` is denormalized from the parent batch so this
+    preview. ``school_id`` is denormalized from the parent batch so this
     table's own tenant-isolation queries never need a join."""
 
     __tablename__ = "import_row"
@@ -59,8 +59,8 @@ class ImportRow(Base, TimestampMixin):
     batch_id: Mapped[str] = mapped_column(
         ForeignKey("import_batch.id", ondelete="CASCADE"), nullable=False
     )
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     row_number: Mapped[int] = mapped_column(Integer, nullable=False)
 

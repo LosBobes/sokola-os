@@ -32,8 +32,8 @@ class Event(Base, TimestampMixin, RecordStatusMixin):
     __tablename__ = "event"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("evt"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     type: Mapped[EventType] = mapped_column(
@@ -72,8 +72,8 @@ class EventRegistration(Base, TimestampMixin):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("erg"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     event_id: Mapped[str] = mapped_column(
         ForeignKey("event.id", ondelete="CASCADE"), nullable=False

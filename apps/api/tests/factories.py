@@ -8,10 +8,10 @@ from dataclasses import dataclass
 
 from app.domains.identity.enums import AuthAccountStatus, AuthIdentifierType, RoleCode
 from app.domains.identity.models import AuthAccount, AuthIdentifier, Person, RoleAssignment
-from app.domains.organization.enums import MembershipStatus, OrganizationType
-from app.domains.organization.models import Organization, OrganizationMembership
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
-from app.domains.people.models import GuardianOrganizationAccess, GuardianRelationship
+from app.domains.people.models import GuardianRelationship, GuardianSchoolAccess
+from app.domains.school.enums import MembershipStatus, SchoolType
+from app.domains.school.models import School, SchoolMembership
 from app.security.auth import DEV_PERSON_HEADER
 from app.security.deps import CONTEXT_HEADER
 from sqlalchemy.orm import Session
@@ -24,8 +24,8 @@ def make_person(db: Session, *, given: str = "Ana", family: str = "Marković") -
     return person
 
 
-def make_organization(db: Session, *, name: str = "Klub Soko") -> Organization:
-    org = Organization(name=name, type=OrganizationType.SPORTS_CLUB)
+def make_school(db: Session, *, name: str = "Klub Soko") -> School:
+    org = School(name=name, type=SchoolType.SPORTS_CLUB)
     db.add(org)
     db.commit()
     return org
@@ -35,13 +35,13 @@ def assign_role(
     db: Session,
     *,
     person: Person,
-    organization: Organization,
+    school: School,
     role: RoleCode = RoleCode.MANAGER,
     granted_areas: list[str] | None = None,
 ) -> RoleAssignment:
     assignment = RoleAssignment(
         person_id=person.id,
-        organization_id=organization.id,
+        school_id=school.id,
         role_code=role,
         granted_areas=granted_areas,
     )
@@ -54,12 +54,12 @@ def add_membership(
     db: Session,
     *,
     person: Person,
-    organization: Organization,
+    school: School,
     status: MembershipStatus = MembershipStatus.ACTIVE,
     created_at: dt.datetime | None = None,
-) -> OrganizationMembership:
-    membership = OrganizationMembership(
-        organization_id=organization.id, person_id=person.id, status=status
+) -> SchoolMembership:
+    membership = SchoolMembership(
+        school_id=school.id, person_id=person.id, status=status
     )
     if created_at is not None:
         membership.created_at = created_at
@@ -71,7 +71,7 @@ def add_membership(
 @dataclass
 class Actor:
     person: Person
-    organization: Organization
+    school: School
     assignment: RoleAssignment
 
     @property
@@ -86,30 +86,30 @@ def bootstrap_actor(
     role: RoleCode = RoleCode.MANAGER,
     given: str = "Šef",
 ) -> Actor:
-    """A person with a role (and membership) in a fresh organization, plus ready
+    """A person with a role (and membership) in a fresh school, plus ready
     auth headers for HTTP tests."""
     person = make_person(db, given=given, family="Uprava")
-    org = make_organization(db, name=org_name)
-    add_membership(db, person=person, organization=org)
-    assignment = assign_role(db, person=person, organization=org, role=role)
-    return Actor(person=person, organization=org, assignment=assignment)
+    org = make_school(db, name=org_name)
+    add_membership(db, person=person, school=org)
+    assignment = assign_role(db, person=person, school=org, role=role)
+    return Actor(person=person, school=org, assignment=assignment)
 
 
 def add_actor(
     db: Session,
     *,
-    organization: Organization,
+    school: School,
     role: RoleCode,
     given: str = "Osoba",
     granted_areas: list[str] | None = None,
 ) -> Actor:
-    """Another actor in an EXISTING organization (same tenant as another actor)."""
+    """Another actor in an EXISTING school (same tenant as another actor)."""
     person = make_person(db, given=given, family="X")
-    add_membership(db, person=person, organization=organization)
+    add_membership(db, person=person, school=school)
     assignment = assign_role(
-        db, person=person, organization=organization, role=role, granted_areas=granted_areas
+        db, person=person, school=school, role=role, granted_areas=granted_areas
     )
-    return Actor(person=person, organization=organization, assignment=assignment)
+    return Actor(person=person, school=school, assignment=assignment)
 
 
 def link_login_email(db: Session, *, person: Person, email: str) -> None:
@@ -127,11 +127,11 @@ def link_login_email(db: Session, *, person: Person, email: str) -> None:
 
 
 def make_child_with_guardian(
-    db: Session, *, organization: Organization, guardian: Person, given: str = "Dete"
+    db: Session, *, school: School, guardian: Person, given: str = "Dete"
 ) -> Person:
     """A child who is an org member and to whom ``guardian`` has active access."""
     child = make_person(db, given=given, family="D")
-    add_membership(db, person=child, organization=organization)
+    add_membership(db, person=child, school=school)
     db.add(
         GuardianRelationship(
             guardian_person_id=guardian.id,
@@ -140,8 +140,8 @@ def make_child_with_guardian(
         )
     )
     db.add(
-        GuardianOrganizationAccess(
-            organization_id=organization.id,
+        GuardianSchoolAccess(
+            school_id=school.id,
             guardian_person_id=guardian.id,
             child_person_id=child.id,
             status=GuardianAccessStatus.ACTIVE,

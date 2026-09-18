@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.common.enums import RecordStatus
 from app.domains.identity.models import Person
 from app.domains.people.enums import GuardianAccessStatus
-from app.domains.people.models import GuardianOrganizationAccess
+from app.domains.people.models import GuardianSchoolAccess
 from app.security.context import RequestContext
 from app.security.deps import ContextDep, DbDep
 from app.security.permissions import PermissionArea, require_permission
@@ -33,13 +33,13 @@ def _children(db: Session, context: RequestContext) -> list[ChildSummary]:
     stmt = (
         select(Person)
         .join(
-            GuardianOrganizationAccess,
-            GuardianOrganizationAccess.child_person_id == Person.id,
+            GuardianSchoolAccess,
+            GuardianSchoolAccess.child_person_id == Person.id,
         )
         .where(
-            GuardianOrganizationAccess.organization_id == context.organization_id,
-            GuardianOrganizationAccess.guardian_person_id == context.person_id,
-            GuardianOrganizationAccess.status == GuardianAccessStatus.ACTIVE,
+            GuardianSchoolAccess.school_id == context.school_id,
+            GuardianSchoolAccess.guardian_person_id == context.person_id,
+            GuardianSchoolAccess.status == GuardianAccessStatus.ACTIVE,
             Person.record_status == RecordStatus.ACTIVE,
         )
         .order_by(Person.display_name)

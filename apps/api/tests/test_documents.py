@@ -66,7 +66,7 @@ def test_upload_rejects_oversized_file(client: TestClient, db: Session) -> None:
 
 def test_upload_requires_permission(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    student = add_actor(db, organization=staff.organization, role=RoleCode.STUDENT)
+    student = add_actor(db, school=staff.school, role=RoleCode.STUDENT)
     resp = _upload(client, student)
     assert resp.status_code == 403
 
@@ -75,7 +75,7 @@ def test_download_staff_only_document_forbidden_for_non_staff(
     client: TestClient, db: Session
 ) -> None:
     staff = bootstrap_actor(db)
-    outsider = add_actor(db, organization=staff.organization, role=RoleCode.STUDENT)
+    outsider = add_actor(db, school=staff.school, role=RoleCode.STUDENT)
     doc_id = _upload(client, staff).json()["id"]
 
     forbidden = client.get(f"/documents/{doc_id}/content", headers=outsider.headers)
@@ -91,10 +91,10 @@ def test_download_subject_visibility_allows_subject_and_guardian(
     client: TestClient, db: Session
 ) -> None:
     staff = bootstrap_actor(db)
-    guardian = add_actor(db, organization=staff.organization, role=RoleCode.PARENT)
-    child = make_child_with_guardian(db, organization=staff.organization, guardian=guardian.person)
+    guardian = add_actor(db, school=staff.school, role=RoleCode.PARENT)
+    child = make_child_with_guardian(db, school=staff.school, guardian=guardian.person)
     other_guardian = add_actor(
-        db, organization=staff.organization, role=RoleCode.PARENT, given="Nepovezan"
+        db, school=staff.school, role=RoleCode.PARENT, given="Nepovezan"
     )
 
     doc_id = _upload(
@@ -119,7 +119,7 @@ def test_download_subject_visibility_allows_subject_and_guardian(
     assert staff_ok.status_code == 200
 
 
-def test_subject_visibility_requires_org_member_subject(client: TestClient, db: Session) -> None:
+def test_subject_visibility_requires_school_member_subject(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
     resp = _upload(
         client, staff, visibility="SUBJECT", subject_person_id="per_does_not_exist"
@@ -128,24 +128,24 @@ def test_subject_visibility_requires_org_member_subject(client: TestClient, db: 
     assert resp.json()["error"]["details"]["code"] == "SUBJECT_NOT_A_MEMBER"
 
 
-def test_cross_org_access_is_not_found(client: TestClient, db: Session) -> None:
+def test_cross_school_access_is_not_found(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    other_org_staff = bootstrap_actor(db, org_name="Druga škola")
+    other_school_staff = bootstrap_actor(db, org_name="Druga škola")
     doc_id = _upload(client, staff).json()["id"]
 
-    metadata = client.get(f"/documents/{doc_id}", headers=other_org_staff.headers)
+    metadata = client.get(f"/documents/{doc_id}", headers=other_school_staff.headers)
     assert metadata.status_code == 404
 
-    content = client.get(f"/documents/{doc_id}/content", headers=other_org_staff.headers)
+    content = client.get(f"/documents/{doc_id}/content", headers=other_school_staff.headers)
     assert content.status_code == 404
 
 
-def test_list_documents_is_org_scoped_and_paginated(client: TestClient, db: Session) -> None:
+def test_list_documents_is_school_scoped_and_paginated(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    other_org_staff = bootstrap_actor(db, org_name="Druga škola")
+    other_school_staff = bootstrap_actor(db, org_name="Druga škola")
     _upload(client, staff, filename="jedan.pdf")
     _upload(client, staff, filename="dva.pdf")
-    _upload(client, other_org_staff, filename="tudje.pdf")
+    _upload(client, other_school_staff, filename="tudje.pdf")
 
     resp = client.get("/documents", headers=staff.headers)
     assert resp.status_code == 200
@@ -160,8 +160,8 @@ def test_list_documents_is_org_scoped_and_paginated(client: TestClient, db: Sess
 
 def test_non_staff_list_only_sees_own_visible_documents(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    guardian = add_actor(db, organization=staff.organization, role=RoleCode.PARENT)
-    child = make_child_with_guardian(db, organization=staff.organization, guardian=guardian.person)
+    guardian = add_actor(db, school=staff.school, role=RoleCode.PARENT)
+    child = make_child_with_guardian(db, school=staff.school, guardian=guardian.person)
 
     _upload(client, staff, filename="interno.pdf")  # STAFF_ONLY
     _upload(
@@ -183,10 +183,10 @@ def test_contract_acknowledgement_by_subject_and_guardian(
     client: TestClient, db: Session
 ) -> None:
     staff = bootstrap_actor(db)
-    guardian = add_actor(db, organization=staff.organization, role=RoleCode.PARENT)
-    child = make_child_with_guardian(db, organization=staff.organization, guardian=guardian.person)
+    guardian = add_actor(db, school=staff.school, role=RoleCode.PARENT)
+    child = make_child_with_guardian(db, school=staff.school, guardian=guardian.person)
     unrelated = add_actor(
-        db, organization=staff.organization, role=RoleCode.PARENT, given="Nepovezan"
+        db, school=staff.school, role=RoleCode.PARENT, given="Nepovezan"
     )
 
     doc_id = _upload(
@@ -224,8 +224,8 @@ def test_staff_cannot_acknowledge_on_behalf_of_subject(client: TestClient, db: S
     """Staff can administer (see) a SUBJECT contract but acknowledging is the
     subject's/guardian's act, not staff's."""
     staff = bootstrap_actor(db)
-    guardian = add_actor(db, organization=staff.organization, role=RoleCode.PARENT)
-    child = make_child_with_guardian(db, organization=staff.organization, guardian=guardian.person)
+    guardian = add_actor(db, school=staff.school, role=RoleCode.PARENT)
+    child = make_child_with_guardian(db, school=staff.school, guardian=guardian.person)
     doc_id = _upload(
         client,
         staff,

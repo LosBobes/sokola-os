@@ -3,13 +3,13 @@ import { api } from "../api/client";
 import { PENDING_ORG_KEY, useSession } from "../auth/session";
 import { BrandMark } from "../components/shell";
 import { SystemState } from "../components/ui";
-import type { Organization } from "../api/types";
+import type { School } from "../api/types";
 
 /**
  * Shown for an authenticated person (password or Google session already
  * established) with no active role in any school yet, either a brand-new
  * account, or one whose invitations/roles were all revoked. Creating the
- * organization itself needs no prior context (`POST /organizations` only
+ * school itself needs no prior context (`POST /schools` only
  * requires an authenticated principal), so this just names the school and
  * refreshes the session's contexts.
  */
@@ -24,7 +24,7 @@ export function CreateSchool() {
     setBusy(true);
     setError(null);
     try {
-      const org = await api.post<Organization>("/organizations", {
+      const org = await api.post<School>("/schools", {
         name: school,
         type: "SPORTS_CLUB",
       });

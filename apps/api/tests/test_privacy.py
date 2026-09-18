@@ -20,7 +20,7 @@ from tests.factories import add_actor, add_membership, bootstrap_actor, make_per
 def test_record_and_list_consent(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
     subject = make_person(db, given="Milica", family="Petrović")
-    add_membership(db, person=subject, organization=staff.organization)
+    add_membership(db, person=subject, school=staff.school)
 
     created = client.post(
         "/consents",
@@ -41,7 +41,7 @@ def test_record_and_list_consent(client: TestClient, db: Session) -> None:
     assert page["items"][0]["id"] == body["id"]
 
 
-def test_record_consent_requires_person_in_this_org(client: TestClient, db: Session) -> None:
+def test_record_consent_requires_person_in_this_school(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
     resp = client.post(
         "/consents",
@@ -54,7 +54,7 @@ def test_record_consent_requires_person_in_this_org(client: TestClient, db: Sess
 def test_withdraw_consent(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
     subject = make_person(db, given="Nikola", family="Jovanović")
-    add_membership(db, person=subject, organization=staff.organization)
+    add_membership(db, person=subject, school=staff.school)
 
     created = client.post(
         "/consents",
@@ -77,7 +77,7 @@ def test_consent_tenant_isolation(client: TestClient, db: Session) -> None:
     org_a = bootstrap_actor(db, org_name="Klub A")
     org_b = bootstrap_actor(db, org_name="Klub B")
     subject_a = make_person(db, given="A", family="Osoba")
-    add_membership(db, person=subject_a, organization=org_a.organization)
+    add_membership(db, person=subject_a, school=org_a.school)
 
     created = client.post(
         "/consents",
@@ -101,16 +101,16 @@ def test_consent_tenant_isolation(client: TestClient, db: Session) -> None:
 
 def test_only_privacy_area_can_record_consent(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    trainer = add_actor(db, organization=staff.organization, role=RoleCode.TRAINER, given="Trener")
+    trainer = add_actor(db, school=staff.school, role=RoleCode.TRAINER, given="Trener")
     finance_only = add_actor(
         db,
-        organization=staff.organization,
+        school=staff.school,
         role=RoleCode.ADMIN,
         given="Finansije",
         granted_areas=["BILLING"],
     )
     subject = make_person(db, given="Subjekat", family="Test")
-    add_membership(db, person=subject, organization=staff.organization)
+    add_membership(db, person=subject, school=staff.school)
 
     for actor in (trainer, finance_only):
         resp = client.post(
@@ -131,12 +131,12 @@ def test_has_active_consent_true_then_false_after_withdrawal(
 ) -> None:
     staff = bootstrap_actor(db)
     subject = make_person(db, given="Jelena", family="Ilić")
-    add_membership(db, person=subject, organization=staff.organization)
+    add_membership(db, person=subject, school=staff.school)
 
     # No consent recorded yet.
     assert (
         has_active_consent(
-            db, staff.organization.id, subject.id, ConsentScope.PHOTO_VIDEO
+            db, staff.school.id, subject.id, ConsentScope.PHOTO_VIDEO
         )
         is False
     )
@@ -149,13 +149,13 @@ def test_has_active_consent_true_then_false_after_withdrawal(
 
     db.expire_all()
     assert (
-        has_active_consent(db, staff.organization.id, subject.id, ConsentScope.PHOTO_VIDEO)
+        has_active_consent(db, staff.school.id, subject.id, ConsentScope.PHOTO_VIDEO)
         is True
     )
     # A different scope for the same person is unaffected.
     assert (
         has_active_consent(
-            db, staff.organization.id, subject.id, ConsentScope.MARKETING_COMMUNICATIONS
+            db, staff.school.id, subject.id, ConsentScope.MARKETING_COMMUNICATIONS
         )
         is False
     )
@@ -163,7 +163,7 @@ def test_has_active_consent_true_then_false_after_withdrawal(
     client.post(f"/consents/{created['id']}/withdraw", headers=staff.headers, json={})
     db.expire_all()
     assert (
-        has_active_consent(db, staff.organization.id, subject.id, ConsentScope.PHOTO_VIDEO)
+        has_active_consent(db, staff.school.id, subject.id, ConsentScope.PHOTO_VIDEO)
         is False
     )
 
@@ -176,7 +176,7 @@ def test_has_active_consent_true_then_false_after_withdrawal(
 def test_dsar_lifecycle_pending_to_fulfilled(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
     subject = make_person(db, given="Marko", family="Kovačević")
-    add_membership(db, person=subject, organization=staff.organization)
+    add_membership(db, person=subject, school=staff.school)
 
     created = client.post(
         "/dsar-requests",
@@ -216,7 +216,7 @@ def test_dsar_lifecycle_pending_to_fulfilled(client: TestClient, db: Session) ->
 def test_dsar_rejection_directly_from_pending(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
     subject = make_person(db, given="Ana", family="Simić")
-    add_membership(db, person=subject, organization=staff.organization)
+    add_membership(db, person=subject, school=staff.school)
 
     req = client.post(
         "/dsar-requests",
@@ -237,7 +237,7 @@ def test_dsar_rejection_directly_from_pending(client: TestClient, db: Session) -
 def test_dsar_list_and_get(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
     subject = make_person(db, given="Petar", family="Nikolić")
-    add_membership(db, person=subject, organization=staff.organization)
+    add_membership(db, person=subject, school=staff.school)
 
     created = client.post(
         "/dsar-requests",
@@ -259,7 +259,7 @@ def test_dsar_tenant_isolation(client: TestClient, db: Session) -> None:
     org_a = bootstrap_actor(db, org_name="Klub A")
     org_b = bootstrap_actor(db, org_name="Klub B")
     subject_a = make_person(db, given="A", family="Osoba")
-    add_membership(db, person=subject_a, organization=org_a.organization)
+    add_membership(db, person=subject_a, school=org_a.school)
 
     created = client.post(
         "/dsar-requests",

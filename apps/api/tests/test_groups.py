@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from tests.factories import bootstrap_actor
 
 
-def _make_person_in_org(client: TestClient, actor, given: str) -> str:
+def _make_person_in_school(client: TestClient, actor, given: str) -> str:
     resp = client.post(
         "/people", headers=actor.headers, json={"given_name": given, "family_name": "Test"}
     )
@@ -40,7 +40,7 @@ def test_create_group_and_add_members(client: TestClient, db: Session) -> None:
         "/groups", headers=actor.headers, json={"name": "Mlađi pioniri"}
     ).json()
 
-    person_id = _make_person_in_org(client, actor, "Luka")
+    person_id = _make_person_in_school(client, actor, "Luka")
     added = client.post(
         f"/groups/{group['id']}/members", headers=actor.headers, json={"person_id": person_id}
     )
@@ -59,8 +59,8 @@ def test_capacity_is_enforced(client: TestClient, db: Session) -> None:
         json={"name": "Mala grupa", "capacity_mode": "LIMITED", "capacity": 1},
     ).json()
 
-    p1 = _make_person_in_org(client, actor, "Prvi")
-    p2 = _make_person_in_org(client, actor, "Drugi")
+    p1 = _make_person_in_school(client, actor, "Prvi")
+    p2 = _make_person_in_school(client, actor, "Drugi")
 
     assert (
         client.post(
@@ -74,11 +74,11 @@ def test_capacity_is_enforced(client: TestClient, db: Session) -> None:
     assert full.status_code == 409
 
 
-def test_cannot_add_person_from_another_org(client: TestClient, db: Session) -> None:
+def test_cannot_add_person_from_another_school(client: TestClient, db: Session) -> None:
     org_a = bootstrap_actor(db, org_name="Klub A")
     org_b = bootstrap_actor(db, org_name="Klub B")
 
-    outsider_id = _make_person_in_org(client, org_b, "Stranac")
+    outsider_id = _make_person_in_school(client, org_b, "Stranac")
     group = client.post("/groups", headers=org_a.headers, json={"name": "Grupa A"}).json()
 
     resp = client.post(
@@ -142,7 +142,7 @@ def test_group_pricing_rejects_negative_price(client: TestClient, db: Session) -
 def test_membership_discount_set_and_read(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db)
     group = client.post("/groups", headers=actor.headers, json={"name": "Balet"}).json()
-    person_id = _make_person_in_org(client, actor, "Mina")
+    person_id = _make_person_in_school(client, actor, "Mina")
     member = _add_member(client, actor, group["id"], person_id)
     assert member["discount"] == "0.00"
 
@@ -161,7 +161,7 @@ def test_membership_discount_set_and_read(client: TestClient, db: Session) -> No
 def test_membership_discount_rejects_negative(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db)
     group = client.post("/groups", headers=actor.headers, json={"name": "Balet"}).json()
-    person_id = _make_person_in_org(client, actor, "Mina")
+    person_id = _make_person_in_school(client, actor, "Mina")
     member = _add_member(client, actor, group["id"], person_id)
 
     resp = client.patch(
@@ -180,7 +180,7 @@ def test_membership_discount_rejects_negative(client: TestClient, db: Session) -
 def test_membership_suspend_and_resume(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db)
     group = client.post("/groups", headers=actor.headers, json={"name": "Balet"}).json()
-    person_id = _make_person_in_org(client, actor, "Mina")
+    person_id = _make_person_in_school(client, actor, "Mina")
     member = _add_member(client, actor, group["id"], person_id)
     membership_url = f"/groups/{group['id']}/members/{member['membership_id']}"
 
@@ -206,7 +206,7 @@ def test_membership_suspend_and_resume(client: TestClient, db: Session) -> None:
 def test_membership_end_is_terminal(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db)
     group = client.post("/groups", headers=actor.headers, json={"name": "Balet"}).json()
-    person_id = _make_person_in_org(client, actor, "Mina")
+    person_id = _make_person_in_school(client, actor, "Mina")
     member = _add_member(client, actor, group["id"], person_id)
     membership_url = f"/groups/{group['id']}/members/{member['membership_id']}"
 
@@ -239,7 +239,7 @@ def test_membership_end_is_terminal(client: TestClient, db: Session) -> None:
 def test_ended_member_can_rejoin_the_same_group(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db)
     group = client.post("/groups", headers=actor.headers, json={"name": "Balet"}).json()
-    person_id = _make_person_in_org(client, actor, "Mina")
+    person_id = _make_person_in_school(client, actor, "Mina")
     member = _add_member(client, actor, group["id"], person_id)
 
     client.post(
@@ -262,7 +262,7 @@ def test_membership_lifecycle_rejects_foreign_group_or_membership(
     org_b = bootstrap_actor(db, org_name="Klub B")
 
     group_a = client.post("/groups", headers=org_a.headers, json={"name": "Grupa A"}).json()
-    person_a = _make_person_in_org(client, org_a, "Ana")
+    person_a = _make_person_in_school(client, org_a, "Ana")
     member_a = _add_member(client, org_a, group_a["id"], person_a)
 
     # org_b cannot act on org_a's group at all.

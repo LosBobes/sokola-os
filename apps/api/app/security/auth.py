@@ -8,7 +8,7 @@ Order:
 2. **OIDC session**: a signed session cookie carrying ``person_id``, established
    by the Google login callback (see :mod:`app.security.oidc`).
 
-The acting organization/role is resolved separately and re-checked on every
+The acting school/role is resolved separately and re-checked on every
 request (see :mod:`app.security.deps`).
 """
 

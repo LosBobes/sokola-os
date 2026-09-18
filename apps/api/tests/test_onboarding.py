@@ -9,8 +9,8 @@ from __future__ import annotations
 from typing import Any
 
 from app.domains.identity.enums import RoleCode
-from app.domains.organization.enums import OrganizationLifecycleStatus
-from app.domains.organization.models import Organization
+from app.domains.school.enums import SchoolLifecycleStatus
+from app.domains.school.models import School
 from app.security.auth import DEV_PERSON_HEADER
 from app.security.deps import CONTEXT_HEADER
 from fastapi.testclient import TestClient
@@ -22,13 +22,13 @@ from tests.factories import add_actor, make_person
 def _bootstrap_owner(
     client: TestClient, db: Session, *, org_name: str = "Nova Škola"
 ) -> tuple[dict[str, str], dict[str, Any]]:
-    """Create a school through the real signup path (``POST /organizations``),
+    """Create a school through the real signup path (``POST /schools``),
     which, unlike ``tests.factories.bootstrap_actor``, starts it
-    IN_PREPARATION. Returns ready owner headers plus the created organization."""
+    IN_PREPARATION. Returns ready owner headers plus the created school."""
     person = make_person(db, given="Osnivač")
     bare_headers = {DEV_PERSON_HEADER: person.id}
     org = client.post(
-        "/organizations", headers=bare_headers, json={"name": org_name, "type": "SCHOOL"}
+        "/schools", headers=bare_headers, json={"name": org_name, "type": "SCHOOL"}
     ).json()
     contexts = client.get("/me/contexts", headers=bare_headers).json()
     assignment_id = contexts[0]["role_assignment_id"]
@@ -54,7 +54,7 @@ def test_new_school_starts_in_preparation_with_only_profile_done(
     assert org["lifecycle_status"] == "IN_PREPARATION"
 
     progress = client.get("/onboarding/progress", headers=headers).json()
-    assert progress["organization_id"] == org["id"]
+    assert progress["school_id"] == org["id"]
     assert progress["lifecycle_status"] == "IN_PREPARATION"
     assert progress["activated_at"] is None
     assert progress["can_activate"] is False
@@ -107,7 +107,7 @@ def test_progress_tracks_structure_setup_and_first_invite(
             "type": "STAFF",
             "target_email": "suvlasnik@primer.rs",
             "role_code": "OWNER",
-            "scope_type": "ORGANIZATION",
+            "scope_type": "SCHOOL",
         },
     )
     assert invited.status_code == 201, invited.text
@@ -132,7 +132,7 @@ def test_in_preparation_blocks_normal_staff_invite(client: TestClient, db: Sessi
             "type": "STAFF",
             "target_email": "menadzer@primer.rs",
             "role_code": "MANAGER",
-            "scope_type": "ORGANIZATION",
+            "scope_type": "SCHOOL",
         },
     )
     assert resp.status_code == 403
@@ -149,7 +149,7 @@ def test_in_preparation_blocks_parent_invite(client: TestClient, db: Session) ->
         json={
             "type": "PARENT",
             "target_email": "roditelj@primer.rs",
-            "scope_type": "ORGANIZATION",
+            "scope_type": "SCHOOL",
             "target_child_person_id": "per_ne_postoji",
         },
     )
@@ -166,7 +166,7 @@ def test_in_preparation_allows_first_owner_invite(client: TestClient, db: Sessio
             "type": "STAFF",
             "target_email": "suvlasnik@primer.rs",
             "role_code": "OWNER",
-            "scope_type": "ORGANIZATION",
+            "scope_type": "SCHOOL",
         },
     )
     assert resp.status_code == 201, resp.text
@@ -188,7 +188,7 @@ def test_activation_lifts_the_invite_gate(client: TestClient, db: Session) -> No
             "type": "STAFF",
             "target_email": "menadzer@primer.rs",
             "role_code": "MANAGER",
-            "scope_type": "ORGANIZATION",
+            "scope_type": "SCHOOL",
         },
     )
     assert resp.status_code == 201, resp.text
@@ -214,22 +214,22 @@ def test_activation_requires_a_location(client: TestClient, db: Session) -> None
     assert progress["can_activate"] is False
     assert _step(progress, "ACTIVATE")["completed"] is True
 
-    org_row = db.get(Organization, org["id"])
+    org_row = db.get(School, org["id"])
     assert org_row is not None
-    assert org_row.lifecycle_status is OrganizationLifecycleStatus.ACTIVE
+    assert org_row.lifecycle_status is SchoolLifecycleStatus.ACTIVE
 
     # Already active, a second activation is refused.
     again = client.post("/onboarding/activate", headers=headers)
     assert again.status_code == 409
 
 
-def test_activate_requires_organization_permission(client: TestClient, db: Session) -> None:
+def test_activate_requires_school_permission(client: TestClient, db: Session) -> None:
     headers, org = _bootstrap_owner(client, db)
     client.post("/locations", headers=headers, json={"name": "Centrala"})
 
-    org_row = db.get(Organization, org["id"])
+    org_row = db.get(School, org["id"])
     assert org_row is not None
-    trainer = add_actor(db, organization=org_row, role=RoleCode.TRAINER, given="Trener")
+    trainer = add_actor(db, school=org_row, role=RoleCode.TRAINER, given="Trener")
 
     resp = client.post("/onboarding/activate", headers=trainer.headers)
     assert resp.status_code == 403
@@ -241,8 +241,8 @@ def test_activate_requires_organization_permission(client: TestClient, db: Sessi
 
 
 def test_onboarding_progress_is_isolated_per_school(client: TestClient, db: Session) -> None:
-    headers_a, _org_a = _bootstrap_owner(client, db, org_name="Škola A")
-    headers_b, _org_b = _bootstrap_owner(client, db, org_name="Škola B")
+    headers_a, _school_a = _bootstrap_owner(client, db, org_name="Škola A")
+    headers_b, _school_b = _bootstrap_owner(client, db, org_name="Škola B")
 
     client.post("/locations", headers=headers_a, json={"name": "Centrala A"})
 

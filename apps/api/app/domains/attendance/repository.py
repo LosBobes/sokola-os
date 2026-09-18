@@ -12,11 +12,11 @@ from app.domains.scheduling.models import Session as TrainingSession
 
 
 def get_session(
-    db: DbSession, organization_id: str, session_id: str, *, for_update: bool = False
+    db: DbSession, school_id: str, session_id: str, *, for_update: bool = False
 ) -> TrainingSession | None:
     stmt = select(TrainingSession).where(
         TrainingSession.id == session_id,
-        TrainingSession.organization_id == organization_id,
+        TrainingSession.school_id == school_id,
         TrainingSession.record_status == RecordStatus.ACTIVE,
     )
     if for_update:

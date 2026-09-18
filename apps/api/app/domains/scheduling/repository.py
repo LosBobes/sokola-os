@@ -9,54 +9,54 @@ from app.common.enums import RecordStatus
 from app.domains.groups.models import Group
 from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
 from app.domains.identity.models import RoleAssignment
-from app.domains.organization.enums import MembershipStatus, OrgMemberType
-from app.domains.organization.models import OrganizationMembership
 from app.domains.scheduling.enums import SessionStatus
 from app.domains.scheduling.models import Session, SessionSeries
+from app.domains.school.enums import MembershipStatus, OrgMemberType
+from app.domains.school.models import SchoolMembership
 from app.domains.structure.models import Location
 
 
-def get_org_group(db: DbSession, organization_id: str, group_id: str) -> Group | None:
+def get_school_group(db: DbSession, school_id: str, group_id: str) -> Group | None:
     stmt = select(Group).where(
         Group.id == group_id,
-        Group.organization_id == organization_id,
+        Group.school_id == school_id,
         Group.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).scalar_one_or_none()
 
 
-def is_org_trainer(db: DbSession, organization_id: str, person_id: str) -> bool:
-    """Whether this person may be put in front of a group in this organization.
+def is_school_trainer(db: DbSession, school_id: str, person_id: str) -> bool:
+    """Whether this person may be put in front of a group in this school.
 
     Two independent grounds, because holding an account and being staff are
     separate facts: an ACTIVE TRAINER *role assignment* (someone who signs in as
-    a trainer), or an ACTIVE organization membership typed ``STAFF`` (a coach
+    a trainer), or an ACTIVE school membership typed ``STAFF`` (a coach
     the school records but who has no login, which the people domain explicitly
     allows). Either way the check stays tenant-scoped.
     """
     role_stmt = select(RoleAssignment.id).where(
         RoleAssignment.person_id == person_id,
-        RoleAssignment.organization_id == organization_id,
+        RoleAssignment.school_id == school_id,
         RoleAssignment.role_code == RoleCode.TRAINER,
         RoleAssignment.status == RoleAssignmentStatus.ACTIVE,
     )
     if db.execute(role_stmt).first() is not None:
         return True
-    staff_stmt = select(OrganizationMembership.id).where(
-        OrganizationMembership.person_id == person_id,
-        OrganizationMembership.organization_id == organization_id,
-        OrganizationMembership.member_type == OrgMemberType.STAFF,
-        OrganizationMembership.status == MembershipStatus.ACTIVE,
-        OrganizationMembership.record_status == RecordStatus.ACTIVE,
+    staff_stmt = select(SchoolMembership.id).where(
+        SchoolMembership.person_id == person_id,
+        SchoolMembership.school_id == school_id,
+        SchoolMembership.member_type == OrgMemberType.STAFF,
+        SchoolMembership.status == MembershipStatus.ACTIVE,
+        SchoolMembership.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(staff_stmt).first() is not None
 
 
-def is_org_location(db: DbSession, organization_id: str, location_id: str) -> bool:
+def is_school_location(db: DbSession, school_id: str, location_id: str) -> bool:
     """Whether an active location with this id belongs to the caller's school."""
     stmt = select(Location.id).where(
         Location.id == location_id,
-        Location.organization_id == organization_id,
+        Location.school_id == school_id,
         Location.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).first() is not None
@@ -64,7 +64,7 @@ def is_org_location(db: DbSession, organization_id: str, location_id: str) -> bo
 
 def find_conflicts(
     db: DbSession,
-    organization_id: str,
+    school_id: str,
     group_id: str,
     starts_at: dt.datetime,
     ends_at: dt.datetime,
@@ -74,7 +74,7 @@ def find_conflicts(
     """Scheduled sessions for the same group whose time range overlaps the draft.
     Half-open overlap: existing.starts < new.ends AND existing.ends > new.starts."""
     stmt = select(Session).where(
-        Session.organization_id == organization_id,
+        Session.school_id == school_id,
         Session.group_id == group_id,
         Session.status == SessionStatus.SCHEDULED,
         Session.starts_at < ends_at,
@@ -85,22 +85,22 @@ def find_conflicts(
     return list(db.execute(stmt.order_by(Session.starts_at)).scalars().all())
 
 
-def get_org_session(db: DbSession, organization_id: str, session_id: str) -> Session | None:
+def get_school_session(db: DbSession, school_id: str, session_id: str) -> Session | None:
     stmt = select(Session).where(
         Session.id == session_id,
-        Session.organization_id == organization_id,
+        Session.school_id == school_id,
         Session.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).scalar_one_or_none()
 
 
 def list_sessions_in_range(
-    db: DbSession, organization_id: str, start: dt.datetime, end: dt.datetime
+    db: DbSession, school_id: str, start: dt.datetime, end: dt.datetime
 ) -> list[Session]:
     stmt = (
         select(Session)
         .where(
-            Session.organization_id == organization_id,
+            Session.school_id == school_id,
             Session.record_status == RecordStatus.ACTIVE,
             Session.starts_at >= start,
             Session.starts_at < end,
@@ -113,22 +113,22 @@ def list_sessions_in_range(
 # --- Recurring series -------------------------------------------------------
 
 
-def get_org_series(
-    db: DbSession, organization_id: str, series_id: str
+def get_school_series(
+    db: DbSession, school_id: str, series_id: str
 ) -> SessionSeries | None:
     stmt = select(SessionSeries).where(
         SessionSeries.id == series_id,
-        SessionSeries.organization_id == organization_id,
+        SessionSeries.school_id == school_id,
         SessionSeries.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).scalar_one_or_none()
 
 
-def list_series(db: DbSession, organization_id: str) -> list[SessionSeries]:
+def list_series(db: DbSession, school_id: str) -> list[SessionSeries]:
     stmt = (
         select(SessionSeries)
         .where(
-            SessionSeries.organization_id == organization_id,
+            SessionSeries.school_id == school_id,
             SessionSeries.record_status == RecordStatus.ACTIVE,
         )
         .order_by(SessionSeries.created_at)
@@ -145,14 +145,14 @@ def existing_series_start_times(db: DbSession, series_id: str) -> set[dt.datetim
 
 def list_series_sessions(
     db: DbSession,
-    organization_id: str,
+    school_id: str,
     series_id: str,
     *,
     status: SessionStatus | None = None,
     starts_from: dt.datetime | None = None,
 ) -> list[Session]:
     stmt = select(Session).where(
-        Session.organization_id == organization_id,
+        Session.school_id == school_id,
         Session.series_id == series_id,
         Session.record_status == RecordStatus.ACTIVE,
     )

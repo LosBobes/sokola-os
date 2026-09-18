@@ -30,10 +30,10 @@ def _resolve_recipients(
 ) -> list[str]:
     if draft.target_type is AnnouncementTargetType.GROUP:
         assert draft.target_group_id is not None
-        if not repository.group_exists(db, context.organization_id, draft.target_group_id):
+        if not repository.group_exists(db, context.school_id, draft.target_group_id):
             raise NotFoundError("Grupa nije pronađena.")
         return repository.group_recipient_ids(db, draft.target_group_id)
-    return repository.organization_recipient_ids(db, context.organization_id)
+    return repository.school_recipient_ids(db, context.school_id)
 
 
 def _snapshot_hash(recipient_ids: list[str]) -> str:
@@ -63,7 +63,7 @@ def publish(
     guard = None
     if idempotency_key:
         guard = idempotency.begin(
-            db, context.organization_id, "communications.publish", idempotency_key, params
+            db, context.school_id, "communications.publish", idempotency_key, params
         )
         if guard.replay is not None:
             return AnnouncementResponse.model_validate(guard.replay["body"])
@@ -78,7 +78,7 @@ def publish(
         raise ConflictError("Nema primalaca za ovu poruku.")
 
     announcement = Announcement(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         title=req.title,
         body=req.body,
         target_type=req.target_type,
@@ -94,7 +94,7 @@ def publish(
         db.add(
             AnnouncementRecipient(
                 announcement_id=announcement.id,
-                organization_id=context.organization_id,
+                school_id=context.school_id,
                 person_id=person_id,
             )
         )
@@ -112,14 +112,14 @@ def publish(
         entity_type="announcement",
         entity_id=announcement.id,
         summary=f"Objavljena poruka „{req.title}“ ({len(recipients)} primalaca).",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     enqueue(
         db,
         event_type="announcement.published",
-        payload={"announcement_id": announcement.id, "organization_id": context.organization_id},
-        organization_id=context.organization_id,
+        payload={"announcement_id": announcement.id, "school_id": context.school_id},
+        school_id=context.school_id,
     )
     if guard is not None:
         idempotency.complete(db, guard, status=201, body=result.model_dump(mode="json"))
@@ -131,8 +131,8 @@ def list_inbox(
     db: Session, context: RequestContext, params: PageParams
 ) -> Page[NotificationResponse]:
     """M3. A person's own in-app inbox, scoped to the caller alone, never to
-    another person, even within the same organization."""
-    items, total = repository.list_inbox(db, context.organization_id, context.person_id, params)
+    another person, even within the same school."""
+    items, total = repository.list_inbox(db, context.school_id, context.person_id, params)
     return Page.build([NotificationResponse.model_validate(n) for n in items], total, params)
 
 
@@ -142,7 +142,7 @@ def mark_notification_read(
     """M3. Marking read is idempotent, reading an already-read notification is
     a no-op, not an error."""
     notification = repository.get_inbox_notification(
-        db, context.organization_id, context.person_id, notification_id
+        db, context.school_id, context.person_id, notification_id
     )
     if notification is None:
         raise NotFoundError("Obaveštenje nije pronađeno.")

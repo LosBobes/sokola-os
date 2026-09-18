@@ -74,7 +74,7 @@ def _list_sessions(client: TestClient, actor: Actor) -> list[dict]:
 def test_create_weekly_series(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db)
     group_id = _group(client, actor)
-    trainer = add_actor(db, organization=actor.organization, role=RoleCode.TRAINER, given="Trener")
+    trainer = add_actor(db, school=actor.school, role=RoleCode.TRAINER, given="Trener")
 
     series = _create_series(client, actor, group_id, trainer_person_id=trainer.person.id)
     assert series["frequency"] == "WEEKLY"
@@ -90,7 +90,7 @@ def test_series_create_rejects_foreign_trainer(client: TestClient, db: Session) 
     group_id = _group(client, actor)
     other = bootstrap_actor(db, org_name="Drugi klub")
     foreign_trainer = add_actor(
-        db, organization=other.organization, role=RoleCode.TRAINER, given="Stranac"
+        db, school=other.school, role=RoleCode.TRAINER, given="Stranac"
     )
     resp = client.post(
         "/schedule/series",
@@ -205,7 +205,7 @@ def test_edit_scope_this_and_future(client: TestClient, db: Session) -> None:
 def test_edit_scope_all_future(client: TestClient, db: Session) -> None:
     actor = bootstrap_actor(db)
     group_id = _group(client, actor)
-    trainer = add_actor(db, organization=actor.organization, role=RoleCode.TRAINER, given="Trener")
+    trainer = add_actor(db, school=actor.school, role=RoleCode.TRAINER, given="Trener")
     series = _create_series(client, actor, group_id)
     _generate(client, actor, series["id"])
     pivot = _list_sessions(client, actor)[8]

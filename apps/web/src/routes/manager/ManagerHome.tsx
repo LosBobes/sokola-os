@@ -88,7 +88,7 @@ function useAttendanceRollup(sessions: SessionSummary[] | null) {
 
 export function ManagerHome() {
   const { me, activeContext } = useSession();
-  const orgName = activeContext?.organization_name ?? "";
+  const orgName = activeContext?.school_name ?? "";
   const firstName = (me?.display_name ?? "").split(/\s+/)[0] ?? "";
 
   const range = useMemo(todayRange, []);

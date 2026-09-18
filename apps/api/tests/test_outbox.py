@@ -17,7 +17,7 @@ def test_enqueued_event_is_delivered(db: Session) -> None:
     worker.register_handler("test.delivered", lambda _db, m: seen.append(m.id))
 
     msg = service.enqueue(
-        db, event_type="test.delivered", payload={"a": 1}, organization_id="org_1"
+        db, event_type="test.delivered", payload={"a": 1}, school_id="org_1"
     )
     db.commit()
 
@@ -37,7 +37,7 @@ def test_failing_handler_dead_letters_after_max_attempts(db: Session) -> None:
 
     worker.register_handler("test.fail", boom)
 
-    msg = service.enqueue(db, event_type="test.fail", payload={}, organization_id="org_1")
+    msg = service.enqueue(db, event_type="test.fail", payload={}, school_id="org_1")
     msg.max_attempts = 1
     db.commit()
 
@@ -57,7 +57,7 @@ def test_transient_failure_reschedules_before_dead_letter(db: Session) -> None:
 
     worker.register_handler("test.retry", boom)
 
-    msg = service.enqueue(db, event_type="test.retry", payload={}, organization_id="org_1")
+    msg = service.enqueue(db, event_type="test.retry", payload={}, school_id="org_1")
     msg.max_attempts = 5
     db.commit()
 

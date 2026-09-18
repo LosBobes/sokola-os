@@ -10,7 +10,7 @@ from app.security.deps import CONTEXT_HEADER, get_context, require_roles
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
-from tests.factories import assign_role, make_organization, make_person
+from tests.factories import assign_role, make_person, make_school
 
 
 def make_request(headers: dict[str, str]) -> Request:
@@ -51,16 +51,16 @@ def test_unknown_person_is_unauthorized(db: Session) -> None:
 # --- context resolution ---------------------------------------------------
 
 
-def test_context_resolves_org_role_and_scope(db: Session) -> None:
+def test_context_resolves_school_role_and_scope(db: Session) -> None:
     person = make_person(db)
-    org = make_organization(db)
-    assignment = assign_role(db, person=person, organization=org, role=RoleCode.MANAGER)
+    org = make_school(db)
+    assignment = assign_role(db, person=person, school=org, role=RoleCode.MANAGER)
 
     ctx = get_context(
         make_request({CONTEXT_HEADER: assignment.id}), db, Principal(person.id)
     )
     assert isinstance(ctx, RequestContext)
-    assert ctx.organization_id == org.id
+    assert ctx.school_id == org.id
     assert ctx.role_code is RoleCode.MANAGER
     assert ctx.person_id == person.id
 
@@ -74,8 +74,8 @@ def test_context_requires_a_selection(db: Session) -> None:
 def test_cannot_use_another_persons_context(db: Session) -> None:
     owner = make_person(db, given="Ana")
     intruder = make_person(db, given="Marko")
-    org = make_organization(db)
-    assignment = assign_role(db, person=owner, organization=org)
+    org = make_school(db)
+    assignment = assign_role(db, person=owner, school=org)
 
     # The intruder authenticates as themselves but names the owner's assignment.
     with pytest.raises(ForbiddenError):
@@ -91,9 +91,9 @@ def test_require_roles_allows_and_blocks() -> None:
     ctx = RequestContext(
         person_id="per_1",
         role_assignment_id="rol_1",
-        organization_id="org_1",
+        school_id="org_1",
         role_code=RoleCode.TRAINER,
-        scope_type=RoleScopeType.ORGANIZATION,
+        scope_type=RoleScopeType.SCHOOL,
     )
     require_roles(RoleCode.TRAINER)(ctx)  # allowed → no raise
     with pytest.raises(ForbiddenError):

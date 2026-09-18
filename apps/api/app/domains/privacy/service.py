@@ -45,8 +45,8 @@ def _now() -> dt.datetime:
     return clock.now()
 
 
-def _require_org_person(db: Session, context: RequestContext, person_id: str) -> None:
-    if repository.get_org_person(db, context.organization_id, person_id) is None:
+def _require_school_person(db: Session, context: RequestContext, person_id: str) -> None:
+    if repository.get_school_person(db, context.school_id, person_id) is None:
         raise NotFoundError(_PERSON_NOT_FOUND)
 
 
@@ -69,9 +69,9 @@ def _consent_response(row: ConsentRecord) -> ConsentResponse:
 def record_consent(
     db: Session, context: RequestContext, req: RecordConsentRequest
 ) -> ConsentResponse:
-    _require_org_person(db, context, req.person_id)
+    _require_school_person(db, context, req.person_id)
     consent = ConsentRecord(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         person_id=req.person_id,
         scope=req.scope,
         granted_at=_now(),
@@ -87,7 +87,7 @@ def record_consent(
         entity_type="privacy_consent_record",
         entity_id=consent.id,
         summary=f"Saglasnost evidentirana za svrhu {req.scope.value}.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"person_id": req.person_id, "scope": req.scope.value},
     )
@@ -98,15 +98,15 @@ def record_consent(
 def list_person_consents(
     db: Session, context: RequestContext, person_id: str, params: PageParams
 ) -> Page[ConsentResponse]:
-    _require_org_person(db, context, person_id)
-    rows, total = repository.list_person_consents(db, context.organization_id, person_id, params)
+    _require_school_person(db, context, person_id)
+    rows, total = repository.list_person_consents(db, context.school_id, person_id, params)
     return Page.build([_consent_response(r) for r in rows], total, params)
 
 
 def withdraw_consent(
     db: Session, context: RequestContext, consent_id: str, req: WithdrawConsentRequest
 ) -> ConsentResponse:
-    row = repository.get_org_consent(db, context.organization_id, consent_id)
+    row = repository.get_school_consent(db, context.school_id, consent_id)
     if row is None:
         raise NotFoundError("Saglasnost nije pronađena.")
     if row.revoked_at is not None:
@@ -121,7 +121,7 @@ def withdraw_consent(
         entity_type="privacy_consent_record",
         entity_id=row.id,
         summary=f"Saglasnost povučena za svrhu {row.scope.value}.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"person_id": row.person_id, "scope": row.scope.value},
     )
@@ -150,9 +150,9 @@ def _dsar_response(row: DataSubjectRequest) -> DsarRequestResponse:
 def create_dsar_request(
     db: Session, context: RequestContext, req: CreateDsarRequest
 ) -> DsarRequestResponse:
-    _require_org_person(db, context, req.person_id)
+    _require_school_person(db, context, req.person_id)
     request = DataSubjectRequest(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         person_id=req.person_id,
         request_type=req.request_type,
         status=DsarRequestStatus.PENDING,
@@ -168,7 +168,7 @@ def create_dsar_request(
         entity_type="privacy_data_subject_request",
         entity_id=request.id,
         summary=f"Zahtev tipa {req.request_type.value} zaveden za osobu.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"person_id": req.person_id, "request_type": req.request_type.value},
     )
@@ -180,15 +180,15 @@ def list_dsar_requests(
     db: Session, context: RequestContext, params: PageParams, *, person_id: str | None = None
 ) -> Page[DsarRequestResponse]:
     if person_id is not None:
-        _require_org_person(db, context, person_id)
-    rows, total = repository.list_org_dsar_requests(
-        db, context.organization_id, params, person_id=person_id
+        _require_school_person(db, context, person_id)
+    rows, total = repository.list_school_dsar_requests(
+        db, context.school_id, params, person_id=person_id
     )
     return Page.build([_dsar_response(r) for r in rows], total, params)
 
 
 def get_dsar_request(db: Session, context: RequestContext, request_id: str) -> DsarRequestResponse:
-    row = repository.get_org_dsar_request(db, context.organization_id, request_id)
+    row = repository.get_school_dsar_request(db, context.school_id, request_id)
     if row is None:
         raise NotFoundError("Zahtev nije pronađen.")
     return _dsar_response(row)
@@ -197,7 +197,7 @@ def get_dsar_request(db: Session, context: RequestContext, request_id: str) -> D
 def start_dsar_request(
     db: Session, context: RequestContext, request_id: str
 ) -> DsarRequestResponse:
-    row = repository.get_org_dsar_request(db, context.organization_id, request_id)
+    row = repository.get_school_dsar_request(db, context.school_id, request_id)
     if row is None:
         raise NotFoundError("Zahtev nije pronađen.")
     if row.status is not DsarRequestStatus.PENDING:
@@ -210,7 +210,7 @@ def start_dsar_request(
         entity_type="privacy_data_subject_request",
         entity_id=row.id,
         summary="Zahtev je preuzet u obradu.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     db.commit()
@@ -227,7 +227,7 @@ def _decide_dsar_request(
     action: str,
     summary: str,
 ) -> DsarRequestResponse:
-    row = repository.get_org_dsar_request(db, context.organization_id, request_id)
+    row = repository.get_school_dsar_request(db, context.school_id, request_id)
     if row is None:
         raise NotFoundError("Zahtev nije pronađen.")
     if row.status not in (DsarRequestStatus.PENDING, DsarRequestStatus.IN_PROGRESS):
@@ -243,7 +243,7 @@ def _decide_dsar_request(
         entity_type="privacy_data_subject_request",
         entity_id=row.id,
         summary=summary,
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"decision_note": row.decision_note},
     )
@@ -299,10 +299,10 @@ def _retention_response(row: RetentionPeriod) -> RetentionPeriodResponse:
 def create_retention_period(
     db: Session, context: RequestContext, req: CreateRetentionPeriodRequest
 ) -> RetentionPeriodResponse:
-    if repository.retention_period_category_taken(db, context.organization_id, req.data_category):
+    if repository.retention_period_category_taken(db, context.school_id, req.data_category):
         raise ConflictError(_RETENTION_CATEGORY_CONFLICT)
     row = RetentionPeriod(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         data_category=req.data_category,
         retention_period_days=req.retention_period_days,
         note=req.note.strip() if req.note else None,
@@ -315,14 +315,14 @@ def create_retention_period(
 def list_retention_periods(
     db: Session, context: RequestContext, params: PageParams
 ) -> Page[RetentionPeriodResponse]:
-    rows, total = repository.list_org_retention_periods(db, context.organization_id, params)
+    rows, total = repository.list_school_retention_periods(db, context.school_id, params)
     return Page.build([_retention_response(r) for r in rows], total, params)
 
 
 def get_retention_period(
     db: Session, context: RequestContext, retention_period_id: str
 ) -> RetentionPeriodResponse:
-    row = repository.get_org_retention_period(db, context.organization_id, retention_period_id)
+    row = repository.get_school_retention_period(db, context.school_id, retention_period_id)
     if row is None:
         raise NotFoundError("Rok čuvanja nije pronađen.")
     return _retention_response(row)
@@ -334,7 +334,7 @@ def update_retention_period(
     retention_period_id: str,
     req: UpdateRetentionPeriodRequest,
 ) -> RetentionPeriodResponse:
-    row = repository.get_org_retention_period(db, context.organization_id, retention_period_id)
+    row = repository.get_school_retention_period(db, context.school_id, retention_period_id)
     if row is None:
         raise NotFoundError("Rok čuvanja nije pronađen.")
     if "retention_period_days" in req.model_fields_set and req.retention_period_days is not None:
@@ -348,7 +348,7 @@ def update_retention_period(
 def deactivate_retention_period(
     db: Session, context: RequestContext, retention_period_id: str
 ) -> RetentionPeriodResponse:
-    row = repository.get_org_retention_period(db, context.organization_id, retention_period_id)
+    row = repository.get_school_retention_period(db, context.school_id, retention_period_id)
     if row is None:
         raise NotFoundError("Rok čuvanja nije pronađen.")
     row.record_status = RecordStatus.ARCHIVED
@@ -359,7 +359,7 @@ def deactivate_retention_period(
         entity_type="privacy_retention_period",
         entity_id=row.id,
         summary=f"Rok čuvanja za {row.data_category.value} je deaktiviran.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     db.commit()

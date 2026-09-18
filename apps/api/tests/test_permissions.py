@@ -35,9 +35,9 @@ def _ctx(
     return RequestContext(
         person_id="per_1",
         role_assignment_id="rol_1",
-        organization_id="org_1",
+        school_id="org_1",
         role_code=role,
-        scope_type=RoleScopeType.ORGANIZATION,
+        scope_type=RoleScopeType.SCHOOL,
         granted_areas=granted_areas,
     )
 
@@ -110,7 +110,7 @@ def test_finance_only_admin_denied_on_people_allowed_on_billing(
     # An ADMIN in the SAME org, invited "for finances only".
     finance_admin = add_actor(
         db,
-        organization=owner.organization,
+        school=owner.school,
         role=RoleCode.ADMIN,
         given="Finansije",
         granted_areas=[PermissionArea.BILLING.value],
@@ -151,7 +151,7 @@ def test_default_grant_preserves_admin_finance_access(
 ) -> None:
     owner = bootstrap_actor(db, role=RoleCode.MANAGER)
     group_id = _group_with_members(client, owner, 1)
-    admin = add_actor(db, organization=owner.organization, role=RoleCode.ADMIN, given="Admin")
+    admin = add_actor(db, school=owner.school, role=RoleCode.ADMIN, given="Admin")
     preview = client.post(
         "/billing/runs/preview",
         headers=admin.headers,
@@ -181,9 +181,9 @@ def test_default_grant_preserves_trainer_attendance_but_not_roster(
 def test_default_grant_preserves_parent_access(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db, role=RoleCode.MANAGER)
     parent = add_actor(
-        db, organization=staff.organization, role=RoleCode.PARENT, given="Roditelj"
+        db, school=staff.school, role=RoleCode.PARENT, given="Roditelj"
     )
-    make_child_with_guardian(db, organization=staff.organization, guardian=parent.person)
+    make_child_with_guardian(db, school=staff.school, guardian=parent.person)
     children = client.get("/parent/children", headers=parent.headers)
     assert children.status_code == 200
     assert len(children.json()) == 1
@@ -199,7 +199,7 @@ def test_events_area_separates_staff_management_from_parent_surface(
     # though parents legitimately use the parent-facing event routes.
     staff = bootstrap_actor(db, role=RoleCode.MANAGER)
     parent = add_actor(
-        db, organization=staff.organization, role=RoleCode.PARENT, given="Roditelj"
+        db, school=staff.school, role=RoleCode.PARENT, given="Roditelj"
     )
     event = {"title": "Zimski kamp", "starts_at": "2026-12-20T09:00:00+00:00"}
     assert client.post("/events", headers=parent.headers, json=event).status_code == 403

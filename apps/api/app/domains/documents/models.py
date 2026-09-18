@@ -24,12 +24,12 @@ class Document(Base, TimestampMixin, RecordStatusMixin):
 
     __tablename__ = "document"
     __table_args__ = (
-        Index("ix_document_org_subject", "organization_id", "subject_person_id"),
+        Index("ix_document_school_subject", "school_id", "subject_person_id"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("doc"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     owner_person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False

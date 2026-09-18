@@ -99,9 +99,9 @@ def test_search_returns_matches_across_entity_types(client: TestClient, db: Sess
     assert by_type["CHARGE"]["subtitle"].startswith("Zmajko Testić")
 
 
-def test_org_b_data_never_appears_in_org_a_results(client: TestClient, db: Session) -> None:
+def test_school_b_data_never_appears_in_school_a_results(client: TestClient, db: Session) -> None:
     """The critical invariant: every sub-query is scoped to the caller's
-    organization, never leaking a same-named row from a different tenant."""
+    school, never leaking a same-named row from a different tenant."""
     org_a = bootstrap_actor(db, org_name="Klub A")
     org_b = bootstrap_actor(db, org_name="Klub B")
 

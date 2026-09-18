@@ -22,8 +22,8 @@ class Announcement(Base, TimestampMixin):
     __tablename__ = "announcement"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("ann"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
@@ -48,8 +48,8 @@ class AnnouncementRecipient(Base, TimestampMixin):
     announcement_id: Mapped[str] = mapped_column(
         ForeignKey("announcement.id", ondelete="CASCADE"), nullable=False
     )
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False
@@ -76,12 +76,12 @@ class Notification(Base, TimestampMixin):
         UniqueConstraint(
             "source_message_id", "person_id", name="uq_notification_source_person"
         ),
-        Index("ix_notification_inbox", "organization_id", "person_id", "created_at"),
+        Index("ix_notification_inbox", "school_id", "person_id", "created_at"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("ntf"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False

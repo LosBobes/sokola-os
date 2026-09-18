@@ -25,7 +25,7 @@ from app.security.deps import ContextDep, DbDep, require_roles
 
 router = APIRouter(tags=["structure"])
 
-# Structural setup is organization management: only owners/managers/admins write.
+# Structural setup is school management: only owners/managers/admins write.
 _staff = require_roles(RoleCode.OWNER, RoleCode.MANAGER, RoleCode.ADMIN)
 StaffContext = Annotated[ContextDep, Depends(_staff)]
 PageParamsDep = Annotated[PageParams, Depends(page_params)]

@@ -23,13 +23,13 @@ def enqueue(
     *,
     event_type: str,
     payload: dict[str, Any],
-    organization_id: str | None = None,
+    school_id: str | None = None,
     event_version: int = 1,
 ) -> OutboxMessage:
     """Add an event to the current transaction. The caller commits it together
     with the business change, never separately."""
     message = OutboxMessage(
-        organization_id=organization_id,
+        school_id=school_id,
         event_type=event_type,
         event_version=event_version,
         payload=payload,

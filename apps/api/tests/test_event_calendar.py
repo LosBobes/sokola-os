@@ -107,7 +107,7 @@ def test_a_trainer_may_read_the_calendar_but_not_create_events(
 ) -> None:
     actor = bootstrap_actor(db)
     trainer = add_actor(
-        db, organization=actor.organization, role=RoleCode.TRAINER, given="Trener"
+        db, school=actor.school, role=RoleCode.TRAINER, given="Trener"
     )
     client.post(
         "/events",
@@ -189,7 +189,7 @@ def test_a_parent_cannot_reach_the_staff_calendar(client: TestClient, db: Sessio
     drafts and cancellations, which are the school's internal planning."""
     actor = bootstrap_actor(db)
     parent = add_actor(
-        db, organization=actor.organization, role=RoleCode.PARENT, given="Roditelj"
+        db, school=actor.school, role=RoleCode.PARENT, given="Roditelj"
     )
     client.post(
         "/events",

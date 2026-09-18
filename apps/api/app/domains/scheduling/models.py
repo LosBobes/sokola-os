@@ -23,8 +23,8 @@ class SessionSeries(Base, TimestampMixin, RecordStatusMixin):
     __tablename__ = "session_series"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("ses"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     group_id: Mapped[str] = mapped_column(
         ForeignKey("group.id", ondelete="CASCADE"), nullable=False
@@ -61,8 +61,8 @@ class Session(Base, TimestampMixin, RecordStatusMixin):
     __tablename__ = "session"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("ssn"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     group_id: Mapped[str] = mapped_column(
         ForeignKey("group.id", ondelete="CASCADE"), nullable=False

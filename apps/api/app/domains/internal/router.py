@@ -1,7 +1,7 @@
 """Dev-only bootstrap endpoints.
 
 These exist solely to make local onboarding and end-to-end tests possible (create
-a first identity before any organization exists). They are hidden unless the
+a first identity before any school exists). They are hidden unless the
 insecure dev-auth adapter is enabled, and that flag is refused in production.
 """
 

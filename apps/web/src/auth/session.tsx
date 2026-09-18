@@ -31,11 +31,11 @@ interface SessionState {
   me: Me | null;
   activeContext: Context | null;
   signInAs: (personId: string) => Promise<Me>;
-  signInToTenant: (personId: string, organizationId: string) => Promise<Context>;
-  signInWithGoogle: (organizationId?: string) => void;
+  signInToTenant: (personId: string, schoolId: string) => Promise<Context>;
+  signInWithGoogle: (schoolId?: string) => void;
   /** Email+password sign-in. Establishes the same session cookie Google does,
    * then loads `/me` and activates the right context. */
-  signInWithPassword: (email: string, password: string, organizationId?: string) => Promise<Me>;
+  signInWithPassword: (email: string, password: string, schoolId?: string) => Promise<Me>;
   /** Register a brand-new email+password account, then sign in. The new person
    * has no school yet, so the app drops into CreateSchool. */
   registerWithPassword: (input: {
@@ -47,7 +47,7 @@ interface SessionState {
   chooseContext: (roleAssignmentId: string) => void;
   /** Re-fetch `/me` and re-activate contexts. For a cookie-authenticated
    * session (password/Google) whose role set just changed server-side,
-   * e.g. right after creating a new organization. */
+   * e.g. right after creating a new school. */
   refreshContexts: () => Promise<void>;
   signOut: () => void;
   loading: boolean;
@@ -124,7 +124,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const pending = localStorage.getItem(PENDING_ORG_KEY);
       const stored = localStorage.getItem(CONTEXT_KEY);
       const chosen =
-        (pending && next.contexts.find((c) => c.organization_id === pending)) ||
+        (pending && next.contexts.find((c) => c.school_id === pending)) ||
         next.contexts.find((c) => c.role_assignment_id === stored) ||
         next.contexts[0];
       applyContext(next, chosen?.role_assignment_id ?? null);
@@ -161,11 +161,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const signInToTenant = useCallback(
-    async (personId: string, organizationId: string): Promise<Context> => {
+    async (personId: string, schoolId: string): Promise<Context> => {
       setAuthHeaders(personId, null);
       localStorage.setItem(PERSON_KEY, personId);
       const next = await fetchMe();
-      const ctx = next.contexts.find((c) => c.organization_id === organizationId);
+      const ctx = next.contexts.find((c) => c.school_id === schoolId);
       if (!ctx) throw new NoTenantAccessError("Nemate pristup ovoj školi.");
       applyContext(next, ctx.role_assignment_id);
       return ctx;
@@ -173,14 +173,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [fetchMe, applyContext],
   );
 
-  const signInWithGoogle = useCallback((organizationId?: string) => {
-    if (organizationId) localStorage.setItem(PENDING_ORG_KEY, organizationId);
+  const signInWithGoogle = useCallback((schoolId?: string) => {
+    if (schoolId) localStorage.setItem(PENDING_ORG_KEY, schoolId);
     window.location.href = "/api/auth/google/login";
   }, []);
 
   const signInWithPassword = useCallback(
-    async (email: string, password: string, organizationId?: string): Promise<Me> => {
-      if (organizationId) localStorage.setItem(PENDING_ORG_KEY, organizationId);
+    async (email: string, password: string, schoolId?: string): Promise<Me> => {
+      if (schoolId) localStorage.setItem(PENDING_ORG_KEY, schoolId);
       await api.post("/auth/password/login", { email, password });
       const next = await fetchMe();
       activateContexts(next);

@@ -21,8 +21,8 @@ class AnnouncementDraft(BaseModel):
     def _group_target_needs_group(self) -> AnnouncementDraft:
         if self.target_type is AnnouncementTargetType.GROUP and not self.target_group_id:
             raise ValueError("target_group_id is required when target_type is GROUP")
-        if self.target_type is AnnouncementTargetType.ORGANIZATION and self.target_group_id:
-            raise ValueError("target_group_id must be null when target_type is ORGANIZATION")
+        if self.target_type is AnnouncementTargetType.SCHOOL and self.target_group_id:
+            raise ValueError("target_group_id must be null when target_type is SCHOOL")
         return self
 
 

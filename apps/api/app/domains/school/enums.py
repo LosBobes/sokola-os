@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 
 
-class OrganizationType(enum.StrEnum):
+class SchoolType(enum.StrEnum):
     SCHOOL = "SCHOOL"
     SPORTS_CLUB = "SPORTS_CLUB"
     DANCE_SCHOOL = "DANCE_SCHOOL"
@@ -50,11 +50,11 @@ class MembershipPeriodStatus(enum.StrEnum):
     ENDED = "ENDED"
 
 
-class OrganizationLifecycleStatus(enum.StrEnum):
+class SchoolLifecycleStatus(enum.StrEnum):
     """Where a school is in guided onboarding (PRD 02 §24/§25), independent of
     ``record_status`` (which is the soft-delete/deactivation axis, §31).
 
-    A school created through ``POST /organizations`` starts ``IN_PREPARATION``
+    A school created through ``POST /schools`` starts ``IN_PREPARATION``
     ("u pripremi"): the owner may set up structure and invite a co-owner, but
     normal STAFF/PARENT/STUDENT invitations are blocked until ``ACTIVE`` (see
     ``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).

@@ -8,11 +8,9 @@ from app.common.errors import BadRequestError, ConflictError, NotFoundError
 from app.common.pagination import Page, PageParams
 from app.domains.identity.enums import PersonIdentityStatus, PersonMergeStatus
 from app.domains.identity.models import Person, PersonMergeRecord
-from app.domains.organization.enums import MembershipStatus, OrgMemberType
-from app.domains.organization.models import OrganizationMembership
 from app.domains.people import repository
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
-from app.domains.people.models import GuardianOrganizationAccess, GuardianRelationship
+from app.domains.people.models import GuardianRelationship, GuardianSchoolAccess
 from app.domains.people.schemas import (
     CreateMergeReviewRequest,
     CreatePersonRequest,
@@ -28,6 +26,8 @@ from app.domains.people.schemas import (
     RevokeGuardianAccessRequest,
     UpdateMemberDataRequest,
 )
+from app.domains.school.enums import MembershipStatus, OrgMemberType
+from app.domains.school.models import SchoolMembership
 from app.platform.audit.service import record_audit
 from app.platform.outbox.service import enqueue
 from app.security.context import RequestContext
@@ -45,7 +45,7 @@ def create_provisional_person(
     written reason.
     """
     candidates = repository.find_duplicate_candidates(
-        db, context.organization_id, req.given_name, req.family_name
+        db, context.school_id, req.given_name, req.family_name
     )
     if candidates and not req.allow_possible_duplicate:
         raise ConflictError(
@@ -70,8 +70,8 @@ def create_provisional_person(
     db.flush()
 
     db.add(
-        OrganizationMembership(
-            organization_id=context.organization_id,
+        SchoolMembership(
+            school_id=context.school_id,
             person_id=person.id,
             member_type=req.member_type,
         )
@@ -87,15 +87,15 @@ def create_provisional_person(
         entity_type="person",
         entity_id=person.id,
         summary=summary,
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"duplicate_override": req.allow_possible_duplicate},
     )
     enqueue(
         db,
         event_type="person.created",
-        payload={"person_id": person.id, "organization_id": context.organization_id},
-        organization_id=context.organization_id,
+        payload={"person_id": person.id, "school_id": context.school_id},
+        school_id=context.school_id,
     )
     db.commit()
     return PersonResponse.model_validate(person)
@@ -108,8 +108,8 @@ def list_people(
     *,
     member_type: OrgMemberType | None = None,
 ) -> Page[PersonSummary]:
-    rows, total = repository.list_org_people(
-        db, context.organization_id, params, member_type=member_type
+    rows, total = repository.list_school_people(
+        db, context.school_id, params, member_type=member_type
     )
     items = [
         PersonSummary(
@@ -124,7 +124,7 @@ def list_people(
 
 
 def get_person(db: Session, context: RequestContext, person_id: str) -> PersonResponse:
-    person = repository.get_org_person(db, context.organization_id, person_id)
+    person = repository.get_school_person(db, context.school_id, person_id)
     if person is None:
         raise NotFoundError("Osoba nije pronađena.")
     return PersonResponse.model_validate(person)
@@ -137,20 +137,20 @@ def get_person(db: Session, context: RequestContext, person_id: str) -> PersonRe
 
 def _load_member(
     db: Session, context: RequestContext, person_id: str
-) -> tuple[OrganizationMembership, Person]:
-    membership = repository.get_membership(db, context.organization_id, person_id)
-    person = repository.get_org_person(db, context.organization_id, person_id)
+) -> tuple[SchoolMembership, Person]:
+    membership = repository.get_membership(db, context.school_id, person_id)
+    person = repository.get_school_person(db, context.school_id, person_id)
     if membership is None or person is None:
         # Foreign or nonexistent resource returns the same error, never leak.
         raise NotFoundError("Osoba nije pronađena.")
     return membership, person
 
 
-def _guard_not_last_owner(db: Session, organization_id: str, person_id: str) -> None:
+def _guard_not_last_owner(db: Session, school_id: str, person_id: str) -> None:
     """§22, never strip the school of its last remaining active owner."""
     if (
-        repository.is_active_owner(db, organization_id, person_id)
-        and repository.count_active_owners(db, organization_id) <= 1
+        repository.is_active_owner(db, school_id, person_id)
+        and repository.count_active_owners(db, school_id) <= 1
     ):
         raise ConflictError(_LAST_OWNER_ERROR)
 
@@ -158,7 +158,7 @@ def _guard_not_last_owner(db: Session, organization_id: str, person_id: str) -> 
 def _emit_membership_change(
     db: Session,
     context: RequestContext,
-    membership: OrganizationMembership,
+    membership: SchoolMembership,
     person: Person,
     action: str,
     reason: str | None,
@@ -171,10 +171,10 @@ def _emit_membership_change(
         db,
         data_class=AuditDataClass.RELATIONSHIP,
         action=f"membership.{action}",
-        entity_type="organization_membership",
+        entity_type="school_membership",
         entity_id=membership.id,
         summary=summary,
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"person_id": person.id},
     )
@@ -184,9 +184,9 @@ def _emit_membership_change(
         payload={
             "membership_id": membership.id,
             "person_id": person.id,
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
 
 
@@ -203,7 +203,7 @@ def end_membership(
     membership, person = _load_member(db, context, person_id)
     if membership.status is MembershipStatus.ENDED:
         raise ConflictError("Članstvo je već okončano.")
-    _guard_not_last_owner(db, context.organization_id, person_id)
+    _guard_not_last_owner(db, context.school_id, person_id)
     membership.status = MembershipStatus.ENDED
     _emit_membership_change(db, context, membership, person, "ended", req.reason)
     db.commit()
@@ -218,7 +218,7 @@ def suspend_membership(
         raise ConflictError("Okončano članstvo ne može biti suspendovano.")
     if membership.status is MembershipStatus.SUSPENDED:
         raise ConflictError("Članstvo je već suspendovano.")
-    _guard_not_last_owner(db, context.organization_id, person_id)
+    _guard_not_last_owner(db, context.school_id, person_id)
     membership.status = MembershipStatus.SUSPENDED
     _emit_membership_change(db, context, membership, person, "suspended", req.reason)
     db.commit()
@@ -254,7 +254,7 @@ def update_member_data(
     if "local_member_code" in fields:
         code = (req.local_member_code or "").strip() or None
         if code is not None and repository.find_local_code_owner(
-            db, context.organization_id, code, person_id
+            db, context.school_id, code, person_id
         ) is not None:
             raise ConflictError("Lokalna šifra člana se već koristi u ovoj školi.")
         membership.local_member_code = code
@@ -269,10 +269,10 @@ def update_member_data(
         db,
         data_class=AuditDataClass.OPERATIONAL,
         action="membership.data_updated",
-        entity_type="organization_membership",
+        entity_type="school_membership",
         entity_id=membership.id,
         summary=f"Ažurirani lokalni podaci člana za „{person.display_name}“.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"person_id": person.id},
     )
@@ -286,7 +286,7 @@ def update_member_data(
 
 
 def _relationship_type(
-    db: Session, access: GuardianOrganizationAccess
+    db: Session, access: GuardianSchoolAccess
 ) -> GuardianRelationshipType:
     rel = db.execute(
         select(GuardianRelationship).where(
@@ -298,7 +298,7 @@ def _relationship_type(
 
 
 def _contact_response(
-    db: Session, access: GuardianOrganizationAccess, guardian: Person
+    db: Session, access: GuardianSchoolAccess, guardian: Person
 ) -> GuardianContactResponse:
     return GuardianContactResponse(
         guardian_person_id=guardian.id,
@@ -312,7 +312,7 @@ def _contact_response(
 def list_guardians(
     db: Session, context: RequestContext, person_id: str
 ) -> list[GuardianContactResponse]:
-    child = repository.get_org_person(db, context.organization_id, person_id)
+    child = repository.get_school_person(db, context.school_id, person_id)
     if child is None:
         raise NotFoundError("Osoba nije pronađena.")
     return [
@@ -326,7 +326,7 @@ def list_guardians(
             is_primary_contact=access.is_primary_contact,
         )
         for access, guardian, rel in repository.list_guardians_for_child(
-            db, context.organization_id, person_id
+            db, context.school_id, person_id
         )
     ]
 
@@ -338,11 +338,11 @@ def revoke_guardian_access(
     guardian_person_id: str,
     req: RevokeGuardianAccessRequest,
 ) -> GuardianContactResponse:
-    child = repository.get_org_person(db, context.organization_id, person_id)
+    child = repository.get_school_person(db, context.school_id, person_id)
     if child is None:
         raise NotFoundError("Osoba nije pronađena.")
     access = repository.get_guardian_access(
-        db, context.organization_id, person_id, guardian_person_id
+        db, context.school_id, person_id, guardian_person_id
     )
     if access is None:
         raise NotFoundError("Roditeljski pristup nije pronađen.")
@@ -364,10 +364,10 @@ def revoke_guardian_access(
         db,
         data_class=AuditDataClass.RELATIONSHIP,
         action="guardian.access_revoked",
-        entity_type="guardian_organization_access",
+        entity_type="guardian_school_access",
         entity_id=access.id,
         summary=summary,
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"guardian_person_id": guardian_person_id, "child_person_id": person_id},
     )
@@ -378,9 +378,9 @@ def revoke_guardian_access(
             "access_id": access.id,
             "guardian_person_id": guardian_person_id,
             "child_person_id": person_id,
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
     db.commit()
     return _contact_response(db, access, guardian)
@@ -389,11 +389,11 @@ def revoke_guardian_access(
 def set_primary_contact(
     db: Session, context: RequestContext, person_id: str, guardian_person_id: str
 ) -> GuardianContactResponse:
-    child = repository.get_org_person(db, context.organization_id, person_id)
+    child = repository.get_school_person(db, context.school_id, person_id)
     if child is None:
         raise NotFoundError("Osoba nije pronađena.")
     access = repository.get_guardian_access(
-        db, context.organization_id, person_id, guardian_person_id
+        db, context.school_id, person_id, guardian_person_id
     )
     if access is None:
         raise NotFoundError("Roditeljski pristup nije pronađen.")
@@ -406,7 +406,7 @@ def set_primary_contact(
         return _contact_response(db, access, guardian)
 
     # Exactly one primary per child: demote the current one first (§25).
-    for current in repository.child_primary_contacts(db, context.organization_id, person_id):
+    for current in repository.child_primary_contacts(db, context.school_id, person_id):
         current.is_primary_contact = False
     db.flush()
     access.is_primary_contact = True
@@ -415,13 +415,13 @@ def set_primary_contact(
         db,
         data_class=AuditDataClass.RELATIONSHIP,
         action="guardian.primary_set",
-        entity_type="guardian_organization_access",
+        entity_type="guardian_school_access",
         entity_id=access.id,
         summary=(
             f"„{guardian.display_name}“ je označen/a kao primarni kontakt za "
             f"„{child.display_name}“."
         ),
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"guardian_person_id": guardian_person_id, "child_person_id": person_id},
     )
@@ -436,9 +436,9 @@ def set_primary_contact(
 
 def list_duplicates(db: Session, context: RequestContext) -> list[DuplicateCluster]:
     clusters: list[DuplicateCluster] = []
-    for given, family in repository.list_duplicate_clusters(db, context.organization_id):
+    for given, family in repository.list_duplicate_clusters(db, context.school_id):
         people = repository.find_duplicate_candidates(
-            db, context.organization_id, given, family
+            db, context.school_id, given, family
         )
         if len(people) > 1:
             clusters.append(
@@ -459,17 +459,17 @@ def create_merge_review(
 ) -> MergeReviewResponse:
     if req.source_person_id == req.target_person_id:
         raise BadRequestError("Izvor i cilj spajanja moraju biti različite osobe.")
-    source = repository.get_org_person(db, context.organization_id, req.source_person_id)
-    target = repository.get_org_person(db, context.organization_id, req.target_person_id)
+    source = repository.get_school_person(db, context.school_id, req.source_person_id)
+    target = repository.get_school_person(db, context.school_id, req.target_person_id)
     if source is None or target is None:
         raise NotFoundError("Osoba nije pronađena.")
     if repository.find_open_review(
-        db, context.organization_id, source.id, target.id
+        db, context.school_id, source.id, target.id
     ) is not None:
         raise ConflictError("Predmet spajanja za ove osobe je već otvoren.")
 
     review = PersonMergeRecord(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         source_person_id=source.id,
         target_person_id=target.id,
         status=PersonMergeStatus.FLAGGED,
@@ -487,7 +487,7 @@ def create_merge_review(
         summary=(
             f"Označen mogući duplikat: „{source.display_name}“ ↔ „{target.display_name}“."
         ),
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"source_person_id": source.id, "target_person_id": target.id},
     )
@@ -498,14 +498,14 @@ def create_merge_review(
 def list_merge_reviews(db: Session, context: RequestContext) -> list[MergeReviewResponse]:
     return [
         MergeReviewResponse.model_validate(r)
-        for r in repository.list_open_merge_reviews(db, context.organization_id)
+        for r in repository.list_open_merge_reviews(db, context.school_id)
     ]
 
 
 def decide_merge_review(
     db: Session, context: RequestContext, review_id: str, req: MergeDecisionRequest
 ) -> MergeReviewResponse:
-    review = repository.get_merge_review(db, context.organization_id, review_id)
+    review = repository.get_merge_review(db, context.school_id, review_id)
     if review is None:
         raise NotFoundError("Predmet spajanja nije pronađen.")
     if review.status is not PersonMergeStatus.FLAGGED:
@@ -522,7 +522,7 @@ def decide_merge_review(
             entity_type="person_merge_record",
             entity_id=review.id,
             summary="Predmet spajanja je odbačen: osobe su različite.",
-            organization_id=context.organization_id,
+            school_id=context.school_id,
             actor_person_id=context.person_id,
         )
         db.commit()
@@ -530,14 +530,14 @@ def decide_merge_review(
 
     # MERGE, conservative: mark the source merged and end its org membership.
     # Repointing of the source's relationships/payments is a deliberate follow-up.
-    source = repository.get_org_person(db, context.organization_id, review.source_person_id)
-    target = repository.get_org_person(db, context.organization_id, review.target_person_id)
+    source = repository.get_school_person(db, context.school_id, review.source_person_id)
+    target = repository.get_school_person(db, context.school_id, review.target_person_id)
     if source is None or target is None:
         raise ConflictError("Osobe iz predmeta više nisu dostupne za spajanje.")
-    _guard_not_last_owner(db, context.organization_id, source.id)
+    _guard_not_last_owner(db, context.school_id, source.id)
 
     source.identity_status = PersonIdentityStatus.MERGED
-    source_membership = repository.get_membership(db, context.organization_id, source.id)
+    source_membership = repository.get_membership(db, context.school_id, source.id)
     if source_membership is not None:
         source_membership.status = MembershipStatus.ENDED
         source_membership.record_status = RecordStatus.ARCHIVED
@@ -552,7 +552,7 @@ def decide_merge_review(
         entity_type="person",
         entity_id=source.id,
         summary=f"„{source.display_name}“ je spojen/a u „{target.display_name}“.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"source_person_id": source.id, "target_person_id": target.id},
     )
@@ -562,9 +562,9 @@ def decide_merge_review(
         payload={
             "source_person_id": source.id,
             "target_person_id": target.id,
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
     db.commit()
     return MergeReviewResponse.model_validate(review)

@@ -234,7 +234,7 @@ export function BrandMark({
 function ContextSwitcher() {
   const { me, activeContext, chooseContext } = useSession();
   if (!me) return null;
-  const orgName = activeContext?.organization_name ?? "";
+  const orgName = activeContext?.school_name ?? "";
   return (
     <div className="orgswitcher">
       <span className="orgswitcher__avatar" aria-hidden>
@@ -250,7 +250,7 @@ function ContextSwitcher() {
         >
           {me.contexts.map((c) => (
             <option key={c.role_assignment_id} value={c.role_assignment_id}>
-              {c.organization_name} · {ROLE_LABEL[c.role_code]}
+              {c.school_name} · {ROLE_LABEL[c.role_code]}
             </option>
           ))}
         </select>

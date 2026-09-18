@@ -6,34 +6,34 @@ from sqlalchemy.orm import Session as DbSession
 from app.common.enums import RecordStatus
 from app.domains.groups.models import Group, GroupMembership
 from app.domains.identity.models import Person
-from app.domains.organization.models import OrganizationMembership
 from app.domains.progress.models import ProgressNote
+from app.domains.school.models import SchoolMembership
 
 
-def get_org_person(db: DbSession, organization_id: str, person_id: str) -> Person | None:
+def get_school_person(db: DbSession, school_id: str, person_id: str) -> Person | None:
     """A person is visible only through an active membership in this org.
 
-    This mirrors ``people.repository.get_org_person`` exactly, duplicated
+    This mirrors ``people.repository.get_school_person`` exactly, duplicated
     rather than imported, the architecture gate allows domains to share
     ``models`` but never another domain's ``repository``.
     """
     stmt = (
         select(Person)
-        .join(OrganizationMembership, OrganizationMembership.person_id == Person.id)
+        .join(SchoolMembership, SchoolMembership.person_id == Person.id)
         .where(
             Person.id == person_id,
-            OrganizationMembership.organization_id == organization_id,
-            OrganizationMembership.record_status == RecordStatus.ACTIVE,
+            SchoolMembership.school_id == school_id,
+            SchoolMembership.record_status == RecordStatus.ACTIVE,
             Person.record_status == RecordStatus.ACTIVE,
         )
     )
     return db.execute(stmt).scalar_one_or_none()
 
 
-def get_group(db: DbSession, organization_id: str, group_id: str) -> Group | None:
+def get_group(db: DbSession, school_id: str, group_id: str) -> Group | None:
     stmt = select(Group).where(
         Group.id == group_id,
-        Group.organization_id == organization_id,
+        Group.school_id == school_id,
         Group.record_status == RecordStatus.ACTIVE,
     )
     return db.execute(stmt).scalar_one_or_none()
@@ -49,10 +49,10 @@ def is_active_group_member(db: DbSession, group_id: str, person_id: str) -> bool
 
 
 def list_for_person(
-    db: DbSession, organization_id: str, person_id: str, group_id: str | None
+    db: DbSession, school_id: str, person_id: str, group_id: str | None
 ) -> list[ProgressNote]:
     stmt = select(ProgressNote).where(
-        ProgressNote.organization_id == organization_id,
+        ProgressNote.school_id == school_id,
         ProgressNote.person_id == person_id,
     )
     if group_id is not None:

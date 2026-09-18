@@ -57,7 +57,7 @@ def _member_response(membership: GroupMembership, person: Person) -> GroupMember
 def _resolve_program(db: Session, context: RequestContext, program_id: str | None) -> str | None:
     if program_id is None:
         return None
-    program = repository.get_org_program(db, context.organization_id, program_id)
+    program = repository.get_school_program(db, context.school_id, program_id)
     if program is None:
         raise NotFoundError("Program nije pronađen.")
     return program.id
@@ -68,7 +68,7 @@ def _resolve_location(
 ) -> str | None:
     if location_id is None:
         return None
-    location = repository.get_org_location(db, context.organization_id, location_id)
+    location = repository.get_school_location(db, context.school_id, location_id)
     if location is None:
         raise NotFoundError("Ogranak nije pronađen.")
     return location.id
@@ -82,7 +82,7 @@ def _resolve_default_trainer(
     cross-tenant existence."""
     if person_id is None:
         return None
-    if repository.get_member_person(db, context.organization_id, person_id) is None:
+    if repository.get_member_person(db, context.school_id, person_id) is None:
         raise NotFoundError("Osoba nije pronađena u ovoj školi.")
     return person_id
 
@@ -91,7 +91,7 @@ def create_group(db: Session, context: RequestContext, req: CreateGroupRequest) 
     program_id = _resolve_program(db, context, req.program_id)
     location_id = _resolve_location(db, context, req.location_id)
     group = Group(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         name=req.name.strip(),
         capacity_mode=req.capacity_mode,
         capacity=req.capacity,
@@ -109,7 +109,7 @@ def create_group(db: Session, context: RequestContext, req: CreateGroupRequest) 
 
 
 def list_groups(db: Session, context: RequestContext, params: PageParams) -> Page[GroupResponse]:
-    groups, total = repository.list_org_groups(db, context.organization_id, params)
+    groups, total = repository.list_school_groups(db, context.school_id, params)
     return Page.build([_group_response(g) for g in groups], total, params)
 
 
@@ -118,7 +118,7 @@ def update_group(
 ) -> GroupResponse:
     """M1/M4: sets the group's list price and/or its structure links. Partial , 
     only fields present in the request are touched (see UpdateGroupRequest)."""
-    group = repository.get_org_group(db, context.organization_id, group_id)
+    group = repository.get_school_group(db, context.school_id, group_id)
     if group is None:
         raise NotFoundError("Grupa nije pronađena.")
 
@@ -143,7 +143,7 @@ def update_group(
         entity_type="group",
         entity_id=group.id,
         summary=f"Izmenjena grupa „{group.name}“.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     db.commit()
@@ -157,12 +157,12 @@ def add_member(
     person_id: str,
     role: GroupMemberRole = GroupMemberRole.MEMBER,
 ) -> GroupMemberResponse:
-    group = repository.get_org_group(db, context.organization_id, group_id)
+    group = repository.get_school_group(db, context.school_id, group_id)
     if group is None:
         raise NotFoundError("Grupa nije pronađena.")
 
-    # The person must be a visible member of THIS organization.
-    person = repository.get_member_person(db, context.organization_id, person_id)
+    # The person must be a visible member of THIS school.
+    person = repository.get_member_person(db, context.school_id, person_id)
     if person is None:
         raise NotFoundError("Osoba nije pronađena u ovoj školi.")
 
@@ -181,7 +181,7 @@ def add_member(
 
     membership = GroupMembership(
         group_id=group_id,
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         person_id=person_id,
         role=role,
         joined_at=clock.now(),
@@ -197,7 +197,7 @@ def add_member(
             f"„{person.display_name}“ dodat/a u grupu „{group.name}“ "
             f"({_ROLE_LABEL[role]})."
         ),
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     db.commit()
@@ -207,7 +207,7 @@ def add_member(
 def list_members(
     db: Session, context: RequestContext, group_id: str
 ) -> list[GroupMemberResponse]:
-    group = repository.get_org_group(db, context.organization_id, group_id)
+    group = repository.get_school_group(db, context.school_id, group_id)
     if group is None:
         raise NotFoundError("Grupa nije pronađena.")
     return [
@@ -223,10 +223,10 @@ def list_members(
 def _load_group_membership(
     db: Session, context: RequestContext, group_id: str, membership_id: str
 ) -> tuple[Group, GroupMembership, Person]:
-    group = repository.get_org_group(db, context.organization_id, group_id)
+    group = repository.get_school_group(db, context.school_id, group_id)
     if group is None:
         raise NotFoundError("Grupa nije pronađena.")
-    found = repository.get_org_membership(db, context.organization_id, group_id, membership_id)
+    found = repository.get_school_membership(db, context.school_id, group_id, membership_id)
     if found is None:
         # Foreign or nonexistent membership id returns the same error, never leak.
         raise NotFoundError("Član grupe nije pronađen.")
@@ -254,7 +254,7 @@ def _emit_membership_change(
         entity_type="group_membership",
         entity_id=membership.id,
         summary=summary,
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"group_id": group.id, "person_id": person.id},
     )
@@ -265,9 +265,9 @@ def _emit_membership_change(
             "membership_id": membership.id,
             "group_id": group.id,
             "person_id": person.id,
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
 
 
@@ -368,7 +368,7 @@ def set_member_role(
             f"Uloga za „{person.display_name}“ u grupi „{group.name}“ promenjena "
             f"iz „{_ROLE_LABEL[previous]}“ u „{_ROLE_LABEL[req.role]}“."
         ),
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"group_id": group.id, "person_id": person.id},
     )
@@ -400,7 +400,7 @@ def set_membership_discount(
             f"Popust za „{person.display_name}“ u grupi „{group.name}“ "
             f"postavljen na {req.discount}."
         ),
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"group_id": group.id, "person_id": person.id},
     )

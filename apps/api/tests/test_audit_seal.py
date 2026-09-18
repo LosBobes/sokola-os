@@ -27,7 +27,7 @@ ORG_A = "org_aaaaaaaaaaaaaaaaaaaaaaaaaa"
 ORG_B = "org_bbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 
-def _append(db: Session, organization_id: str | None, summary: str, **kwargs: object) -> AuditLog:
+def _append(db: Session, school_id: str | None, summary: str, **kwargs: object) -> AuditLog:
     entry = record_audit(
         db,
         data_class=AuditDataClass.OPERATIONAL,
@@ -35,7 +35,7 @@ def _append(db: Session, organization_id: str | None, summary: str, **kwargs: ob
         entity_type="test",
         entity_id="ent_1",
         summary=summary,
-        organization_id=organization_id,
+        school_id=school_id,
         **kwargs,  # type: ignore[arg-type]
     )
     db.commit()
@@ -91,7 +91,7 @@ def test_chains_are_per_tenant_and_independent(db: Session) -> None:
 def test_entries_without_a_tenant_use_the_system_chain(db: Session) -> None:
     entry = _append(db, None, "sistemska")
     assert entry.chain_key == SYSTEM_CHAIN_KEY
-    assert entry.organization_id is None
+    assert entry.school_id is None
     assert verify_chain(db, SYSTEM_CHAIN_KEY).ok
 
 
@@ -220,7 +220,7 @@ def test_concurrent_appends_do_not_share_a_sequence_number(db: Session) -> None:
             entity_type="test",
             entity_id="ent_1",
             summary="leva",
-            organization_id=ORG_A,
+            school_id=ORG_A,
         )
         # `right` blocks on the chain head until `left` commits, which is the
         # serialization the seal depends on.
@@ -233,7 +233,7 @@ def test_concurrent_appends_do_not_share_a_sequence_number(db: Session) -> None:
             entity_type="test",
             entity_id="ent_1",
             summary="desna",
-            organization_id=ORG_A,
+            school_id=ORG_A,
         )
         right.commit()
 

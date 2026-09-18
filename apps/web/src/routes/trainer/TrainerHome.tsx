@@ -54,7 +54,7 @@ function useGroupHeadcounts(groupIds: string[]) {
 
 export function TrainerHome() {
   const { me, activeContext } = useSession();
-  const orgName = activeContext?.organization_name ?? "";
+  const orgName = activeContext?.school_name ?? "";
   const firstName = (me?.display_name ?? "").split(/\s+/)[0] ?? "";
 
   // Re-render every minute so "Za N min" stays fresh without a full reload.

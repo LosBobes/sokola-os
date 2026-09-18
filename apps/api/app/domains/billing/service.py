@@ -49,7 +49,7 @@ def _compute(
     derived per member from the group's pricing: ``Group.base_monthly_price_
     minor`` minus that member's ``GroupMembership.discount``, floored at
     0 so a discount can never make a charge negative."""
-    group = repository.get_org_group(db, context.organization_id, req.group_id)
+    group = repository.get_school_group(db, context.school_id, req.group_id)
     if group is None:
         raise NotFoundError("Grupa nije pronađena.")
     currency = get_settings().default_currency
@@ -122,7 +122,7 @@ def post_run(
     guard = None
     if idempotency_key:
         guard = idempotency.begin(
-            db, context.organization_id, "billing.post_run", idempotency_key, params
+            db, context.school_id, "billing.post_run", idempotency_key, params
         )
         if guard.replay is not None:
             return BillingRunResponse.model_validate(guard.replay["body"])
@@ -137,7 +137,7 @@ def post_run(
         raise ConflictError("Nema članova za obračun u ovoj grupi.")
 
     run = BillingRun(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         description=req.description,
         period_label=req.period_label,
         currency=currency,
@@ -159,7 +159,7 @@ def post_run(
         db.add(
             Charge(
                 id=charge_id,
-                organization_id=context.organization_id,
+                school_id=context.school_id,
                 person_id=item.person_id,
                 billing_run_id=run.id,
                 source_type=ChargeSourceType.MEMBERSHIP,
@@ -179,14 +179,14 @@ def post_run(
         entity_type="billing_run",
         entity_id=run.id,
         summary=f"Proknjižen obračun „{req.description}“ ({len(items)} zaduženja).",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     enqueue(
         db,
         event_type="billing_run.posted",
-        payload={"billing_run_id": run.id, "organization_id": context.organization_id},
-        organization_id=context.organization_id,
+        payload={"billing_run_id": run.id, "school_id": context.school_id},
+        school_id=context.school_id,
     )
     if guard is not None:
         idempotency.complete(db, guard, status=201, body=result.model_dump(mode="json"))
@@ -212,7 +212,7 @@ def _period_due_date(period_label: str) -> dt.date | None:
 def list_charges(
     db: Session, context: RequestContext, params: PageParams, person_id: str | None
 ) -> Page[ChargeResponse]:
-    charges, total = repository.list_charges(db, context.organization_id, params, person_id)
+    charges, total = repository.list_charges(db, context.school_id, params, person_id)
     return Page.build([ChargeResponse.model_validate(c) for c in charges], total, params)
 
 
@@ -231,12 +231,12 @@ def cancel_charge(
     guard = None
     if idempotency_key:
         guard = idempotency.begin(
-            db, context.organization_id, "billing.cancel_charge", idempotency_key, params
+            db, context.school_id, "billing.cancel_charge", idempotency_key, params
         )
         if guard.replay is not None:
             return ChargeResponse.model_validate(guard.replay["body"])
 
-    charge = repository.get_charge_for_update(db, context.organization_id, charge_id)
+    charge = repository.get_charge_for_update(db, context.school_id, charge_id)
     if charge is None:
         raise NotFoundError("Zaduženje nije pronađeno.")
     if charge.status in (ChargeStatus.PAID, ChargeStatus.CANCELLED):
@@ -259,14 +259,14 @@ def cancel_charge(
         entity_type="charge",
         entity_id=charge.id,
         summary=f"Otkazano zaduženje ({req.reason.value}).",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     enqueue(
         db,
         event_type="charge.cancelled",
-        payload={"charge_id": charge.id, "organization_id": context.organization_id},
-        organization_id=context.organization_id,
+        payload={"charge_id": charge.id, "school_id": context.school_id},
+        school_id=context.school_id,
     )
     if guard is not None:
         idempotency.complete(db, guard, status=200, body=result.model_dump(mode="json"))
@@ -279,7 +279,7 @@ def list_debts(
 ) -> Page[PersonDebtItem]:
     """PRD 07 M2. Per-person outstanding balance across OPEN/PARTIALLY_PAID
     charges, worst debtor first."""
-    rows, total = repository.person_debts(db, context.organization_id, params)
+    rows, total = repository.person_debts(db, context.school_id, params)
     items = [
         PersonDebtItem(
             person_id=person_id,
@@ -295,7 +295,7 @@ def list_debts(
 
 def debt_summary(db: Session, context: RequestContext) -> DebtSummaryResponse:
     """PRD 07 M2. Org-wide roll-up of :func:`list_debts`."""
-    total, people = repository.debt_summary(db, context.organization_id)
+    total, people = repository.debt_summary(db, context.school_id)
     return DebtSummaryResponse(
         currency=get_settings().default_currency,
         total_outstanding=total,
@@ -323,7 +323,7 @@ def _require_slip_access(db: Session, context: RequestContext, person_id: str) -
     if person_id == context.person_id:
         return
     if repository.is_guardian_of(
-        db, context.organization_id, context.person_id, person_id
+        db, context.school_id, context.person_id, person_id
     ):
         return
     raise NotFoundError("Zaduženje nije pronađeno.")
@@ -343,7 +343,7 @@ def payment_slip(
     re-printing a slip for a partially-paid charge must ask for the remainder,
     never for the full sum again.
     """
-    charge = repository.get_charge(db, context.organization_id, charge_id)
+    charge = repository.get_charge(db, context.school_id, charge_id)
     if charge is None:
         raise NotFoundError("Zaduženje nije pronađeno.")
     _require_slip_access(db, context, charge.person_id)
@@ -354,8 +354,8 @@ def payment_slip(
     if outstanding <= 0:
         raise ConflictError("Zaduženje je izmireno, uplatnica nije potrebna.")
 
-    organization = repository.get_organization(db, context.organization_id)
-    if organization is None or not organization.bank_account_number:
+    school = repository.get_school(db, context.school_id)
+    if school is None or not school.bank_account_number:
         raise ConflictError(
             "Škola nema unet broj računa, pa uplatnica ne može biti generisana.",
             details={"code": "PAYEE_ACCOUNT_NOT_SET"},
@@ -367,10 +367,10 @@ def payment_slip(
 
     try:
         payload = ips_qr.build_ips_qr_payload(
-            account=organization.bank_account_number,
-            payee_name=organization.name,
-            payee_address=organization.address,
-            payee_city=organization.city,
+            account=school.bank_account_number,
+            payee_name=school.name,
+            payee_address=school.address,
+            payee_city=school.city,
             amount=outstanding,
             currency=charge.currency,
             purpose=charge.description,
@@ -382,10 +382,10 @@ def payment_slip(
 
     return PaymentSlipResponse(
         charge_id=charge.id,
-        payee_name=organization.name,
-        payee_address=organization.address,
-        payee_city=organization.city,
-        account_number=ips_qr.normalize_account(organization.bank_account_number),
+        payee_name=school.name,
+        payee_address=school.address,
+        payee_city=school.city,
+        account_number=ips_qr.normalize_account(school.bank_account_number),
         payer_name=payer_name,
         currency=charge.currency,
         amount=outstanding,
@@ -420,7 +420,7 @@ def find_charge_by_reference(
     for candidate in candidates:
         if not candidate:
             continue
-        charge = repository.get_charge_by_reference(db, context.organization_id, candidate)
+        charge = repository.get_charge_by_reference(db, context.school_id, candidate)
         if charge is not None:
             return ChargeResponse.model_validate(charge)
     raise NotFoundError("Zaduženje za uneti poziv na broj nije pronađeno.")

@@ -85,7 +85,7 @@ def _audit_deactivation(
         entity_type=f"structure_{entity_type}",
         entity_id=entity_id,
         summary=f"Deaktivirano: „{name}“.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
 
@@ -98,7 +98,7 @@ def _audit_deactivation(
 def create_category(
     db: Session, context: RequestContext, req: CreateCategoryRequest
 ) -> CategoryResponse:
-    category = Category(organization_id=context.organization_id, name=req.name.strip())
+    category = Category(school_id=context.school_id, name=req.name.strip())
     db.add(category)
     db.commit()
     return _category_response(category)
@@ -107,12 +107,12 @@ def create_category(
 def list_categories(
     db: Session, context: RequestContext, params: PageParams
 ) -> Page[CategoryResponse]:
-    rows, total = repository.list_org_categories(db, context.organization_id, params)
+    rows, total = repository.list_school_categories(db, context.school_id, params)
     return Page.build([_category_response(r) for r in rows], total, params)
 
 
 def get_category(db: Session, context: RequestContext, category_id: str) -> CategoryResponse:
-    row = repository.get_org_category(db, context.organization_id, category_id)
+    row = repository.get_school_category(db, context.school_id, category_id)
     if row is None:
         raise NotFoundError("Kategorija nije pronađena.")
     return _category_response(row)
@@ -121,7 +121,7 @@ def get_category(db: Session, context: RequestContext, category_id: str) -> Cate
 def update_category(
     db: Session, context: RequestContext, category_id: str, req: UpdateCategoryRequest
 ) -> CategoryResponse:
-    row = repository.get_org_category(db, context.organization_id, category_id)
+    row = repository.get_school_category(db, context.school_id, category_id)
     if row is None:
         raise NotFoundError("Kategorija nije pronađena.")
     if "name" in req.model_fields_set and req.name is not None:
@@ -133,7 +133,7 @@ def update_category(
 def deactivate_category(
     db: Session, context: RequestContext, category_id: str
 ) -> CategoryResponse:
-    row = repository.get_org_category(db, context.organization_id, category_id)
+    row = repository.get_school_category(db, context.school_id, category_id)
     if row is None:
         raise NotFoundError("Kategorija nije pronađena.")
     row.record_status = RecordStatus.ARCHIVED
@@ -152,7 +152,7 @@ def deactivate_category(
 def _resolve_category(db: Session, context: RequestContext, category_id: str | None) -> str | None:
     if category_id is None:
         return None
-    category = repository.get_org_category(db, context.organization_id, category_id)
+    category = repository.get_school_category(db, context.school_id, category_id)
     if category is None:
         raise NotFoundError("Kategorija nije pronađena.")
     return category.id
@@ -163,10 +163,10 @@ def create_program(
 ) -> ProgramResponse:
     code = _clean_code(req.internal_code)
     category_id = _resolve_category(db, context, req.category_id)
-    if code is not None and repository.program_code_taken(db, context.organization_id, code):
+    if code is not None and repository.program_code_taken(db, context.school_id, code):
         raise ConflictError(_CODE_CONFLICT)
     program = Program(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         category_id=category_id,
         name=req.name.strip(),
         internal_code=code,
@@ -179,12 +179,12 @@ def create_program(
 def list_programs(
     db: Session, context: RequestContext, params: PageParams
 ) -> Page[ProgramResponse]:
-    rows, total = repository.list_org_programs(db, context.organization_id, params)
+    rows, total = repository.list_school_programs(db, context.school_id, params)
     return Page.build([_program_response(r) for r in rows], total, params)
 
 
 def get_program(db: Session, context: RequestContext, program_id: str) -> ProgramResponse:
-    row = repository.get_org_program(db, context.organization_id, program_id)
+    row = repository.get_school_program(db, context.school_id, program_id)
     if row is None:
         raise NotFoundError("Program nije pronađen.")
     return _program_response(row)
@@ -193,7 +193,7 @@ def get_program(db: Session, context: RequestContext, program_id: str) -> Progra
 def update_program(
     db: Session, context: RequestContext, program_id: str, req: UpdateProgramRequest
 ) -> ProgramResponse:
-    row = repository.get_org_program(db, context.organization_id, program_id)
+    row = repository.get_school_program(db, context.school_id, program_id)
     if row is None:
         raise NotFoundError("Program nije pronađen.")
     if "name" in req.model_fields_set and req.name is not None:
@@ -203,7 +203,7 @@ def update_program(
     if "internal_code" in req.model_fields_set:
         code = _clean_code(req.internal_code)
         if code is not None and repository.program_code_taken(
-            db, context.organization_id, code, exclude_id=row.id
+            db, context.school_id, code, exclude_id=row.id
         ):
             raise ConflictError(_CODE_CONFLICT)
         row.internal_code = code
@@ -214,7 +214,7 @@ def update_program(
 def deactivate_program(
     db: Session, context: RequestContext, program_id: str
 ) -> ProgramResponse:
-    row = repository.get_org_program(db, context.organization_id, program_id)
+    row = repository.get_school_program(db, context.school_id, program_id)
     if row is None:
         raise NotFoundError("Program nije pronađen.")
     row.record_status = RecordStatus.ARCHIVED
@@ -232,10 +232,10 @@ def create_location(
     db: Session, context: RequestContext, req: CreateLocationRequest
 ) -> LocationResponse:
     code = _clean_code(req.internal_code)
-    if code is not None and repository.location_code_taken(db, context.organization_id, code):
+    if code is not None and repository.location_code_taken(db, context.school_id, code):
         raise ConflictError(_CODE_CONFLICT)
     location = Location(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         name=req.name.strip(),
         kind=req.kind,
         address=req.address.strip() if req.address is not None else None,
@@ -249,12 +249,12 @@ def create_location(
 def list_locations(
     db: Session, context: RequestContext, params: PageParams
 ) -> Page[LocationResponse]:
-    rows, total = repository.list_org_locations(db, context.organization_id, params)
+    rows, total = repository.list_school_locations(db, context.school_id, params)
     return Page.build([_location_response(r) for r in rows], total, params)
 
 
 def get_location(db: Session, context: RequestContext, location_id: str) -> LocationResponse:
-    row = repository.get_org_location(db, context.organization_id, location_id)
+    row = repository.get_school_location(db, context.school_id, location_id)
     if row is None:
         raise NotFoundError("Ogranak nije pronađen.")
     return _location_response(row)
@@ -263,7 +263,7 @@ def get_location(db: Session, context: RequestContext, location_id: str) -> Loca
 def update_location(
     db: Session, context: RequestContext, location_id: str, req: UpdateLocationRequest
 ) -> LocationResponse:
-    row = repository.get_org_location(db, context.organization_id, location_id)
+    row = repository.get_school_location(db, context.school_id, location_id)
     if row is None:
         raise NotFoundError("Ogranak nije pronađen.")
     if "name" in req.model_fields_set and req.name is not None:
@@ -275,7 +275,7 @@ def update_location(
     if "internal_code" in req.model_fields_set:
         code = _clean_code(req.internal_code)
         if code is not None and repository.location_code_taken(
-            db, context.organization_id, code, exclude_id=row.id
+            db, context.school_id, code, exclude_id=row.id
         ):
             raise ConflictError(_CODE_CONFLICT)
         row.internal_code = code
@@ -286,7 +286,7 @@ def update_location(
 def deactivate_location(
     db: Session, context: RequestContext, location_id: str
 ) -> LocationResponse:
-    row = repository.get_org_location(db, context.organization_id, location_id)
+    row = repository.get_school_location(db, context.school_id, location_id)
     if row is None:
         raise NotFoundError("Ogranak nije pronađen.")
     row.record_status = RecordStatus.ARCHIVED
@@ -301,14 +301,14 @@ def deactivate_location(
 
 
 def create_room(db: Session, context: RequestContext, req: CreateRoomRequest) -> RoomResponse:
-    location = repository.get_org_location(db, context.organization_id, req.location_id)
+    location = repository.get_school_location(db, context.school_id, req.location_id)
     if location is None:
         raise NotFoundError("Ogranak nije pronađen.")
     code = _clean_code(req.internal_code)
-    if code is not None and repository.room_code_taken(db, context.organization_id, code):
+    if code is not None and repository.room_code_taken(db, context.school_id, code):
         raise ConflictError(_CODE_CONFLICT)
     room = Room(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         location_id=location.id,
         name=req.name.strip(),
         capacity=req.capacity,
@@ -326,14 +326,14 @@ def list_rooms(
     *,
     location_id: str | None = None,
 ) -> Page[RoomResponse]:
-    rows, total = repository.list_org_rooms(
-        db, context.organization_id, params, location_id=location_id
+    rows, total = repository.list_school_rooms(
+        db, context.school_id, params, location_id=location_id
     )
     return Page.build([_room_response(r) for r in rows], total, params)
 
 
 def get_room(db: Session, context: RequestContext, room_id: str) -> RoomResponse:
-    row = repository.get_org_room(db, context.organization_id, room_id)
+    row = repository.get_school_room(db, context.school_id, room_id)
     if row is None:
         raise NotFoundError("Prostor nije pronađen.")
     return _room_response(row)
@@ -342,7 +342,7 @@ def get_room(db: Session, context: RequestContext, room_id: str) -> RoomResponse
 def update_room(
     db: Session, context: RequestContext, room_id: str, req: UpdateRoomRequest
 ) -> RoomResponse:
-    row = repository.get_org_room(db, context.organization_id, room_id)
+    row = repository.get_school_room(db, context.school_id, room_id)
     if row is None:
         raise NotFoundError("Prostor nije pronađen.")
     if "name" in req.model_fields_set and req.name is not None:
@@ -352,7 +352,7 @@ def update_room(
     if "internal_code" in req.model_fields_set:
         code = _clean_code(req.internal_code)
         if code is not None and repository.room_code_taken(
-            db, context.organization_id, code, exclude_id=row.id
+            db, context.school_id, code, exclude_id=row.id
         ):
             raise ConflictError(_CODE_CONFLICT)
         row.internal_code = code
@@ -361,7 +361,7 @@ def update_room(
 
 
 def deactivate_room(db: Session, context: RequestContext, room_id: str) -> RoomResponse:
-    row = repository.get_org_room(db, context.organization_id, room_id)
+    row = repository.get_school_room(db, context.school_id, room_id)
     if row is None:
         raise NotFoundError("Prostor nije pronađen.")
     row.record_status = RecordStatus.ARCHIVED

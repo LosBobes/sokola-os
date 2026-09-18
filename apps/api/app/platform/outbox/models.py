@@ -37,7 +37,7 @@ class OutboxMessage(Base, TimestampMixin):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("obx"))
-    organization_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    school_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     event_type: Mapped[str] = mapped_column(String(120), nullable=False)
     event_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
@@ -89,7 +89,7 @@ class DeadLetterReview(Base, TimestampMixin):
     message_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("outbox_message.id", ondelete="CASCADE"), nullable=False
     )
-    organization_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    school_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     action: Mapped[DeadLetterAction] = mapped_column(enum_type(DeadLetterAction), nullable=False)
     status: Mapped[DeadLetterReviewStatus] = mapped_column(

@@ -6,7 +6,7 @@ vs. parent split:
 * Write paths that only staff may reach (upload, listing every document in the
   tenant) are gated at the router with ``require_permission(DOCUMENTS)``.
 * Resource-level access (can THIS caller see/download/acknowledge THIS
-  document) is re-checked here against ``organization_id`` and
+  document) is re-checked here against ``school_id`` and
   ``visibility`` regardless of role, a staff member's DOCUMENTS grant always
   passes it; anyone else passes only for their own or their guarded child's
   SUBJECT-visibility documents. Never trust the client for either.
@@ -75,12 +75,12 @@ def _can_view(db: Session, context: RequestContext, document: Document) -> bool:
     if document.subject_person_id == context.person_id:
         return True
     return document.subject_person_id in repository.guardian_child_ids(
-        db, context.organization_id, context.person_id
+        db, context.school_id, context.person_id
     )
 
 
 def _load_authorized(db: Session, context: RequestContext, document_id: str) -> Document:
-    document = repository.get_document(db, context.organization_id, document_id)
+    document = repository.get_document(db, context.school_id, document_id)
     if document is None:
         raise NotFoundError("Dokument nije pronađen.")
     if not _can_view(db, context, document):
@@ -91,7 +91,7 @@ def _load_authorized(db: Session, context: RequestContext, document_id: str) -> 
 def _to_response(document: Document) -> DocumentResponse:
     return DocumentResponse(
         id=document.id,
-        organization_id=document.organization_id,
+        school_id=document.school_id,
         owner_person_id=document.owner_person_id,
         subject_person_id=document.subject_person_id,
         filename=document.filename,
@@ -139,7 +139,7 @@ def upload_document(
                 "Potrebno je navesti osobu na koju se dokument odnosi.",
                 details={"code": "SUBJECT_REQUIRED"},
             )
-        if not repository.is_org_member(db, context.organization_id, subject_person_id):
+        if not repository.is_school_member(db, context.school_id, subject_person_id):
             raise BadRequestError(
                 "Navedena osoba nije član ove organizacije.",
                 details={"code": "SUBJECT_NOT_A_MEMBER"},
@@ -148,7 +148,7 @@ def upload_document(
 
     storage_key = _storage().save(data)
     document = Document(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         owner_person_id=context.person_id,
         subject_person_id=resolved_subject_id,
         filename=filename[:255] or "dokument",
@@ -169,14 +169,14 @@ def upload_document(
         entity_type="document",
         entity_id=document.id,
         summary=f"Otpremljen dokument: {document.filename}",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     enqueue(
         db,
         event_type="document.uploaded",
-        payload={"document_id": document.id, "organization_id": context.organization_id},
-        organization_id=context.organization_id,
+        payload={"document_id": document.id, "school_id": context.school_id},
+        school_id=context.school_id,
     )
     db.commit()
     return _to_response(document)
@@ -191,19 +191,19 @@ def list_documents(
     subject_person_id: str | None = None,
 ) -> Page[DocumentResponse]:
     if _has_documents_permission(context):
-        documents, total = repository.list_org_documents(
+        documents, total = repository.list_school_documents(
             db,
-            context.organization_id,
+            context.school_id,
             params,
             document_type=document_type,
             subject_person_id=subject_person_id,
         )
     else:
         visible_ids = repository.guardian_child_ids(
-            db, context.organization_id, context.person_id
+            db, context.school_id, context.person_id
         )
         documents, total = repository.list_visible_documents(
-            db, context.organization_id, context.person_id, visible_ids, params
+            db, context.school_id, context.person_id, visible_ids, params
         )
     items = [_to_response(d) for d in documents]
     return Page.build(items, total, params)
@@ -248,7 +248,7 @@ def acknowledge_document(
     is_subject = document.subject_person_id == context.person_id
     is_guardian = document.subject_person_id is not None and (
         document.subject_person_id
-        in repository.guardian_child_ids(db, context.organization_id, context.person_id)
+        in repository.guardian_child_ids(db, context.school_id, context.person_id)
     )
     if not (is_subject or is_guardian):
         raise ForbiddenError(
@@ -265,7 +265,7 @@ def acknowledge_document(
             entity_type="document",
             entity_id=document.id,
             summary="Potvrđen ugovor.",
-            organization_id=context.organization_id,
+            school_id=context.school_id,
             actor_person_id=context.person_id,
         )
         db.commit()

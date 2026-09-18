@@ -17,11 +17,11 @@ def create_note(
     """M1. A trainer/staff member writes a note about a student in one of their
     groups. The student must be an active member of that group, a note is
     always honest about who it's about and in what context."""
-    person = repository.get_org_person(db, context.organization_id, person_id)
+    person = repository.get_school_person(db, context.school_id, person_id)
     if person is None:
         raise NotFoundError("Osoba nije pronađena.")
 
-    group = repository.get_group(db, context.organization_id, req.group_id)
+    group = repository.get_group(db, context.school_id, req.group_id)
     if group is None:
         raise NotFoundError("Grupa nije pronađena.")
 
@@ -29,7 +29,7 @@ def create_note(
         raise BadRequestError("Osoba nije aktivan član navedene grupe.")
 
     note = ProgressNote(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         person_id=person_id,
         group_id=req.group_id,
         author_person_id=context.person_id,
@@ -44,7 +44,7 @@ def create_note(
         entity_type="person",
         entity_id=person_id,
         summary="Dodata beleška o napretku.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     db.commit()
@@ -56,8 +56,8 @@ def list_notes(
     db: DbSession, context: RequestContext, person_id: str, group_id: str | None
 ) -> list[ProgressNoteResponse]:
     """Staff view: every note for a person, optionally narrowed to one group."""
-    person = repository.get_org_person(db, context.organization_id, person_id)
+    person = repository.get_school_person(db, context.school_id, person_id)
     if person is None:
         raise NotFoundError("Osoba nije pronađena.")
-    notes = repository.list_for_person(db, context.organization_id, person_id, group_id)
+    notes = repository.list_for_person(db, context.school_id, person_id, group_id)
     return [ProgressNoteResponse.model_validate(n) for n in notes]

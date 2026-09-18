@@ -27,7 +27,7 @@ def search(
 ) -> SearchResponse:
     """Search is gated on ``ContextDep`` alone, no new permission area. It only
     ever surfaces rows each sub-query already re-scopes to ``context.
-    organization_id`` the same way that domain's own list endpoint would (e.g.
+    school_id`` the same way that domain's own list endpoint would (e.g.
     ``GET /charges`` is likewise ``ContextDep``-only today, with no per-area
     guard), so this is behaviour-consistent with the codebase, not a new
     exposure. A future permission area is easy to add here if that changes.
@@ -36,7 +36,7 @@ def search(
     if not term:
         return SearchResponse(query=term, results=[])
 
-    org_id = context.organization_id
+    org_id = context.school_id
     results: list[SearchResultItem] = []
 
     for person, membership in repository.search_people(db, org_id, term):

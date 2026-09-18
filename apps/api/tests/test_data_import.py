@@ -207,7 +207,7 @@ def test_commit_twice_conflicts(client: TestClient, db: Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_import_batch_invisible_to_other_org(client: TestClient, db: Session) -> None:
+def test_import_batch_invisible_to_other_school(client: TestClient, db: Session) -> None:
     org_a = bootstrap_actor(db, org_name="Klub A")
     org_b = bootstrap_actor(db, org_name="Klub B")
 
@@ -226,7 +226,9 @@ def test_import_batch_invisible_to_other_org(client: TestClient, db: Session) ->
     )
 
 
-def test_import_group_name_only_resolves_within_same_org(client: TestClient, db: Session) -> None:
+def test_import_group_name_only_resolves_within_same_school(
+    client: TestClient, db: Session
+) -> None:
     org_a = bootstrap_actor(db, org_name="Klub A")
     org_b = bootstrap_actor(db, org_name="Klub B")
     _make_group(client, org_b, "Deljena grupa")
@@ -246,7 +248,7 @@ def test_import_group_name_only_resolves_within_same_org(client: TestClient, db:
 
 def test_trainer_cannot_import(client: TestClient, db: Session) -> None:
     org = bootstrap_actor(db)
-    trainer = add_actor(db, organization=org.organization, role=RoleCode.TRAINER, given="Trener")
+    trainer = add_actor(db, school=org.school, role=RoleCode.TRAINER, given="Trener")
 
     resp = client.post(
         "/import/uploads",

@@ -29,7 +29,7 @@ from app.security.context import RequestContext
 def _require_location(db: Session, context: RequestContext, location_id: str | None) -> None:
     if location_id is None:
         return
-    if not repository.is_org_location(db, context.organization_id, location_id):
+    if not repository.is_school_location(db, context.school_id, location_id):
         # Same error for foreign/nonexistent, never leak cross-tenant existence.
         raise NotFoundError("Lokacija nije pronađena.")
 
@@ -37,7 +37,7 @@ def _require_location(db: Session, context: RequestContext, location_id: str | N
 def _require_person(db: Session, context: RequestContext, person_id: str | None) -> None:
     if person_id is None:
         return
-    if not repository.is_org_person(db, context.organization_id, person_id):
+    if not repository.is_school_person(db, context.school_id, person_id):
         raise NotFoundError("Osoba nije pronađena u ovoj školi.")
 
 
@@ -45,7 +45,7 @@ def create_event(db: Session, context: RequestContext, req: CreateEventRequest) 
     _require_location(db, context, req.location_id)
     _require_person(db, context, req.responsible_person_id)
     event = Event(
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         title=req.title,
         type=req.type,
         category=req.category,
@@ -66,7 +66,7 @@ def create_event(db: Session, context: RequestContext, req: CreateEventRequest) 
 def list_events(db: Session, context: RequestContext) -> list[EventResponse]:
     return [
         EventResponse.model_validate(e)
-        for e in repository.list_published(db, context.organization_id)
+        for e in repository.list_published(db, context.school_id)
     ]
 
 
@@ -81,7 +81,7 @@ def list_calendar(
     """
     return [
         EventResponse.model_validate(e)
-        for e in repository.list_in_range(db, context.organization_id, start, end)
+        for e in repository.list_in_range(db, context.school_id, start, end)
     ]
 
 
@@ -101,7 +101,7 @@ def update_event(
 ) -> EventResponse:
     """M1. Edit an event's title, start time, or capacity while it is still
     upcoming. Refused once the event has started, finished, or been cancelled."""
-    event = repository.get_event(db, context.organization_id, event_id, for_update=True)
+    event = repository.get_event(db, context.school_id, event_id, for_update=True)
     if event is None:
         raise NotFoundError("Događaj nije pronađen.")
     _require_editable(event)
@@ -161,7 +161,7 @@ def update_event(
         entity_type="event",
         entity_id=event.id,
         summary=f"Izmenjen događaj „{event.title}“.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     db.commit()
@@ -172,7 +172,7 @@ def cancel_event(db: Session, context: RequestContext, event_id: str) -> EventRe
     """M1. Cancel the whole event, distinct from cancelling a single
     registration. Cascades: every active (REGISTERED) registration is cancelled
     too, atomically in the same transaction as the event's own status change."""
-    event = repository.get_event(db, context.organization_id, event_id, for_update=True)
+    event = repository.get_event(db, context.school_id, event_id, for_update=True)
     if event is None:
         raise NotFoundError("Događaj nije pronađen.")
     if event.status is EventStatus.CANCELLED:
@@ -195,7 +195,7 @@ def cancel_event(db: Session, context: RequestContext, event_id: str) -> EventRe
         entity_type="event",
         entity_id=event.id,
         summary=f"Otkazan događaj „{event.title}“ ({len(active)} prijava otkazano).",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"cancelled_registrations": len(active)},
     )
@@ -204,10 +204,10 @@ def cancel_event(db: Session, context: RequestContext, event_id: str) -> EventRe
         event_type="event.cancelled",
         payload={
             "event_id": event.id,
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
             "cancelled_registrations": len(active),
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
     db.commit()
     return EventResponse.model_validate(event)
@@ -228,18 +228,18 @@ def register_children(
     guard = None
     if idempotency_key:
         guard = idempotency.begin(
-            db, context.organization_id, "events.register", idempotency_key, params
+            db, context.school_id, "events.register", idempotency_key, params
         )
         if guard.replay is not None:
             return [RegistrationResponse.model_validate(r) for r in guard.replay["body"]]
 
-    event = repository.get_event(db, context.organization_id, event_id, for_update=True)
+    event = repository.get_event(db, context.school_id, event_id, for_update=True)
     if event is None:
         raise NotFoundError("Događaj nije pronađen.")
     if event.status is not EventStatus.PUBLISHED:
         raise ConflictError("Prijave za ovaj događaj nisu otvorene.")
 
-    allowed = repository.guardian_children(db, context.organization_id, context.person_id)
+    allowed = repository.guardian_children(db, context.school_id, context.person_id)
     not_allowed = [cid for cid in unique_ids if cid not in allowed]
     if not_allowed:
         # Reveal nothing about children the caller doesn't guardian.
@@ -265,7 +265,7 @@ def register_children(
         registration = existing.get(cid)
         if registration is None:
             registration = EventRegistration(
-                organization_id=context.organization_id,
+                school_id=context.school_id,
                 event_id=event_id,
                 child_person_id=cid,
                 registered_by_person_id=context.person_id,
@@ -294,14 +294,14 @@ def register_children(
         entity_type="event",
         entity_id=event_id,
         summary=f"Prijavljeno {len(results)} dete/dece na događaj.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     enqueue(
         db,
         event_type="event.registered",
-        payload={"event_id": event_id, "organization_id": context.organization_id},
-        organization_id=context.organization_id,
+        payload={"event_id": event_id, "school_id": context.school_id},
+        school_id=context.school_id,
     )
     if guard is not None:
         idempotency.complete(
@@ -317,12 +317,12 @@ def cancel_registration(
     """Journey 4. Cancellation is a status change, not a deletion; history stays
     canonical and no automatic refund is promised."""
     registration = repository.get_registration(
-        db, context.organization_id, event_id, registration_id
+        db, context.school_id, event_id, registration_id
     )
     if registration is None:
         raise NotFoundError("Prijava nije pronađena.")
 
-    allowed = repository.guardian_children(db, context.organization_id, context.person_id)
+    allowed = repository.guardian_children(db, context.school_id, context.person_id)
     if registration.child_person_id not in allowed:
         raise ForbiddenError("Nedostupna prijava.")
 
@@ -336,7 +336,7 @@ def cancel_registration(
             entity_type="event_registration",
             entity_id=registration.id,
             summary="Otkazana prijava na događaj.",
-            organization_id=context.organization_id,
+            school_id=context.school_id,
             actor_person_id=context.person_id,
         )
         db.commit()

@@ -3,7 +3,7 @@
 No local models: this domain only ever reads rows other domains already own.
 Cross-domain imports are limited to those domains' MODELS (always allowed by
 the architecture gate), never their service/repository/router. Every query
-below filters on ``organization_id`` itself (never relies on a join alone to
+below filters on ``school_id`` itself (never relies on a join alone to
 establish tenant scope), because that is the invariant this whole endpoint
 exists to prove.
 
@@ -26,9 +26,9 @@ from app.domains.billing.models import Charge
 from app.domains.events.models import Event
 from app.domains.groups.models import Group
 from app.domains.identity.models import Person
-from app.domains.organization.enums import MembershipStatus
-from app.domains.organization.models import OrganizationMembership
 from app.domains.scheduling.models import Session as ScheduledSession
+from app.domains.school.enums import MembershipStatus
+from app.domains.school.models import SchoolMembership
 
 RESULTS_PER_TYPE = 5
 
@@ -40,18 +40,18 @@ def _prefix_rank(*columns: Any, term: str) -> ColumnElement[int]:
 
 
 def search_people(
-    db: Session, organization_id: str, term: str
-) -> list[tuple[Person, OrganizationMembership]]:
+    db: Session, school_id: str, term: str
+) -> list[tuple[Person, SchoolMembership]]:
     """People visible to this org via an active membership (mirrors
-    ``people.repository.list_org_people``) whose display name matches."""
+    ``people.repository.list_school_people``) whose display name matches."""
     like = f"%{term}%"
     stmt = (
-        select(Person, OrganizationMembership)
-        .join(OrganizationMembership, OrganizationMembership.person_id == Person.id)
+        select(Person, SchoolMembership)
+        .join(SchoolMembership, SchoolMembership.person_id == Person.id)
         .where(
-            OrganizationMembership.organization_id == organization_id,
-            OrganizationMembership.status == MembershipStatus.ACTIVE,
-            OrganizationMembership.record_status == RecordStatus.ACTIVE,
+            SchoolMembership.school_id == school_id,
+            SchoolMembership.status == MembershipStatus.ACTIVE,
+            SchoolMembership.record_status == RecordStatus.ACTIVE,
             Person.record_status == RecordStatus.ACTIVE,
             Person.display_name.ilike(like),
         )
@@ -61,12 +61,12 @@ def search_people(
     return [tuple(row) for row in db.execute(stmt).all()]
 
 
-def search_groups(db: Session, organization_id: str, term: str) -> list[Group]:
+def search_groups(db: Session, school_id: str, term: str) -> list[Group]:
     like = f"%{term}%"
     stmt = (
         select(Group)
         .where(
-            Group.organization_id == organization_id,
+            Group.school_id == school_id,
             Group.record_status == RecordStatus.ACTIVE,
             Group.name.ilike(like),
         )
@@ -77,10 +77,10 @@ def search_groups(db: Session, organization_id: str, term: str) -> list[Group]:
 
 
 def search_sessions(
-    db: Session, organization_id: str, term: str
+    db: Session, school_id: str, term: str
 ) -> list[tuple[ScheduledSession, Group]]:
     """Sessions matched by their own title or their group's name. Both the
-    session and its group are re-checked against ``organization_id``, a
+    session and its group are re-checked against ``school_id``, a
     session's ``group_id`` should always already belong to the same org, but
     this endpoint re-verifies rather than trusting that invariant silently."""
     like = f"%{term}%"
@@ -88,8 +88,8 @@ def search_sessions(
         select(ScheduledSession, Group)
         .join(Group, Group.id == ScheduledSession.group_id)
         .where(
-            ScheduledSession.organization_id == organization_id,
-            Group.organization_id == organization_id,
+            ScheduledSession.school_id == school_id,
+            Group.school_id == school_id,
             ScheduledSession.record_status == RecordStatus.ACTIVE,
             or_(ScheduledSession.title.ilike(like), Group.name.ilike(like)),
         )
@@ -102,12 +102,12 @@ def search_sessions(
     return [tuple(row) for row in db.execute(stmt).all()]
 
 
-def search_events(db: Session, organization_id: str, term: str) -> list[Event]:
+def search_events(db: Session, school_id: str, term: str) -> list[Event]:
     like = f"%{term}%"
     stmt = (
         select(Event)
         .where(
-            Event.organization_id == organization_id,
+            Event.school_id == school_id,
             Event.record_status == RecordStatus.ACTIVE,
             Event.title.ilike(like),
         )
@@ -118,7 +118,7 @@ def search_events(db: Session, organization_id: str, term: str) -> list[Event]:
 
 
 def search_charges(
-    db: Session, organization_id: str, term: str
+    db: Session, school_id: str, term: str
 ) -> list[tuple[Charge, Person]]:
     """Charges matched by description or the owing person's name. ``Charge``
     carries no ``record_status`` column (mirrors ``billing.repository.
@@ -128,7 +128,7 @@ def search_charges(
         select(Charge, Person)
         .join(Person, Person.id == Charge.person_id)
         .where(
-            Charge.organization_id == organization_id,
+            Charge.school_id == school_id,
             or_(Charge.description.ilike(like), Person.display_name.ilike(like)),
         )
         .order_by(

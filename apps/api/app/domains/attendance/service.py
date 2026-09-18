@@ -21,7 +21,7 @@ from app.security.context import RequestContext
 
 
 def get_sheet(db: DbSession, context: RequestContext, session_id: str) -> AttendanceSheet:
-    session = repository.get_session(db, context.organization_id, session_id)
+    session = repository.get_session(db, context.school_id, session_id)
     if session is None:
         raise NotFoundError("Termin nije pronađen.")
 
@@ -50,7 +50,7 @@ def save_attendance(
     silently overwrite. The session row is locked to serialize concurrent saves.
     """
     session = repository.get_session(
-        db, context.organization_id, session_id, for_update=True
+        db, context.school_id, session_id, for_update=True
     )
     if session is None:
         raise NotFoundError("Termin nije pronađen.")
@@ -83,7 +83,7 @@ def save_attendance(
         if record is None:
             db.add(
                 AttendanceRecord(
-                    organization_id=context.organization_id,
+                    school_id=context.school_id,
                     session_id=session_id,
                     person_id=person_id,
                     status=status,
@@ -102,7 +102,7 @@ def save_attendance(
     for note_input in req.progress_notes:
         db.add(
             ProgressNote(
-                organization_id=context.organization_id,
+                school_id=context.school_id,
                 person_id=note_input.person_id,
                 group_id=session.group_id,
                 author_person_id=context.person_id,
@@ -120,7 +120,7 @@ def save_attendance(
         entity_type="session",
         entity_id=session_id,
         summary=f"Sačuvano prisustvo ({len(roster_ids)} osoba).",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
     db.commit()

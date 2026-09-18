@@ -10,33 +10,33 @@ from app.domains.structure.enums import LocationKind
 
 
 class Category(Base, TimestampMixin, RecordStatusMixin):
-    """A program category (kategorija programa) inside one organization. A light
+    """A program category (kategorija programa) inside one school. A light
     grouping label for programs; carries no schedule or finance of its own."""
 
     __tablename__ = "structure_category"
-    __table_args__ = (Index("ix_structure_category_org", "organization_id"),)
+    __table_args__ = (Index("ix_structure_category_school", "school_id"),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("cat"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(160), nullable=False)
 
 
 class Program(Base, TimestampMixin, RecordStatusMixin):
-    """A program offered by one organization (e.g. a discipline or course). May
+    """A program offered by one school (e.g. a discipline or course). May
     be grouped under a :class:`Category`. Its optional internal code is unique
-    among the organization's active programs."""
+    among the school's active programs."""
 
     __tablename__ = "structure_program"
     __table_args__ = (
-        Index("ix_structure_program_org", "organization_id"),
-        Index("ix_structure_program_org_code", "organization_id", "internal_code"),
+        Index("ix_structure_program_school", "school_id"),
+        Index("ix_structure_program_school_code", "school_id", "internal_code"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("prg"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     category_id: Mapped[str | None] = mapped_column(
         ForeignKey("structure_category.id", ondelete="SET NULL"), nullable=True
@@ -46,10 +46,10 @@ class Program(Base, TimestampMixin, RecordStatusMixin):
 
 
 class Location(Base, TimestampMixin, RecordStatusMixin):
-    """A place (lokacija) where an organization's activities happen: a branch, a
+    """A place (lokacija) where an school's activities happen: a branch, a
     hall, a pitch, a kindergarten, a theatre, the outdoors, or an online room.
     Rooms belong to it. Its optional internal code is unique among the
-    organization's active locations.
+    school's active locations.
 
     ``kind`` classifies the place (see :class:`LocationKind`). It is descriptive
     only, nothing in scheduling, billing or attendance branches on it, so adding
@@ -58,13 +58,13 @@ class Location(Base, TimestampMixin, RecordStatusMixin):
 
     __tablename__ = "structure_location"
     __table_args__ = (
-        Index("ix_structure_location_org", "organization_id"),
-        Index("ix_structure_location_org_code", "organization_id", "internal_code"),
+        Index("ix_structure_location_school", "school_id"),
+        Index("ix_structure_location_school_code", "school_id", "internal_code"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("loc"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     kind: Mapped[LocationKind] = mapped_column(
@@ -76,17 +76,17 @@ class Location(Base, TimestampMixin, RecordStatusMixin):
 
 class Room(Base, TimestampMixin, RecordStatusMixin):
     """A space (prostor) inside a :class:`Location`. Carries a capacity and an
-    optional internal code unique among the organization's active rooms."""
+    optional internal code unique among the school's active rooms."""
 
     __tablename__ = "structure_room"
     __table_args__ = (
-        Index("ix_structure_room_org", "organization_id"),
-        Index("ix_structure_room_org_code", "organization_id", "internal_code"),
+        Index("ix_structure_room_school", "school_id"),
+        Index("ix_structure_room_school_code", "school_id", "internal_code"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("room"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     location_id: Mapped[str] = mapped_column(
         ForeignKey("structure_location.id", ondelete="CASCADE"), nullable=False

@@ -72,7 +72,7 @@ export function MorePage() {
       <Card
         eyebrow="Nalog"
         title={me.display_name}
-        subtitle={`${roleLabel} · ${activeContext.organization_name}`}
+        subtitle={`${roleLabel} · ${activeContext.school_name}`}
         className="more-page__card"
       >
         <div className="more-page__rows">
@@ -92,7 +92,7 @@ export function MorePage() {
           <ul className="more-page__list">
             <li>
               <span className="more-page__row more-page__row--active" aria-current="true">
-                <span className="more-page__row-org">{activeContext.organization_name}</span>
+                <span className="more-page__row-org">{activeContext.school_name}</span>
                 <span className="more-page__row-role">{ROLE_LABEL[activeContext.role_code]}</span>
               </span>
             </li>
@@ -104,7 +104,7 @@ export function MorePage() {
                   onClick={() => chooseContext(c.role_assignment_id)}
                   data-cy={`more-context-${c.role_assignment_id}`}
                 >
-                  <span className="more-page__row-org">{c.organization_name}</span>
+                  <span className="more-page__row-org">{c.school_name}</span>
                   <span className="more-page__row-role">{ROLE_LABEL[c.role_code]}</span>
                 </button>
               </li>

@@ -24,7 +24,7 @@ from app.domains.identity.enums import (
 
 class Person(Base, TimestampMixin, RecordStatusMixin):
     """A global human identity. Existing globally does NOT make a person visible
-    to any organization; visibility comes only through an org-scoped relationship."""
+    to any school; visibility comes only through an org-scoped relationship."""
 
     __tablename__ = "person"
 
@@ -78,7 +78,7 @@ class AuthIdentifier(Base, TimestampMixin):
 
 
 class RoleAssignment(Base, TimestampMixin, RecordStatusMixin):
-    """What a person is allowed to do inside one organization. ``role_code`` is a
+    """What a person is allowed to do inside one school. ``role_code`` is a
     closed access-template facade, never a job title. This is the authority the
     server consults to build the request context."""
 
@@ -86,7 +86,7 @@ class RoleAssignment(Base, TimestampMixin, RecordStatusMixin):
     __table_args__ = (
         UniqueConstraint(
             "person_id",
-            "organization_id",
+            "school_id",
             "role_code",
             "scope_type",
             "scope_ref_id",
@@ -98,14 +98,14 @@ class RoleAssignment(Base, TimestampMixin, RecordStatusMixin):
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False
     )
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     role_code: Mapped[RoleCode] = mapped_column(enum_type(RoleCode), nullable=False)
     scope_type: Mapped[RoleScopeType] = mapped_column(
-        enum_type(RoleScopeType), nullable=False, default=RoleScopeType.ORGANIZATION
+        enum_type(RoleScopeType), nullable=False, default=RoleScopeType.SCHOOL
     )
-    # Branch/group id when the role is narrower than the whole organization.
+    # Branch/group id when the role is narrower than the whole school.
     scope_ref_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[RoleAssignmentStatus] = mapped_column(
         enum_type(RoleAssignmentStatus), nullable=False, default=RoleAssignmentStatus.ACTIVE
@@ -147,8 +147,8 @@ class Invitation(Base, TimestampMixin):
     __table_args__ = (UniqueConstraint("token_hash", name="uq_invitation_token_hash"),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("inv"))
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     type: Mapped[InvitationType] = mapped_column(enum_type(InvitationType), nullable=False)
     status: Mapped[InvitationStatus] = mapped_column(
@@ -164,7 +164,7 @@ class Invitation(Base, TimestampMixin):
     # The role assignment acceptance will create (or reactivate).
     role_code: Mapped[RoleCode] = mapped_column(enum_type(RoleCode), nullable=False)
     scope_type: Mapped[RoleScopeType] = mapped_column(
-        enum_type(RoleScopeType), nullable=False, default=RoleScopeType.ORGANIZATION
+        enum_type(RoleScopeType), nullable=False, default=RoleScopeType.SCHOOL
     )
     scope_ref_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     granted_areas: Mapped[list[str] | None] = mapped_column(ARRAY(String(40)), nullable=True)
@@ -180,14 +180,14 @@ class Invitation(Base, TimestampMixin):
 class PersonMergeRecord(Base, TimestampMixin):
     """A duplicate-review case, and (once decided) append-only evidence of a
     merge. There is no self-service dedup endpoint; merges are deliberate,
-    reviewed operations scoped to the organization that raised them."""
+    reviewed operations scoped to the school that raised them."""
 
     __tablename__ = "person_merge_record"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("mrg"))
     # The tenant that flagged the pair; the review never crosses org boundaries.
-    organization_id: Mapped[str] = mapped_column(
-        ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     source_person_id: Mapped[str] = mapped_column(String(64), nullable=False)
     target_person_id: Mapped[str] = mapped_column(String(64), nullable=False)

@@ -35,7 +35,7 @@ def _assignment_response(assignment: RoleAssignment, person: Person) -> RoleAssi
         id=assignment.id,
         person_id=person.id,
         display_name=person.display_name,
-        organization_id=assignment.organization_id,
+        school_id=assignment.school_id,
         role_code=assignment.role_code,
         scope_type=assignment.scope_type,
         scope_ref_id=assignment.scope_ref_id,
@@ -53,11 +53,11 @@ def assign_role(
         raise BadRequestError(
             "Vlasništvo se dodeljuje isključivo kroz prenos vlasništva (ownership/transfer)."
         )
-    person = repository.get_org_person(db, context.organization_id, req.person_id)
+    person = repository.get_school_person(db, context.school_id, req.person_id)
     if person is None:
         raise NotFoundError("Osoba nije pronađena u ovoj školi.")
     policy.validate_scope(
-        db, context.organization_id, req.role_code, req.scope_type, req.scope_ref_id
+        db, context.school_id, req.role_code, req.scope_type, req.scope_ref_id
     )
     policy.validate_granted_areas(
         req.role_code,
@@ -68,7 +68,7 @@ def assign_role(
 
     existing = repository.find_assignment(
         db,
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         person_id=req.person_id,
         role_code=req.role_code,
         scope_type=req.scope_type,
@@ -86,7 +86,7 @@ def assign_role(
     else:
         assignment = RoleAssignment(
             person_id=req.person_id,
-            organization_id=context.organization_id,
+            school_id=context.school_id,
             role_code=req.role_code,
             scope_type=req.scope_type,
             scope_ref_id=req.scope_ref_id,
@@ -103,7 +103,7 @@ def assign_role(
         entity_type="role_assignment",
         entity_id=assignment.id,
         summary=f"„{person.display_name}“ je dobio/la ulogu {req.role_code.value}.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"person_id": person.id},
     )
@@ -113,9 +113,9 @@ def assign_role(
         payload={
             "role_assignment_id": assignment.id,
             "person_id": person.id,
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
     db.commit()
     return _assignment_response(assignment, person)
@@ -124,14 +124,14 @@ def assign_role(
 def list_role_assignments(
     db: Session, context: RequestContext, params: PageParams
 ) -> Page[RoleAssignmentResponse]:
-    rows, total = repository.list_org_assignments(db, context.organization_id, params)
+    rows, total = repository.list_school_assignments(db, context.school_id, params)
     return Page.build([_assignment_response(a, p) for a, p in rows], total, params)
 
 
 def _load_assignment(
     db: Session, context: RequestContext, assignment_id: str
 ) -> tuple[RoleAssignment, Person]:
-    assignment = repository.get_assignment(db, context.organization_id, assignment_id)
+    assignment = repository.get_assignment(db, context.school_id, assignment_id)
     if assignment is None:
         raise NotFoundError("Dodela uloge nije pronađena.")
     person = repository.get_person(db, assignment.person_id)
@@ -157,7 +157,7 @@ def update_granted_areas(
         entity_type="role_assignment",
         entity_id=assignment.id,
         summary=f"Ovlašćenja za „{person.display_name}“ su izmenjena.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"granted_areas": req.granted_areas},
     )
@@ -165,11 +165,11 @@ def update_granted_areas(
     return _assignment_response(assignment, person)
 
 
-def _guard_not_last_owner(db: Session, organization_id: str, assignment: RoleAssignment) -> None:
+def _guard_not_last_owner(db: Session, school_id: str, assignment: RoleAssignment) -> None:
     """§14/M4, never strip the school of its last active owner."""
     if (
         assignment.role_code is RoleCode.OWNER
-        and repository.count_active_owners(db, organization_id) <= 1
+        and repository.count_active_owners(db, school_id) <= 1
     ):
         raise ConflictError(_LAST_OWNER_ERROR)
 
@@ -193,7 +193,7 @@ def _emit_assignment_transition(
         entity_type="role_assignment",
         entity_id=assignment.id,
         summary=summary,
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"person_id": person.id},
     )
@@ -203,9 +203,9 @@ def _emit_assignment_transition(
         payload={
             "role_assignment_id": assignment.id,
             "person_id": person.id,
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
 
 
@@ -215,7 +215,7 @@ def suspend_assignment(
     assignment, person = _load_assignment(db, context, assignment_id)
     if assignment.status is not RoleAssignmentStatus.ACTIVE:
         raise ConflictError("Dodela uloge nije aktivna.")
-    _guard_not_last_owner(db, context.organization_id, assignment)
+    _guard_not_last_owner(db, context.school_id, assignment)
     assignment.status = RoleAssignmentStatus.SUSPENDED
     _emit_assignment_transition(db, context, assignment, person, "suspended", req.reason)
     db.commit()
@@ -228,7 +228,7 @@ def revoke_assignment(
     assignment, person = _load_assignment(db, context, assignment_id)
     if assignment.status is RoleAssignmentStatus.REVOKED:
         raise ConflictError("Dodela uloge je već opozvana.")
-    _guard_not_last_owner(db, context.organization_id, assignment)
+    _guard_not_last_owner(db, context.school_id, assignment)
     assignment.status = RoleAssignmentStatus.REVOKED
     _emit_assignment_transition(db, context, assignment, person, "revoked", req.reason)
     db.commit()
@@ -246,16 +246,16 @@ def transfer_ownership(
     if req.revoke_from_person_id == req.new_owner_person_id:
         raise BadRequestError("Novi i prethodni vlasnik ne mogu biti ista osoba.")
 
-    new_owner = repository.get_org_person(db, context.organization_id, req.new_owner_person_id)
+    new_owner = repository.get_school_person(db, context.school_id, req.new_owner_person_id)
     if new_owner is None:
         raise NotFoundError("Osoba nije pronađena u ovoj školi.")
 
     existing = repository.find_assignment(
         db,
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         person_id=req.new_owner_person_id,
         role_code=RoleCode.OWNER,
-        scope_type=RoleScopeType.ORGANIZATION,
+        scope_type=RoleScopeType.SCHOOL,
         scope_ref_id=None,
     )
     if existing is not None and existing.status is RoleAssignmentStatus.ACTIVE:
@@ -267,9 +267,9 @@ def transfer_ownership(
     else:
         new_assignment = RoleAssignment(
             person_id=req.new_owner_person_id,
-            organization_id=context.organization_id,
+            school_id=context.school_id,
             role_code=RoleCode.OWNER,
-            scope_type=RoleScopeType.ORGANIZATION,
+            scope_type=RoleScopeType.SCHOOL,
         )
         db.add(new_assignment)
         db.flush()
@@ -281,7 +281,7 @@ def transfer_ownership(
         entity_type="role_assignment",
         entity_id=new_assignment.id,
         summary=f"„{new_owner.display_name}“ je postao/la vlasnik škole.",
-        organization_id=context.organization_id,
+        school_id=context.school_id,
         actor_person_id=context.person_id,
     )
 
@@ -289,17 +289,17 @@ def transfer_ownership(
     if req.revoke_from_person_id:
         old = repository.find_assignment(
             db,
-            organization_id=context.organization_id,
+            school_id=context.school_id,
             person_id=req.revoke_from_person_id,
             role_code=RoleCode.OWNER,
-            scope_type=RoleScopeType.ORGANIZATION,
+            scope_type=RoleScopeType.SCHOOL,
             scope_ref_id=None,
         )
         if old is None or old.status is not RoleAssignmentStatus.ACTIVE:
             raise NotFoundError("Prethodni vlasnik nije pronađen.")
         # Safe: the new owner is already in place, so this never leaves the
         # school without an active owner even for an instant (§14/M4).
-        _guard_not_last_owner(db, context.organization_id, old)
+        _guard_not_last_owner(db, context.school_id, old)
         old.status = RoleAssignmentStatus.REVOKED
         old_person = repository.get_person(db, req.revoke_from_person_id)
         assert old_person is not None
@@ -310,7 +310,7 @@ def transfer_ownership(
             entity_type="role_assignment",
             entity_id=old.id,
             summary=f"Vlasništvo za „{old_person.display_name}“ je opozvano (preneto).",
-            organization_id=context.organization_id,
+            school_id=context.school_id,
             actor_person_id=context.person_id,
         )
         revoked_response = _assignment_response(old, old_person)
@@ -319,11 +319,11 @@ def transfer_ownership(
         db,
         event_type="ownership.transferred",
         payload={
-            "organization_id": context.organization_id,
+            "school_id": context.school_id,
             "new_owner_person_id": req.new_owner_person_id,
             "revoked_from_person_id": req.revoke_from_person_id,
         },
-        organization_id=context.organization_id,
+        school_id=context.school_id,
     )
     db.commit()
     return TransferOwnershipResponse(

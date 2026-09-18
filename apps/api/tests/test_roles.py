@@ -18,7 +18,7 @@ from tests.factories import add_actor, bootstrap_actor, make_person
 
 def test_assign_role_to_existing_member(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    member = add_actor(db, organization=staff.organization, role=RoleCode.STUDENT, given="Ana")
+    member = add_actor(db, school=staff.school, role=RoleCode.STUDENT, given="Ana")
 
     resp = client.post(
         "/roles",
@@ -44,7 +44,7 @@ def test_assign_role_rejects_owner_use_transfer_instead(
     client: TestClient, db: Session
 ) -> None:
     staff = bootstrap_actor(db)
-    member = add_actor(db, organization=staff.organization, role=RoleCode.STUDENT, given="X")
+    member = add_actor(db, school=staff.school, role=RoleCode.STUDENT, given="X")
     resp = client.post(
         "/roles",
         headers=staff.headers,
@@ -53,7 +53,7 @@ def test_assign_role_rejects_owner_use_transfer_instead(
     assert resp.status_code == 400
 
 
-def test_assign_role_requires_org_membership(client: TestClient, db: Session) -> None:
+def test_assign_role_requires_school_membership(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
     stranger = make_person(db, given="Stranac")
     resp = client.post(
@@ -64,7 +64,7 @@ def test_assign_role_requires_org_membership(client: TestClient, db: Session) ->
 
 def test_update_granted_areas_restricts_and_clears(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    admin = add_actor(db, organization=staff.organization, role=RoleCode.ADMIN, given="Admin")
+    admin = add_actor(db, school=staff.school, role=RoleCode.ADMIN, given="Admin")
 
     restrict = client.patch(
         f"/roles/{admin.assignment.id}/granted-areas",
@@ -101,13 +101,13 @@ def test_restricted_admin_cannot_grant_areas_beyond_their_own(
     staff = bootstrap_actor(db)
     restricted_admin = add_actor(
         db,
-        organization=staff.organization,
+        school=staff.school,
         role=RoleCode.ADMIN,
         given="Ograničen",
         granted_areas=["ROLES", "BILLING"],
     )
     target = add_actor(
-        db, organization=staff.organization, role=RoleCode.ADMIN, given="Meta"
+        db, school=staff.school, role=RoleCode.ADMIN, given="Meta"
     )
 
     # Cannot grant a third party more than the restricted admin itself holds.
@@ -145,7 +145,7 @@ def test_restricted_admin_cannot_grant_areas_beyond_their_own(
             "type": "STAFF",
             "role_code": "ADMIN",
             "target_email": "novi@example.com",
-            "scope_type": "ORGANIZATION",
+            "scope_type": "SCHOOL",
         },
     )
     assert invite_escalate.status_code == 400
@@ -158,7 +158,7 @@ def test_restricted_admin_cannot_grant_areas_beyond_their_own(
             "type": "STAFF",
             "role_code": "ADMIN",
             "target_email": "u-granicama@example.com",
-            "scope_type": "ORGANIZATION",
+            "scope_type": "SCHOOL",
             "granted_areas": ["BILLING"],
         },
     )
@@ -167,7 +167,7 @@ def test_restricted_admin_cannot_grant_areas_beyond_their_own(
 
 def test_suspend_and_revoke_assignment(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    trainer = add_actor(db, organization=staff.organization, role=RoleCode.TRAINER, given="T")
+    trainer = add_actor(db, school=staff.school, role=RoleCode.TRAINER, given="T")
 
     suspended = client.post(
         f"/roles/{trainer.assignment.id}/suspend", headers=staff.headers, json={}
@@ -201,7 +201,7 @@ def test_suspend_and_revoke_assignment(client: TestClient, db: Session) -> None:
 
 def test_list_role_assignments(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    add_actor(db, organization=staff.organization, role=RoleCode.TRAINER, given="Trener")
+    add_actor(db, school=staff.school, role=RoleCode.TRAINER, given="Trener")
 
     body = client.get("/roles", headers=staff.headers).json()
     role_codes = {item["role_code"] for item in body["items"]}
@@ -216,7 +216,7 @@ def test_list_role_assignments(client: TestClient, db: Session) -> None:
 def test_assign_role_scoped_to_group(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
     group_id = client.post("/groups", headers=staff.headers, json={"name": "G1"}).json()["id"]
-    trainer = add_actor(db, organization=staff.organization, role=RoleCode.STUDENT, given="X")
+    trainer = add_actor(db, school=staff.school, role=RoleCode.STUDENT, given="X")
 
     resp = client.post(
         "/roles",
@@ -233,11 +233,11 @@ def test_assign_role_scoped_to_group(client: TestClient, db: Session) -> None:
     assert resp.json()["scope_ref_id"] == group_id
 
 
-def test_assign_role_scope_must_reference_a_real_group_in_this_org(
+def test_assign_role_scope_must_reference_a_real_group_in_this_school(
     client: TestClient, db: Session
 ) -> None:
     staff = bootstrap_actor(db)
-    member = add_actor(db, organization=staff.organization, role=RoleCode.STUDENT, given="X")
+    member = add_actor(db, school=staff.school, role=RoleCode.STUDENT, given="X")
     resp = client.post(
         "/roles",
         headers=staff.headers,
@@ -275,7 +275,7 @@ def test_last_owner_cannot_be_suspended(client: TestClient, db: Session) -> None
 def test_second_owner_can_be_revoked_but_not_the_last(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db, role=RoleCode.OWNER)
     second_owner = add_actor(
-        db, organization=staff.organization, role=RoleCode.OWNER, given="Drugi"
+        db, school=staff.school, role=RoleCode.OWNER, given="Drugi"
     )
 
     first = client.post(
@@ -296,7 +296,7 @@ def test_second_owner_can_be_revoked_but_not_the_last(client: TestClient, db: Se
 def test_transfer_ownership_adds_and_revokes_previous(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db, role=RoleCode.OWNER)
     successor = add_actor(
-        db, organization=staff.organization, role=RoleCode.MANAGER, given="Naslednik"
+        db, school=staff.school, role=RoleCode.MANAGER, given="Naslednik"
     )
 
     resp = client.post(
@@ -324,7 +324,7 @@ def test_transfer_ownership_adds_and_revokes_previous(client: TestClient, db: Se
 def test_transfer_ownership_add_only_keeps_both_owners(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db, role=RoleCode.OWNER)
     co_owner = add_actor(
-        db, organization=staff.organization, role=RoleCode.MANAGER, given="Suvlasnik"
+        db, school=staff.school, role=RoleCode.MANAGER, given="Suvlasnik"
     )
 
     resp = client.post(
@@ -344,7 +344,7 @@ def test_transfer_ownership_add_only_keeps_both_owners(client: TestClient, db: S
 def test_transfer_ownership_rejects_already_an_owner(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db, role=RoleCode.OWNER)
     other_owner = add_actor(
-        db, organization=staff.organization, role=RoleCode.OWNER, given="Već"
+        db, school=staff.school, role=RoleCode.OWNER, given="Već"
     )
     resp = client.post(
         "/roles/ownership/transfer",
@@ -361,7 +361,7 @@ def test_transfer_ownership_rejects_already_an_owner(client: TestClient, db: Ses
 
 def test_only_roles_area_can_administer_roles(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db)
-    trainer = add_actor(db, organization=staff.organization, role=RoleCode.TRAINER, given="T")
+    trainer = add_actor(db, school=staff.school, role=RoleCode.TRAINER, given="T")
     resp = client.post(
         "/roles",
         headers=trainer.headers,
@@ -372,7 +372,7 @@ def test_only_roles_area_can_administer_roles(client: TestClient, db: Session) -
 
 def test_role_admin_does_not_cross_tenants(client: TestClient, db: Session) -> None:
     org_a = bootstrap_actor(db, org_name="Klub A")
-    member_a = add_actor(db, organization=org_a.organization, role=RoleCode.STUDENT, given="A")
+    member_a = add_actor(db, school=org_a.school, role=RoleCode.STUDENT, given="A")
 
     org_b = bootstrap_actor(db, org_name="Klub B")
     resp = client.post(
@@ -398,43 +398,43 @@ def test_deactivate_locks_out_context_then_owner_reactivates(
 ) -> None:
     staff = bootstrap_actor(db, role=RoleCode.OWNER)
 
-    deactivated = client.post("/organizations/current/deactivate", headers=staff.headers)
+    deactivated = client.post("/schools/current/deactivate", headers=staff.headers)
     assert deactivated.status_code == 200
-    assert deactivated.json()["id"] == staff.organization.id
+    assert deactivated.json()["id"] == staff.school.id
 
     # The context is now unreachable, even for the same owner.
-    blocked = client.get("/organizations/current", headers=staff.headers)
+    blocked = client.get("/schools/current", headers=staff.headers)
     assert blocked.status_code == 403
 
     reactivated = client.post(
-        f"/organizations/{staff.organization.id}/reactivate",
+        f"/schools/{staff.school.id}/reactivate",
         headers={DEV_PERSON_HEADER: staff.person.id},
     )
     assert reactivated.status_code == 200
 
     # Context resolution works again.
-    restored = client.get("/organizations/current", headers=staff.headers)
+    restored = client.get("/schools/current", headers=staff.headers)
     assert restored.status_code == 200
 
 
 def test_reactivate_requires_active_owner(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db, role=RoleCode.OWNER)
     manager = add_actor(
-        db, organization=staff.organization, role=RoleCode.MANAGER, given="Menadžer"
+        db, school=staff.school, role=RoleCode.MANAGER, given="Menadžer"
     )
-    client.post("/organizations/current/deactivate", headers=staff.headers)
+    client.post("/schools/current/deactivate", headers=staff.headers)
 
     denied = client.post(
-        f"/organizations/{staff.organization.id}/reactivate",
+        f"/schools/{staff.school.id}/reactivate",
         headers={DEV_PERSON_HEADER: manager.person.id},
     )
     assert denied.status_code == 403
 
 
-def test_reactivate_unknown_organization_is_not_found(client: TestClient, db: Session) -> None:
+def test_reactivate_unknown_school_is_not_found(client: TestClient, db: Session) -> None:
     person = make_person(db, given="Niko")
     resp = client.post(
-        "/organizations/org_ne_postoji/reactivate",
+        "/schools/org_ne_postoji/reactivate",
         headers={DEV_PERSON_HEADER: person.id},
     )
     assert resp.status_code == 404
