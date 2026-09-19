@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import pytest
 from app.common.errors import ConflictError, UnauthorizedError
+from app.domains.identity.accounts import find_local_password_identity
+from app.domains.identity.auth_enums import LOCAL_PASSWORD_PROVIDER
+from app.domains.identity.auth_models import LocalPasswordCredential
 from app.domains.identity.enums import PersonIdentityStatus
-from app.domains.identity.models import AuthAccount
 from app.security.oidc import jit_provision
 from app.security.password import hash_password, verify_password
 from app.security.password_auth import authenticate_with_password, register_with_password
@@ -28,10 +30,15 @@ def test_register_with_password_creates_verified_person(db: Session) -> None:
     assert person.identity_status is PersonIdentityStatus.VERIFIED
     assert person.display_name == "Ana Marković"
 
-    account = db.query(AuthAccount).filter(AuthAccount.person_id == person.id).one()
-    assert account.provider == "password"
-    assert account.password_hash is not None
-    assert verify_password("s3cretpw!", account.password_hash)
+    identity = find_local_password_identity(db, "ana@example.com")
+    assert identity is not None
+    assert identity.provider_key == LOCAL_PASSWORD_PROVIDER
+    # §3.2: this provider proves nothing about the address, so it is a label.
+    assert identity.email_verified_at is None
+
+    credential = db.get(LocalPasswordCredential, identity.id)
+    assert credential is not None
+    assert verify_password("s3cretpw!", credential.password_hash)
 
 
 def test_register_then_authenticate(db: Session) -> None:

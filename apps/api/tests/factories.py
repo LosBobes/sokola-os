@@ -9,8 +9,10 @@ from dataclasses import dataclass
 
 from app.common.ids import new_id
 from app.common.slug import slugify
-from app.domains.identity.enums import AuthAccountStatus, AuthIdentifierType, RoleCode
-from app.domains.identity.models import AuthAccount, AuthIdentifier, Person, RoleAssignment
+from app.domains.identity.accounts import create_account_with_identity
+from app.domains.identity.auth_enums import GOOGLE_ISSUER, GOOGLE_PROVIDER
+from app.domains.identity.enums import RoleCode
+from app.domains.identity.models import Person, RoleAssignment
 from app.domains.organization.enums import OrganizationSchoolChangeReason
 from app.domains.organization.models import Organization
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
@@ -199,11 +201,14 @@ def link_login_email(db: Session, *, person: Person, email: str) -> None:
     ``jit_provision`` would record it), the surface invite acceptance checks
     for "wrong account" rejection (§23), independent of the auth adapter used
     to reach the request (dev header in tests, session cookie in prod)."""
-    account = AuthAccount(person_id=person.id, provider="google", status=AuthAccountStatus.ACTIVE)
-    db.add(account)
-    db.flush()
-    db.add(
-        AuthIdentifier(auth_account_id=account.id, type=AuthIdentifierType.EMAIL, value=email)
+    create_account_with_identity(
+        db,
+        person_id=person.id,
+        provider_key=GOOGLE_PROVIDER,
+        issuer=GOOGLE_ISSUER,
+        subject=f"google-sub-{person.id}",
+        login_email=email,
+        email_verified=True,
     )
     db.commit()
 

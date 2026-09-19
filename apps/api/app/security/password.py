@@ -12,7 +12,7 @@ Two secrets protect the password, at two layers:
   tables and stops two identical passwords hashing to the same value.
 - **Pepper**, a single application secret (``SOKOLA_PASSWORD_PEPPER``) held in
   the environment, **never** in the database. Folded into every password via
-  HMAC before the salt + scrypt. A stolen ``auth_account`` table therefore
+  HMAC before the salt + scrypt. A stolen ``local_password_credential`` table therefore
   can't be brute-forced offline without also compromising the server config.
 
 Unlike OIDC (which stores only an identity link), a password is a secret we

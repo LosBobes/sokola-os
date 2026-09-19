@@ -7,8 +7,9 @@ stays modular:
   / ``policy`` (it may share ``models`` / ``enums`` / ``schemas`` records only);
 * ``app.common`` never imports a product domain;
 * no ``service.py`` exceeds the size ratchet;
-* credentials stay centralized: one password column, on ``AuthAccount``, and no
-  password-reset / MFA columns anywhere.
+* credentials stay centralized: one password column, on
+  ``LocalPasswordCredential``, and no password-reset / MFA columns anywhere;
+* ``UserAccount`` carries none of M01 §3.1's forbidden fields.
 
 Run: ``python -m scripts.check_architecture``.
 """
@@ -25,11 +26,21 @@ DOMAINS = APP / "domains"
 
 FORBIDDEN_CROSS_DOMAIN = ("service", "repository", "router", "policy")
 MAX_SERVICE_LINES = 600
-# Email+password is a supported sign-in method, so a password hash is allowed , 
-# but in exactly one place. Anywhere else it is either a second credential store
-# or a copy, and both are how password handling quietly stops being auditable.
+# Email+password is a supported sign-in method (M01 §4.9), so a password hash is
+# allowed , but in exactly one place. Anywhere else it is either a second
+# credential store or a copy, and both are how password handling quietly stops
+# being auditable.
 PASSWORD_HASH_PATTERN = re.compile(r"password_hash", re.IGNORECASE)
-PASSWORD_HASH_HOME = "domains/identity/models.py"
+PASSWORD_HASH_HOME = "domains/identity/auth_models.py"
+# M01 §3.1's forbidden list for `UserAccount`. The tenant and role entries are
+# the ones that look harmless: a `school_id` on the account would make
+# authentication carry a tenant claim, and §8 puts that decision on every
+# individual request instead.
+FORBIDDEN_ACCOUNT_COLUMNS = re.compile(
+    r"\b(password|password_hash|secret|refresh_token|access_token|id_token|"
+    r"session_secret|school_id|tenant_id|role|role_code|is_admin)\b",
+    re.IGNORECASE,
+)
 # Still out of scope (spec §"do not add"): self-service reset flows and MFA both
 # need email delivery, rate limiting and recovery-code storage designed as a
 # unit. Until that is built, a forgotten password is an admin action.
@@ -84,11 +95,21 @@ def check_service_sizes() -> list[str]:
     return problems
 
 
+def _model_files() -> list[pathlib.Path]:
+    """Every module that declares tables, not just the ones called ``models.py``.
+
+    A gate that only reads one filename is a gate anyone can pass by naming the
+    file something else — which is exactly what happened when the M01 account
+    model moved into ``auth_models.py``.
+    """
+    return sorted(py for py in APP.rglob("*.py") if "model" in py.name)
+
+
 def check_credential_columns() -> list[str]:
-    """Password hashes live on ``AuthAccount`` and nowhere else; reset tokens and
-    MFA secrets live nowhere at all."""
+    """Password hashes live on ``LocalPasswordCredential`` and nowhere else;
+    reset tokens and MFA secrets live nowhere at all."""
     problems: list[str] = []
-    for py in APP.rglob("models.py"):
+    for py in _model_files():
         rel = py.relative_to(APP.parent)
         source = py.read_text()
         if FORBIDDEN_CREDENTIAL_PATTERN.search(source):
@@ -96,8 +117,35 @@ def check_credential_columns() -> list[str]:
         if PASSWORD_HASH_PATTERN.search(source) and not str(rel).endswith(PASSWORD_HASH_HOME):
             problems.append(
                 f"{rel}: password hash outside {PASSWORD_HASH_HOME} "
-                f"(credentials belong on AuthAccount only)"
+                f"(credentials belong on LocalPasswordCredential only)"
             )
+    return problems
+
+
+def check_user_account_columns() -> list[str]:
+    """M01 §3.1: ``UserAccount`` carries no credential, token or tenant/role field.
+
+    Read from the class body rather than the whole file, because the forbidden
+    words are perfectly ordinary elsewhere — the point is what an authorization
+    read pulls into memory on every request.
+    """
+    problems: list[str] = []
+    for py in _model_files():
+        tree = ast.parse(py.read_text(), filename=str(py))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef) or node.name != "UserAccount":
+                continue
+            for stmt in node.body:
+                if not isinstance(stmt, ast.AnnAssign) or not isinstance(
+                    stmt.target, ast.Name
+                ):
+                    continue
+                name = stmt.target.id
+                if FORBIDDEN_ACCOUNT_COLUMNS.fullmatch(name):
+                    problems.append(
+                        f"{py.relative_to(APP.parent)}: UserAccount.{name} is on "
+                        f"M01 §3.1's forbidden list"
+                    )
     return problems
 
 
@@ -107,6 +155,7 @@ def main() -> int:
         check_common_purity(),
         check_service_sizes(),
         check_credential_columns(),
+        check_user_account_columns(),
     ]
     problems = [p for group in checks for p in group]
     if problems:

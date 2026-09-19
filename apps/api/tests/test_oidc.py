@@ -3,8 +3,10 @@ from __future__ import annotations
 import pytest
 from app.common.errors import UnauthorizedError
 from app.config import get_settings
-from app.domains.identity.enums import AuthAccountStatus, PersonIdentityStatus
-from app.domains.identity.models import AuthAccount
+from app.domains.identity.auth_enums import AccountDisableReason, UserAccountStatus
+from app.domains.identity.auth_models import UserAccount
+from app.domains.identity.enums import PersonIdentityStatus
+from app.platform import clock
 from app.security.auth import resolve_principal
 from app.security.csrf import csrf_ok, csrf_required
 from app.security.oidc import jit_provision
@@ -76,9 +78,11 @@ def test_google_login_hidden_when_disabled(client: TestClient) -> None:
 def test_disabled_account_revokes_session(db: Session) -> None:
     person = jit_provision(db, {"sub": "google-rev", "email": "r@e.com", "name": "R E"})
     account = (
-        db.query(AuthAccount).filter(AuthAccount.person_id == person.id).one()
+        db.query(UserAccount).filter(UserAccount.person_id == person.id).one()
     )
-    account.status = AuthAccountStatus.DISABLED
+    account.status = UserAccountStatus.DISABLED
+    account.disabled_at = clock.now()
+    account.disabled_reason_code = AccountDisableReason.SECURITY_INCIDENT
     db.commit()
 
     with pytest.raises(UnauthorizedError):
