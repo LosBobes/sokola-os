@@ -124,7 +124,13 @@ def send_invitation(
         action="invitation.sent",
         entity_type="invitation",
         entity_id=invitation.id,
-        summary=f"Pozivnica poslata na {req.target_email} za ulogu {role_code.value}.",
+        # M02 §4.3 / QA-068, QA-084: the recipient address never reaches the
+        # audit trail, masked or otherwise. An auditor needs to know which
+        # invitation and which role; who it was addressed to is read from the
+        # invitation itself, under a purpose-limited view. Putting it here
+        # copies personal data into a store that outlives the invitation and
+        # is read by people with no reason to see it.
+        summary=f"Pozivnica je poslata za ulogu {role_code.value}.",
         school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"type": req.type.value, "role_code": role_code.value},
@@ -165,7 +171,9 @@ def revoke_invitation(
         raise ConflictError("Samo pozivnica na čekanju može biti opozvana.")
 
     invitation.status = InvitationStatus.REVOKED
-    summary = f"Pozivnica za {invitation.target_email} je opozvana."
+    # No recipient address in the audit summary (M02 §4.3); the entity_id
+    # below already names the invitation this is about.
+    summary = "Pozivnica je opozvana."
     if req.reason and req.reason.strip():
         summary += f" Razlog: {req.reason.strip()}"
     record_audit(
@@ -224,7 +232,7 @@ def reissue_invitation(
         action="invitation.reissued",
         entity_type="invitation",
         entity_id=new.id,
-        summary=f"Pozivnica za {new.target_email} je ponovo poslata.",
+        summary="Pozivnica je ponovo poslata.",
         school_id=context.school_id,
         actor_person_id=context.person_id,
         context={"reissued_from_invitation_id": old.id},

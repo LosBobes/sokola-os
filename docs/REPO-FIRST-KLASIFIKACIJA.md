@@ -526,6 +526,29 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Nije očigledno pogrešno:** u repou ne postoji platform akter (isto kao F-37 okruženje i M03-QA-024), pa bi platform-only deaktivacija danas značila da je niko ne može izvršiti. Ovo je zato prijava razlike, ne ispravka.
 - **Status:** `CHALLENGE_NOT_APPLIED` — čeka odluku o platform akteru zajedno sa F-29/F-30.
 
+### F-42 — recipient email pozivnice stoji u plaintext-u, i stajao je u audit tragu (audit deo OTKLONJEN)
+
+- **Nalaz u auditu:** tri audit summary-ja u `app/domains/identity/service.py` interpolirala su **plaintext adresu primaoca**: `„Pozivnica poslata na {target_email}…"`, `„Pozivnica za {target_email} je opozvana."` i `„Pozivnica za {target_email} je ponovo poslata."` §4.3 i M02-QA-068/084 to izričito zabranjuju — audit log nadživljava pozivnicu i čita ga krug ljudi koji nemaju razlog da vide kome je pisano.
+- **Zašto to niko nije primetio:** 97 postojećih testova nad pozivnicama i identitetom prolazi i sa leak-om i bez njega. Nijedan nije čitao summary. To je isti obrazac kao M07-QA-016 (`policy_version` je primao prazan string uz 1133 zelena testa).
+- **Otklonjeno u ovom isečku.** Summary sada nosi ulogu i ništa lično; `entity_id` već imenuje pozivnicu. Konvencija je preuzeta iz najnovijeg M07 koda, gde summary glasi samo „Starateljska veza je opozvana." Test `test_m02_qa_068_*` je probijen: sa vraćenim starim tekstom pada, sa ispravkom prolazi.
+- **Nije otklonjeno:** `Invitation.target_email` je i dalje **plaintext kolona**, a `InvitationResponse` je vraća nemaskiranu na list/detail. §2/§4 traže ciphertext + keyed digest + masku izvedenu u memoriji. To je schema promena sa migracijom i ide u svoj isečak.
+- **Blokira:** M02-QA-006, 007, 008, 062, 084.
+- **Status:** `DELIMIČNO OTKLONJENO` — audit leak zatvoren, email-at-rest ostaje.
+
+### F-43 — nepostojeći invitation token je razlučiv od iskorišćenog
+
+- **Nalaz:** `accept_invitation` diže `NotFoundError` (404) za token koji baza nikad nije videla, a `ConflictError` (409) za token koji postoji ali je EXPIRED/REVOKED/ACCEPTED/REISSUED. M02-QA-034 traži **isti** X02/410 oblik za sve te slučajeve.
+- **Posledica:** ko pogađa tokene može da razvrsta pogotke na „ovaj token je postojao" i „nije". To je manji oracle nego kod resursa po ID-u, jer je prostor tokena ogroman (`secrets.token_urlsafe(32)`), ali je to ista klasa greške koju §8 svuda drugde zabranjuje.
+- **Zašto nije ispravljeno ovde:** ispravka menja HTTP status code-ove postojećeg javnog endpoint-a (404/409 → jedinstveni 410), pa dira klijent i OpenAPI ugovor. To je odluka, ne omaška.
+- **Status:** `CHALLENGE_NOT_APPLIED`.
+
+### F-44 — prihvatanje pozivnice ne čita status škole
+
+- **Nalaz:** `accept_invitation` proverava status pozivnice, rok i poklapanje adrese, ali **ne** čita `School.status`. Škola deaktivirana između izdavanja i prihvatanja ne zaustavlja prihvatanje: nastaju membership i role assignment u školi koja je ugašena.
+- **Zašto to nije odmah vidljivo kao rupa:** sledeći request te osobe biće odbijen, jer `_resolve_tenant` odbija DEACTIVATED školu (M04-QA-057 to dokazuje). Dakle nema pristupa — ali ima **upisa** u ugašenu školu, što M02-QA-057 traži da bude fail-closed, i što ostavlja redove koje niko ne očekuje.
+- **Popravka je mala** (jedna provera statusa u finalnom guardu), ali menja ponašanje komande i ide uz odluku o F-41.
+- **Status:** `NALAZ`.
+
 ## 5. Šta je u ovom radu stvarno urađeno
 
 **Talas 0 — baseline i klasifikacija**
