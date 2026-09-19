@@ -13,11 +13,13 @@ deployment has configured, and it may never mark a provider ``ACTIVE``.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import NamedTuple
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.common.errors import ProviderNotAllowedError
 from app.config import Settings
 from app.domains.identity.auth_enums import (
     GOOGLE_ISSUER,
@@ -27,6 +29,11 @@ from app.domains.identity.auth_enums import (
     AuthProviderStatus,
 )
 from app.domains.identity.auth_models import AuthProviderRegistration
+
+#: The single message every registry refusal gives. §11 keeps
+#: `PROVIDER_NOT_ALLOWED` free of configuration detail, and naming which
+#: check failed would tell an attacker what to change.
+PROVIDER_REFUSAL = "Prijava preko ovog provajdera nije dozvoljena."
 
 
 class BuiltinProvider(NamedTuple):
@@ -155,3 +162,61 @@ def _apply(
     registration.allowed_audiences = audiences
     registration.allowed_redirect_uris = redirects
     registration.config_revision += 1
+
+
+@dataclass(frozen=True, slots=True)
+class CallbackClaims:
+    """What an adapter presents for registry checking (M01 §6 AUTH-02).
+
+    Deliberately not the token, and deliberately not a dict: a dict would carry
+    whatever the provider sent, and §13 forbids the raw payload reaching the
+    audit trail or the logs. These four fields are the ones the registry has an
+    opinion about.
+    """
+
+    issuer: str
+    audience: str
+    subject: str
+    algorithm: str | None = None
+
+
+def verify_callback(
+    db: Session,
+    *,
+    provider_key: str,
+    claims: CallbackClaims,
+    redirect_uri: str | None = None,
+) -> AuthProviderRegistration:
+    """§3.2 + §6 AUTH-02: does an ACTIVE registration permit this callback?
+
+    Fail-closed throughout, and the failures are all one error to the caller
+    (§11 `PROVIDER_NOT_ALLOWED`, "bez detalja konfiguracije"): telling an
+    attacker *which* check rejected them is telling them what to change.
+
+    This runs in addition to the adapter's own token validation, not instead of
+    it. The adapter proves the token is genuine; the registry decides whether a
+    genuine token from that issuer may be used here at all. An adapter someone
+    configured but nobody registered fails here (§4.9), which is the difference
+    between a fail-closed registry and a lookup table.
+    """
+    registration = active_registration(db, provider_key)
+    if registration is None:
+        raise ProviderNotAllowedError(PROVIDER_REFUSAL)
+
+    # Exact match, no trimming and no case folding — see `registration_for_issuer`.
+    if claims.issuer != registration.issuer:
+        raise ProviderNotAllowedError(PROVIDER_REFUSAL)
+
+    # An empty allowlist refuses everything. That is the intended reading: a
+    # deployment that has not declared its client id has not declared it, and
+    # "unconfigured" must not mean "anything".
+    if claims.audience not in registration.allowed_audiences:
+        raise ProviderNotAllowedError(PROVIDER_REFUSAL)
+
+    if claims.algorithm is not None and claims.algorithm not in registration.allowed_algorithms:
+        raise ProviderNotAllowedError(PROVIDER_REFUSAL)
+
+    if redirect_uri is not None and redirect_uri not in registration.allowed_redirect_uris:
+        raise ProviderNotAllowedError(PROVIDER_REFUSAL)
+
+    return registration

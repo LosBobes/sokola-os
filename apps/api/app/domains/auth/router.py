@@ -23,21 +23,34 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_204_NO_CONTENT
 
-from app.common.errors import NotFoundError, UnauthorizedError
+from app.common.errors import (
+    NotFoundError,
+    ProviderNotAllowedError,
+    UnauthorizedError,
+)
 from app.config import Settings
 from app.db import SessionLocal
-from app.domains.identity import accounts, auth_commands, sessions
+from app.domains.identity import accounts, auth_commands, auth_providers, sessions
 from app.domains.identity.auth_enums import (
+    GOOGLE_PROVIDER,
     AuthCommand,
+    AuthEventOutcome,
+    AuthEventType,
     SessionRevokeReason,
     UserAccountStatus,
 )
-from app.domains.identity.auth_models import AuthIdentity, AuthSession, UserAccount
+from app.domains.identity.auth_models import (
+    AuthenticationEvent,
+    AuthIdentity,
+    AuthSession,
+    UserAccount,
+)
 from app.domains.identity.models import Person
+from app.platform import clock
 from app.security.auth import SESSION_CREDENTIAL_KEY
 from app.security.csrf import CSRF_COOKIE
 from app.security.deps import SettingsDep
-from app.security.oidc import get_oauth, jit_provision
+from app.security.oidc import claims_for_registry, get_oauth, jit_provision
 from app.security.password import MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH
 from app.security.password_auth import authenticate_with_password, register_with_password
 
@@ -67,6 +80,7 @@ async def google_login(request: Request, settings: SettingsDep) -> RedirectRespo
     if not settings.oidc_enabled:
         raise NotFoundError("Google prijava nije konfigurisana.")
     oauth = get_oauth()
+    _record_login_started(GOOGLE_PROVIDER)
     try:
         redirect = await oauth.google.authorize_redirect(request, settings.oidc_redirect_url)
     except Exception:
@@ -75,6 +89,22 @@ async def google_login(request: Request, settings: SettingsDep) -> RedirectRespo
         logger.exception("Google login redirect failed")
         return RedirectResponse(url=f"{settings.web_post_login_url}?login=failed")
     return cast(RedirectResponse, redirect)
+
+
+def _record_login_started(provider_key: str) -> None:
+    """§13's `auth.login_started`. Carries no address, IP or return route —
+    §6 AUTH-01 is enumeration-safe, and a log that recorded who was attempting
+    would undo that from the inside."""
+    with SessionLocal() as db:
+        db.add(
+            AuthenticationEvent(
+                event_type=AuthEventType.LOGIN_STARTED,
+                outcome=AuthEventOutcome.SUCCEEDED,
+                provider_key=provider_key,
+                occurred_at=clock.now(),
+            )
+        )
+        db.commit()
 
 
 _ResponseT = TypeVar("_ResponseT", RedirectResponse, JSONResponse)
@@ -139,17 +169,54 @@ async def google_callback(request: Request, settings: SettingsDep) -> RedirectRe
     except Exception:
         # Token exchange failed (provider outage, expired state, user denied) →
         # soft failure rather than a 500.
+        # §13: the exception may carry the token, so it goes to the correlation
+        # log and not to the security log, which records only that an attempt
+        # failed and why in closed terms.
         logger.exception("Google token exchange failed")
+        _record_failed_login(GOOGLE_PROVIDER, "CALLBACK_INVALID")
         return RedirectResponse(url=f"{settings.web_post_login_url}?login=failed")
 
     claims: dict[str, Any] | None = token.get("userinfo")
     if not claims or "sub" not in claims:
+        _record_failed_login(GOOGLE_PROVIDER, "MISSING_SUBJECT")
         raise UnauthorizedError("Prijava nije uspela.")
 
     with SessionLocal() as db:
+        # §6 AUTH-02: the registry decides whether a genuine token from this
+        # issuer may be used here at all. Authlib has already proven the token
+        # is genuine; that is a different question, and answering only it is how
+        # a provider nobody registered ends up signing people in (§4.9).
+        try:
+            auth_providers.verify_callback(
+                db,
+                provider_key=GOOGLE_PROVIDER,
+                claims=claims_for_registry(dict(claims), dict(token)),
+                redirect_uri=settings.oidc_redirect_url,
+            )
+        except ProviderNotAllowedError:
+            accounts.record_failed_login(
+                db, provider_key=GOOGLE_PROVIDER, reason_code="PROVIDER_NOT_ALLOWED"
+            )
+            db.commit()
+            raise
+
         person = jit_provision(db, dict(claims))
 
     return _issue_session(request, settings, person)
+
+
+def _record_failed_login(provider_key: str, reason_code: str) -> None:
+    """§13's `auth.login_failed`, on its own connection.
+
+    Separate because the failure paths above have already given up on whatever
+    transaction they were in, and a security log that only records failures
+    which happened to occur inside a healthy transaction is not a security log.
+    The account is never named: the attempt did not resolve to one, and guessing
+    would put §11's enumeration oracle into the audit trail.
+    """
+    with SessionLocal() as db:
+        accounts.record_failed_login(db, provider_key=provider_key, reason_code=reason_code)
+        db.commit()
 
 
 class PasswordLoginRequest(BaseModel):

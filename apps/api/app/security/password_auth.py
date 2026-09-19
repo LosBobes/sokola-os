@@ -26,6 +26,7 @@ from app.domains.identity.accounts import (
     normalize_email,
     person_for_identity,
     record_authentication,
+    record_failed_login,
 )
 from app.domains.identity.auth_enums import (
     LOCAL_PASSWORD_ISSUER,
@@ -117,6 +118,17 @@ def authenticate_with_password(db: Session, email: str, password: str) -> Person
         db.commit()
         return person
 
+    # §13's `auth.login_failed`. The reason is the same whatever actually went
+    # wrong, and the account is named only when this address really does belong
+    # to one — a reason code that distinguished "no such address" would rebuild
+    # in the audit trail the oracle the response body withholds.
+    record_failed_login(
+        db,
+        provider_key=LOCAL_PASSWORD_PROVIDER,
+        reason_code="INVALID_CREDENTIALS",
+        user_account_id=identity.user_account_id if identity is not None else None,
+    )
+    db.commit()
     raise UnauthorizedError("Neispravna mejl adresa ili lozinka.")
 
 
