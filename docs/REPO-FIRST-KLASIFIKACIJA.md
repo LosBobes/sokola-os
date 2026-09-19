@@ -474,6 +474,34 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Dodatno:** portovi iz §7.2 traže **ACTIVE** M06 članstvo sa obe strane (§12, M03 §6.1), što stara tabela nije proveravala. Svaki prebačeni čitalac zato može početi da odbija slučajeve koje je ranije propuštao — namerno, ali mora biti prijavljeno po domenu, ne otkriveno u produkciji.
 - **Status:** `CHALLENGE_NOT_APPLIED` — backfill je zaseban, operatorski vođen isečak; čeka odluku o akteru.
 
+### F-36 — `TENANT_RESOURCE_NOT_FOUND_SAFE` kao poseban kod **ruši** nerazlučivost koju ista rečenica traži
+
+- **Šta ugovor traži:** M03-QA-013 kaže „404 `TENANT_RESOURCE_NOT_FOUND_SAFE`, **istog oblika kao nepostojeći ID**". Dve polovine, i one se međusobno isključuju ako se prva čita kao „poseban kod za cross-tenant slučaj".
+- **Zašto:** ako tuđi resurs vrati `TENANT_RESOURCE_NOT_FOUND_SAFE`, a izmišljeni ID `NOT_FOUND`, onda klijent koji pogađa ID-eve može da ih razvrsta na „postoji u nekoj drugoj školi" i „ne postoji" — a to je tačno potvrda koju §8 postoji da uskrati. Poseban kod je oracle.
+- **Repo dokaz:** `TenantResourceNotFoundError` je **definisan u `app/common/errors.py:275` i nigde se ne koristi**. Svi tenant-scoped čitaoci dižu obični `NotFoundError`, pa su oba slučaja bajt-identična — što je proverено u `test_m03_qa_013_another_tenants_id_is_indistinguishable_from_no_id` poređenjem celog tela odgovora, ne statusa.
+- **Posledica:** bezbednosna osobina iz druge polovine rečenice **važi**; ime koda iz prve **ne postoji na žici**. Ako se ime ikada uvede, mora da zameni `NOT_FOUND` na *svim* tenant-scoped putanjama, uključujući i nepostojeći ID — nikad samo na cross-tenant grani.
+- **Status:** `CHALLENGE_NOT_APPLIED` — ne odlučuje se ovde; test tvrdi osobinu, ne ime.
+
+### F-37 — aplikacija se povezuje na bazu kao **Postgres superuser**
+
+- **Nalaz:** `compose.prod.yml:31`, `compose.m0.yml:7` i `.github/workflows/ci.yml:25` svi prave bazu preko `POSTGRES_USER: sokola`, što je uloga koju Postgres image pravi kao **vlasnika klastera**, dakle superuser. Aplikacija se tom istom ulogom i povezuje (`SOKOLA_DATABASE_URL`).
+- **Merenje, ne pretpostavka:** `SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user` vraća `rolsuper = true`.
+- **Neposredna posledica za M03:** superuser zaobilazi **svaku** RLS politiku bez obzira na `rolbypassrls`. Prva row-level politika koju bilo ko napiše bila bi mrtva na dolasku, a ništa ne bi otkazalo — izolacija bi izgledala pooštrena, a ne bi bila. Danas to nikoga ne ugrožava jer repo RLS ne koristi (`relrowsecurity` je prazan skup), pa je M03-QA-050 vakuozan sa te strane.
+- **Šira posledica:** aplikaciona konekcija može da `DROP`-uje tabele, da menja constraint-e i da čita `pg_authid`. Ceo tenant model u §7.2 počiva na constraint-ima koje ta ista konekcija sme da ukloni.
+- **Šta bi bilo ispravno:** zasebna, ne-superuser aplikaciona uloga sa `GRANT`-ovima na `public`, dok migracije idu vlasničkom ulogom. To je izmena deploy-a (compose, CI, ops/hetzner), ne test-a, pa **nije rađena u ovom isečku**.
+- **Test koji ovo čuva:** `test_m03_qa_050_no_row_level_security_is_relied_on_or_silently_bypassed` tvrdi konjunkciju — *ili* nijedna tabela ne koristi RLS, *ili* uloga ne može da je zaobiđe. Danas prolazi zbog leve strane; pada onog dana kad neko doda politiku pre nego što je uloga razdvojena.
+- **Status:** `ODLUKA ZA OPERATORA`.
+
+### F-38 — M03 write komande postoje kao servisne funkcije, bez §12 command omotača
+
+- **Nalaz:** TEN-01 (`select_context`) i TEN-02 (`clear_context`) nemaju HTTP rutu. Ceo `app/domains/tenancy/` nema router; jedini M03 endpoint je `GET /tenant/context` (TEN-Q02) u `app/application/tenant_router.py`. Jedini pozivalac `select_context` je `app/security/deps.py:136`, koji bira kontekst kao *sporednu posledicu* role-assignment header-a (to je F-24).
+- **Tri stvari koje zbog toga ne postoje:**
+  1. **idempotencija** — nema `request_id`, nema idempotency store ispred TEN-01, pa M03-QA-010 (retry istim ID-em) i M03-QA-011 (`TENANT_IDEMPOTENCY_KEY_REUSED`, kod koji nijedan modul ne definiše) nemaju šta da provere;
+  2. **audit/outbox na switch-u** — `select_context` ne `enqueue`-uje ništa i ne piše audit red, pa M03-QA-008 ima tačnu verziju konteksta i nikakav trag;
+  3. **idempotencija TEN-04** — `tenant_security.invalidate` ne prima `request_id` i **nije** idempotentan: dva poziva dižu `tenant_access_version` dvaput, što je suprotno od M03-QA-051.
+- **Zašto je ovo jedan nalaz, a ne tri:** sve tri rupe imaju isti koren — M03-ove write operacije su napisane kao funkcije koje pozivalac orkestrira, a §12 ih opisuje kao komande sa kovertom (request ID, receipt, audit, event). Popravka je ista koverta na sva tri mesta.
+- **Status:** `NALAZ` — četiri M03 QA scenarija (008, 010, 011, 051) blokirana su na njega.
+
 ## 5. Šta je u ovom radu stvarno urađeno
 
 **Talas 0 — baseline i klasifikacija**
