@@ -132,10 +132,20 @@ class GuardianChildLink(Base, TimestampMixin):
             name="ck_guardian_child_link_distinct_people",
         ),
         # §2.3's conditional fields, in the database rather than in the service.
-        # Each status owns exactly one timestamp, and a row that claims to be
-        # ACTIVE without saying when is a verification nobody can audit.
+        # Two implications, not one biconditional: ACTIVE must say when it was
+        # activated, and only a link that *was* activated may carry the
+        # timestamp — which REVOKED inherits, because a revoked link that was
+        # once active still happened.
+        #
+        # This started as `(status = 'ACTIVE') = (activated_at IS NOT NULL)`,
+        # which made an active link impossible to revoke: the only way past it
+        # was to erase `activated_at` and with it the record of when
+        # guardianship began. No test caught it, because the schema tests only
+        # ever built single-status rows — the defect needed a *transition* to
+        # appear, and the first one arrived with the GRD commands.
         CheckConstraint(
-            "(status = 'ACTIVE') = (activated_at IS NOT NULL)",
+            "(status <> 'ACTIVE' OR activated_at IS NOT NULL) "
+            "AND (activated_at IS NULL OR status IN ('ACTIVE', 'REVOKED'))",
             name="ck_guardian_child_link_activated_at",
         ),
         CheckConstraint(
@@ -460,8 +470,12 @@ class PayerChildLink(Base, TimestampMixin):
             "child_membership_type = 'PARTICIPANT'",
             name="ck_payer_child_link_child_type",
         ),
+        # Same shape, and the same correction, as the guardian link above: a
+        # payer link that was activated and later revoked keeps the record of
+        # when it started.
         CheckConstraint(
-            "(status = 'ACTIVE') = (activated_at IS NOT NULL)",
+            "(status <> 'ACTIVE' OR activated_at IS NOT NULL) "
+            "AND (activated_at IS NULL OR status IN ('ACTIVE', 'REVOKED'))",
             name="ck_payer_child_link_activated_at",
         ),
         CheckConstraint(

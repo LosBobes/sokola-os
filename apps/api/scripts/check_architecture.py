@@ -6,7 +6,8 @@ stays modular:
 * a domain never imports another domain's ``service`` / ``repository`` / ``router``
   / ``policy`` (it may share ``models`` / ``enums`` / ``schemas`` records only);
 * ``app.common`` never imports a product domain;
-* no ``service.py`` exceeds the size ratchet;
+* no domain module holding *behaviour* exceeds the size ratchet (models,
+  enums, schemas and registries are declarative and exempt);
 * credentials stay centralized: one password column, on
   ``LocalPasswordCredential``, and no password-reset / MFA columns anywhere;
 * ``UserAccount`` carries none of M01 §3.1's forbidden fields.
@@ -108,9 +109,34 @@ def check_common_purity() -> list[str]:
     return problems
 
 
+#: Declarative modules are exempt from the size ratchet. A table with forty
+#: columns is long because the table is, and splitting it would hide the shape
+#: rather than simplify it. Behaviour is the thing that gets hard to follow.
+DECLARATIVE_SUFFIXES = ("models.py", "enums.py", "schemas.py", "registry.py")
+
+
+def _behaviour_modules() -> list[pathlib.Path]:
+    """Every domain module that holds logic, not just the ones called
+    ``service.py``.
+
+    Same lesson as :func:`_model_files`: a gate that reads one filename is a
+    gate anyone passes by naming the file something else. That had already
+    happened here — ``identity/auth_commands.py`` carries 543 lines of command
+    logic and was never size-checked, because the rule only ever looked at
+    ``service.py``. Nothing was being hidden deliberately; the point is that
+    the ratchet silently stopped applying the moment a module was named
+    anything else, which is not a property a limit should have.
+    """
+    return sorted(
+        py
+        for py in DOMAINS.rglob("*.py")
+        if not py.name.endswith(DECLARATIVE_SUFFIXES) and py.name != "__init__.py"
+    )
+
+
 def check_service_sizes() -> list[str]:
     problems: list[str] = []
-    for py in DOMAINS.rglob("service.py"):
+    for py in _behaviour_modules():
         lines = len(py.read_text().splitlines())
         if lines > MAX_SERVICE_LINES:
             problems.append(f"{py.relative_to(APP.parent)}: {lines} lines > {MAX_SERVICE_LINES}")

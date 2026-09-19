@@ -519,3 +519,56 @@ def test_a_membership_named_by_a_link_cannot_simply_be_deleted(db: Session) -> N
     with pytest.raises(IntegrityError):
         db.flush()
     db.rollback()
+
+
+# ---------------------------------------------------------------------------
+# The rule a row cannot test, only a move between rows (§5.3)
+# ---------------------------------------------------------------------------
+
+
+def test_an_activated_link_keeps_its_start_time_after_revocation(
+    db: Session,
+) -> None:
+    """§5.3 allows `ACTIVE -> REVOKED`, and the timestamp survives it.
+
+    This constraint began life as `(status = 'ACTIVE') = (activated_at IS NOT
+    NULL)`, which reads correctly and made the transition impossible: the only
+    way past it was to null `activated_at` and erase the record of when
+    guardianship began — at exactly the moment that record matters most.
+
+    Every test in this file passed anyway, because they all built rows one
+    status at a time and each satisfied the biconditional. A constraint over
+    `status` cannot be validated by rows; it needs a move between them.
+    """
+    pair = _Pair(db)
+    link = _active(pair)
+    db.add(link)
+    db.commit()
+    started_at = link.activated_at
+
+    link.status = LinkStatus.REVOKED
+    link.revoked_at = clock.now()
+    link.decision_reason_code = "GUARDIANSHIP_ENDED"
+    db.commit()
+
+    assert link.activated_at == started_at
+
+
+def test_a_link_that_was_never_active_may_not_claim_a_start_time(
+    db: Session,
+) -> None:
+    """The half of the old rule that was right, kept. A REJECTED link never
+    granted anything, so a start time on one would be a fiction."""
+    pair = _Pair(db)
+    _refused(
+        db,
+        _link(
+            pair,
+            status=LinkStatus.REJECTED,
+            rejected_at=clock.now(),
+            activated_at=clock.now(),
+            decision_by_account_id="acc_approver",
+            decision_reason_code="NO_EVIDENCE",
+        ),
+        "ck_guardian_child_link_activated_at",
+    )

@@ -170,3 +170,12 @@ CHILD_MEMBERSHIP_TYPE = "PARTICIPANT"
 #: downstream acts on a household composition change, and an event carrying
 #: who lives with whom, consumed by nobody, is a privacy cost with no buyer.
 FAMILY_ARCHIVED_EVENT = "m07.family.archived"
+
+#: §7.3's guardian-link events. The version in the payload is the link's own
+#: `version`, which §2.3 calls the "authorization version" — that is the
+#: invalidation signal §3.10 asks for. A tenant-wide bump would be the wrong
+#: instrument: it logs out every user of the school because one family's
+#: arrangement changed.
+GUARDIAN_LINK_ACTIVATED_EVENT = "m07.guardian_link.activated"
+GUARDIAN_LINK_REVOKED_EVENT = "m07.guardian_link.revoked"
+PRIMARY_GUARDIAN_CHANGED_EVENT = "m07.primary_guardian.changed"
