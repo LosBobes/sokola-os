@@ -212,6 +212,12 @@ def verify_and_activate_guardian_link(
     an active guardianship nobody can account for afterwards, and a record
     without the activation would claim a check that granted nothing.
     """
+    # §2.4 makes `policy_version` mandatory. An activation nobody can
+    # trace to a checking procedure is not evidence that one happened —
+    # and a blank string satisfies a NOT NULL column perfectly well.
+    if not policy_version.strip():
+        raise ValidationFailedError("Verzija procedure provere je obavezna.")
+
     guard = idempotency.begin(
         db,
         school_id,

@@ -263,6 +263,12 @@ def verify_and_activate_payer_link(
     correlation_id: str | None = None,
 ) -> PayerChildLink:
     """`PAY-02`. §3.5: ACTIVE and its one immutable proof, atomically."""
+    # §2.4 makes `policy_version` mandatory. An activation nobody can
+    # trace to a checking procedure is not evidence that one happened —
+    # and a blank string satisfies a NOT NULL column perfectly well.
+    if not policy_version.strip():
+        raise ValidationFailedError("Verzija procedure provere je obavezna.")
+
     guard = idempotency.begin(
         db,
         school_id,
