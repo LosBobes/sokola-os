@@ -3,7 +3,16 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, Numeric, String, text
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, RecordStatusMixin, TimestampMixin
@@ -36,6 +45,30 @@ class Group(Base, TimestampMixin, RecordStatusMixin):
     """
 
     __tablename__ = "group"
+    __table_args__ = (
+        # M03 §7.3: the tenant travels *inside* the reference, so a group
+        # cannot point at another school's program or location. Without
+        # this the only thing stopping it is an application check, and a
+        # check someone forgets once leaves no trace.
+        ForeignKeyConstraint(
+            ["school_id", "program_id"],
+            ["structure_program.school_id", "structure_program.id"],
+            name="fk_group_program_tenant",
+            ondelete="SET NULL (program_id)",
+        ),
+        ForeignKeyConstraint(
+            ["school_id", "location_id"],
+            ["structure_location.school_id", "structure_location.id"],
+            name="fk_group_location_tenant",
+            ondelete="SET NULL (location_id)",
+        ),
+        ForeignKeyConstraint(
+            ["school_id", "default_location_id"],
+            ["structure_location.school_id", "structure_location.id"],
+            name="fk_group_default_location_tenant",
+            ondelete="SET NULL (default_location_id)",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("grp"))
     school_id: Mapped[str] = mapped_column(
@@ -46,12 +79,8 @@ class Group(Base, TimestampMixin, RecordStatusMixin):
         enum_type(GroupCapacityMode), nullable=False, default=GroupCapacityMode.UNLIMITED
     )
     capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    program_id: Mapped[str | None] = mapped_column(
-        ForeignKey("structure_program.id", ondelete="SET NULL"), nullable=True
-    )
-    location_id: Mapped[str | None] = mapped_column(
-        ForeignKey("structure_location.id", ondelete="SET NULL"), nullable=True
-    )
+    program_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    location_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     base_monthly_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
     # Defaults a new session for this group inherits (PRD note "grupa kao osnova").
     # They are a starting value copied onto the session at create time, never a
@@ -61,9 +90,7 @@ class Group(Base, TimestampMixin, RecordStatusMixin):
     default_trainer_person_id: Mapped[str | None] = mapped_column(
         ForeignKey("person.id", ondelete="SET NULL"), nullable=True
     )
-    default_location_id: Mapped[str | None] = mapped_column(
-        ForeignKey("structure_location.id", ondelete="SET NULL"), nullable=True
-    )
+    default_location_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class GroupMembership(Base, TimestampMixin):

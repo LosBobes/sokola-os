@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Time
+from sqlalchemy import (
+    Date,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Integer,
+    String,
+    Time,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,6 +29,17 @@ class SessionSeries(Base, TimestampMixin, RecordStatusMixin):
     materialized to UTC by the generation engine over a rolling horizon."""
 
     __tablename__ = "session_series"
+    __table_args__ = (
+        # M03 §7.3: a session cannot be scheduled into another
+        # school's location, enforced by the database rather than by
+        # remembering to check.
+        ForeignKeyConstraint(
+            ["school_id", "location_id"],
+            ["structure_location.school_id", "structure_location.id"],
+            name="fk_session_series_location_tenant",
+            ondelete="SET NULL (location_id)",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("ses"))
     school_id: Mapped[str] = mapped_column(
@@ -36,9 +55,7 @@ class SessionSeries(Base, TimestampMixin, RecordStatusMixin):
     )
     # Where the series meets. Nullable so a rule can exist before a place is
     # picked, SET NULL so archiving a location never destroys schedule history.
-    location_id: Mapped[str | None] = mapped_column(
-        ForeignKey("structure_location.id", ondelete="SET NULL"), nullable=True
-    )
+    location_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     title: Mapped[str] = mapped_column(String(160), nullable=False)
     frequency: Mapped[SessionSeriesFrequency] = mapped_column(
         enum_type(SessionSeriesFrequency), nullable=False
@@ -59,6 +76,17 @@ class Session(Base, TimestampMixin, RecordStatusMixin):
     destructive edit of its series."""
 
     __tablename__ = "session"
+    __table_args__ = (
+        # M03 §7.3: a session cannot be scheduled into another
+        # school's location, enforced by the database rather than by
+        # remembering to check.
+        ForeignKeyConstraint(
+            ["school_id", "location_id"],
+            ["structure_location.school_id", "structure_location.id"],
+            name="fk_session_location_tenant",
+            ondelete="SET NULL (location_id)",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("ssn"))
     school_id: Mapped[str] = mapped_column(
@@ -76,9 +104,7 @@ class Session(Base, TimestampMixin, RecordStatusMixin):
     # Per-occurrence place. Seeded from the group's default (or the series) at
     # create time and overridable for this one occurrence, which is what makes
     # "premesti samo ovaj termin" possible without touching the series.
-    location_id: Mapped[str | None] = mapped_column(
-        ForeignKey("structure_location.id", ondelete="SET NULL"), nullable=True
-    )
+    location_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     title: Mapped[str | None] = mapped_column(String(160), nullable=True)
     starts_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ends_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)

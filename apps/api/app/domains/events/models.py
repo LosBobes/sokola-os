@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, RecordStatusMixin, TimestampMixin
@@ -30,6 +38,15 @@ class Event(Base, TimestampMixin, RecordStatusMixin):
     """
 
     __tablename__ = "event"
+    __table_args__ = (
+        # M03 §7.3: an event cannot name another school's location.
+        ForeignKeyConstraint(
+            ["school_id", "location_id"],
+            ["structure_location.school_id", "structure_location.id"],
+            name="fk_event_location_tenant",
+            ondelete="SET NULL (location_id)",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("evt"))
     school_id: Mapped[str] = mapped_column(
@@ -52,9 +69,7 @@ class Event(Base, TimestampMixin, RecordStatusMixin):
     starts_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ends_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # SET NULL: archiving a location must never delete the event's history.
-    location_id: Mapped[str | None] = mapped_column(
-        ForeignKey("structure_location.id", ondelete="SET NULL"), nullable=True
-    )
+    location_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     location_note: Mapped[str | None] = mapped_column(String(400), nullable=True)
     responsible_person_id: Mapped[str | None] = mapped_column(
         ForeignKey("person.id", ondelete="SET NULL"), nullable=True
