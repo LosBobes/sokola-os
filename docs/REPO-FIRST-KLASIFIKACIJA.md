@@ -388,6 +388,25 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Posledica:** M05 registry se može uvesti kao referentni podatak bez dodirivanja `RoleCode`, i to je ono što treba prvo. Sama migracija uloga je odvojena odluka sa produkcijskom posledicom, i traži ili (a) da `ADMIN` postane `MANAGER` umesto `LIMITED_ADMIN`, ili (b) da se svakom postojećem `ADMIN`-u u istoj migraciji izda eksplicitan grant set koji čuva današnji pristup, ili (c) svestan pristanak da administratori izgube prava. §7.10 zabranjuje da migracija sama pogađa u ovakvom slučaju.
 - **Status:** `CHALLENGE_NOT_APPLIED` — preslikavanje uloga nije primenjeno. Traži odluku vlasnika proizvoda (vidi §8), jer sve tri opcije menjaju nečiji pristup.
 
+### F-30 — M05 registry revizije 1.3 nije u §3.3; 31 red nosi nedefinisanu grupu uloga
+
+- **Ugovor:** M05 §3.3 daje tabelu permission ključeva. Dva dokumenta u istoj fascikli — `03-M05-PERMISSION-REGISTRY-M17-M21-M28.md` i `04-M05-PERMISSION-REGISTRY-M06-M07.md` — svaki se otvara rečenicom da su „normativni nastavak M05 §3.3". Dakle registry revizije 1.3 su sva tri dokumenta zajedno, ne samo §3.3.
+- **Repo dokaz (prebrojano nad spec fajlovima):** §3.3 ima **38** ključeva, fajl 04 ima **16**, fajl 03 ima **59** — ukupno **113**. Prvi isečak (PR #100) je zasejao samo §3.3, pa pet uloga (`LIMITED_ADMIN`, `INSTRUCTOR`, `SUBSTITUTE_INSTRUCTOR`, `GUARDIAN`, `PAYER`) nema **nijedan** binding: njihova prava su tačno ono što živi u ta dva nastavka.
+- **Stvarna prepreka:** fajl 03 koristi **pet različitih oblika tabele**, a dva zaglavlja imenuju grupu uloga koju dokument **nigde ne definiše**:
+
+  | redova | kolona za ulogu | jednoznačno? |
+  |---:|---|---|
+  | 25 | `STAFF` | **ne** — nigde definisano |
+  | 10 | `INSTRUCTOR/SUBSTITUTE` | da (kosa crta = dve uloge, po napomeni u istom fajlu) |
+  | 13 | `Default binding` | da (isti oblik kao §3.3) |
+  | 6 | `Ostale role` | **ne** — nigde definisano |
+  | 5 | `Default binding` | da |
+
+  `STAFF` bi moglo da znači `INSTRUCTOR` + `SUBSTITUTE_INSTRUCTOR` (jer `LIMITED_ADMIN` ima sopstvenu kolonu), ali to je pretpostavka, ne ugovor. `Ostale role` se ne da pogoditi uopšte.
+- **Posledica:** **82 od 113** ključeva se mogu zasejati direktno iz ugovora (38 + 16 + 28). Preostalih **31** traži presudu vlasnika ugovora — pogađanje bi upisalo binding koji niko nije odobrio, u tabelu koja je autoritet za autorizaciju.
+- **Ispravka ranijeg stava:** prvo sam zapisao da revizija 1.3 ne sme da se objavi dok nije potpuna. Tačniji stav je: ne sme da se objavi **nepotpuna iz nepažnje**. Pošto 31 red *nije određen ugovorom*, revizija 1.3 se objavljuje sa 82 ključa i zapisanim jazom; §2.2 ionako predviđa da dopune stižu kao nova revizija. Držati ceo registry (a sa njim TEN-Q01 i resolver) taocem 31 nejasnog reda bilo bi gore od zapisanog jaza.
+- **Status:** `CHALLENGE_NOT_APPLIED` za 31 red. Traži definiciju `STAFF` i `Ostale role` u M05 registry dokumentu; do tada ti ključevi nisu u nijednoj reviziji i zato su fail-closed deny, što je ispravno ponašanje.
+
 ## 5. Šta je u ovom radu stvarno urađeno
 
 **Talas 0 — baseline i klasifikacija**
