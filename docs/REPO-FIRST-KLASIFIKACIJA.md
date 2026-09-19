@@ -386,6 +386,18 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
   - **`STUDENT` nema kanonski parnjak.** M05 ne poznaje učeničku ulogu. U repou `STUDENT` već ima prazan skup oblasti, pa ne nosi prava — ali i dalje postoji kao dodeljiva uloga i ima redove.
   - `SUBSTITUTE_INSTRUCTOR` i `PAYER` nemaju repo parnjaka; oni su nov posao, ne migracija.
 - **Posledica:** M05 registry se može uvesti kao referentni podatak bez dodirivanja `RoleCode`, i to je ono što treba prvo. Sama migracija uloga je odvojena odluka sa produkcijskom posledicom, i traži ili (a) da `ADMIN` postane `MANAGER` umesto `LIMITED_ADMIN`, ili (b) da se svakom postojećem `ADMIN`-u u istoj migraciji izda eksplicitan grant set koji čuva današnji pristup, ili (c) svestan pristanak da administratori izgube prava. §7.10 zabranjuje da migracija sama pogađa u ovakvom slučaju.
+- **Šta F-29 *ne* blokira (provereno nad zasejanom revizijom 1.3):** workspace izbor. §2.4 mapira `OWNER`, `MANAGER` **i** `LIMITED_ADMIN` na isti `ADMIN` workspace — pa kako god se `ADMIN` razreši, njegov workspace je `ADMIN` u oba slučaja. Preslikavanje repo uloge → workspace je zato potpuno određeno za pet od šest uloga:
+
+  | repo uloga | workspace | osnov |
+  |---|---|---|
+  | `OWNER` | `ADMIN` | isti ključ |
+  | `MANAGER` | `ADMIN` | isti ključ |
+  | `ADMIN` | `ADMIN` | **obe kandidat-opcije (MANAGER, LIMITED_ADMIN) daju isti workspace** |
+  | `TRAINER` | `INSTRUCTOR` | §2.4 imenuje migraciju |
+  | `PARENT` | `GUARDIAN` | jedina uloga istog značenja |
+  | `STUDENT` | — | nema kanonskog parnjaka; ionako danas nosi prazan skup oblasti |
+
+  **Posledica: TEN-Q01 nije blokiran.** Blokirani su efektivni permission-i, ne izbor škole i workspace-a.
 - **Status:** `CHALLENGE_NOT_APPLIED` — preslikavanje uloga nije primenjeno. Traži odluku vlasnika proizvoda (vidi §8), jer sve tri opcije menjaju nečiji pristup.
 
 ### F-30 — M05 registry revizije 1.3 nije u §3.3; 39 redova nosi nedefinisanu grupu uloga
