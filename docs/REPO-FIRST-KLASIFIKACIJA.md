@@ -78,7 +78,7 @@ authorization domen.
 
 | Modul | Klasifikacija | Putanja / dokaz |
 |---|---|---|
-| M01 Identity | `ADAPT` | §3.1–3.2 isporučeno: `user_account`, `auth_identity`, `auth_provider_registration`, `local_password_credential`, `authentication_event` (migracija `a7e4c2f91b08`, sa backfill-om i exception report-om). Session store (§3.2) i AUTH komande (§6) su sledeći isečci — vidi F-17, F-19, F-20 |
+| M01 Identity | `ADAPT` | §3.1–3.2, §4.7 i AUTH-03/04/08 isporučeni: `user_account`, `auth_identity`, `auth_provider_registration`, `local_password_credential`, `authentication_event`, `auth_session` (migracije `a7e4c2f91b08`, `b8d3f60a51c7`). Preostaje AUTH-05/06/07/09/10/11 sa §12 receipt-ima i callback enforcement — vidi F-19, F-20, F-21 |
 | M02 Pozivnice | `ADAPT` | `identity/invite_tokens.py`, `Invitation` model, `tests/test_invitations.py`. Invite-only postoji; M02 ugovor je znatno širi (55 KB master) |
 | M03 Multi-tenancy | `ADAPT` | `app/security/context.py`. Server-derived context postoji i testiran je; **nedostaju composite tenant FK/UNIQUE i RLS** (§7) |
 | M04 School/Subscription | `IMPLEMENT` (§2.1–2.8 urađeno) | Anchor: `organization`, `organization_school`, `school_locator`, `school_status_transition`, prošireni `school` (migracija `a4d76f2b91c0`, 30 testova). Ownership: `school_owner_nomination`, `school_primary_owner_term` sa composite tenant FK-ovima (`app/domains/school/ownership*.py`, migracija `b9e3c05a74d2`, 31 test). Entitlement: `school_product_entitlement` sa read-time pravilom efektivnosti (`app/domains/school/entitlements.py`, migracija `c1f4a86d39b7`, 23 testa). **Ostaje:** subscription usage (§2.9–2.10, blokirano — vidi F-15), komercijalni sloj (§2.12–2.20), SCH-01..06 / ORG-01..04 / OWN-01..04 / ENT-01..02 kao komande sa permisijama i step-up-om |
@@ -252,13 +252,13 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Minimalni predlog:** M17 dobija registar svrha (`purpose_code`, aktivan osnov, retention period) i read port kojim M06 proverava osnov u istoj transakciji. Tek onda §2.2.
 - **Status:** `CHALLENGE_NOT_APPLIED` — svesno odloženo do M17. Ovo je blokada koja štiti, ne propust.
 
-### F-17 — sesija je potpisani kolačić bez servera: opoziv pojedinačne sesije nije moguć
+### F-17 — sesija je bila potpisani kolačić bez servera: opoziv pojedinačne sesije nije bio moguć (OTKLONJENO)
 
 - **Ugovor:** M01 §3.2 traži `Session` sa nepredvidivim `id`, `revoked_at`, `revoke_reason_code`, `idle_expires_at`, `absolute_expires_at` i `authorization_version_at_issue`. §4.7 traži da povećanje `authorization_version` **trenutno** poništi sve sesije naloga za svaki zahtev koji počne posle commit-a. §6 AUTH-04 opoziva **samo prezentovanu** sesiju, AUTH-05 sve.
-- **Repo dokaz:** `app/main.py` montira Starlette `SessionMiddleware` sa `secret_key=settings.session_secret`; `app/domains/auth/router.py::_establish_session` upisuje samo `person_id` i `csrf` u potpisani kolačić. Nema tabele sesija, nema poređenja `authorization_version`, nema `revoked_at`. `POST /auth/logout` radi `request.session.clear()` — briše kolačić u **tom** pretraživaču i ništa više.
-- **Posledica:** kolačić izdat na tuđem uređaju važi do isteka potpisa bez obzira na sve što se u međuvremenu dogodi nalogu. „Odjavi me svuda" se ne može implementirati; M01-QA-008/009/011/021 se ne mogu ni napisati.
-- **Šta je u ovom PR-u urađeno:** `authorization_version` sada **postoji** na `user_account`, a `app/security/auth.py::_account_revoked` je pooštren da odbije svaki nalog koji nije `ACTIVE` (ranije samo `DISABLED`), pa suspenzija odmah važi. To je najbolje što potpisani kolačić može: čita nalog na svakom zahtevu, ali ne razlikuje jednu sesiju od druge i nema sa čim da uporedi verziju.
-- **Status:** `CHALLENGE_NOT_APPLIED` do sledećeg M01 isečka — server-side `auth_session` tabela + `AUTH-03 ValidateSession` koji poredi `authorization_version_at_issue`. To je jedini ispravan nosilac §4.7 i zato ide kao zaseban, izolovan PR: menja autentifikaciju na **svakom** zahtevu.
+- **Repo dokaz (pre):** `app/main.py` je montirao Starlette `SessionMiddleware`, a `_establish_session` je upisivao samo `person_id` i `csrf` u potpisani kolačić. Nije bilo tabele sesija, poređenja verzija ni `revoked_at`. `POST /auth/logout` je radio `request.session.clear()` — brisao kolačić u **tom** pretraživaču i ništa više. Kolačić izdat na tuđem uređaju važio je do isteka potpisa bez obzira na sve što se u međuvremenu dogodilo nalogu.
+- **Rešenje (primenjeno, migracija `b8d3f60a51c7`):** `auth_session` je server-side red; potpisani kolačić nosi samo neprozirni credential, a baza čuva isključivo njegov SHA-256 digest. `AUTH-03 ValidateSession` teče pre svake zaštićene radnje i proverava hash, opoziv, **oba** isteka (30 min idle / 12 h absolute, §3.2 fail-closed default), `UserAccount.status = ACTIVE` i **tačno** poklapanje `authorization_version`.
+- **Zašto poređenje verzije, a ne zastavica:** §4.7 kaže „bezbednost ne sme zavisiti od eventualnog outbox potrošača". Validacija čita `user_account` u **sopstvenoj transakciji** zahteva, pa između commit-a i odbijanja ne postoji keš koji bi mogao da zastari — M01-QA-021 nema prozor jer nema druge kopije odgovora. Outbox događaj `identity.authorization_invalidated` se i dalje emituje (§13, `scope_kind=PLATFORM`, `school_id=NULL`, dedupe key `user_account_id:authorization_version`), ali za gašenje realtime kanala i projekcija — nikad kao dokaz. Test `test_the_outbox_event_is_not_the_guard` briše događaj i pokazuje da odbijanje i dalje stoji.
+- **Status:** `OTKLONJENO` za §3.2, §4.7, AUTH-03, AUTH-04 i AUTH-08. AUTH-05 (`LogoutAll` HTTP površina) čeka §12 idempotency receipt-e — vidi F-21.
 
 ### F-18 — Google prijava je usvajala postojeći nalog po jednakom email-u (OTKLONJENO)
 
@@ -281,6 +281,13 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Stanje posle ovog PR-a:** `auth_provider_registration` postoji, popunjena je za oba adaptera, `auth_identity.provider_key` je strani ključ ka njoj (dakle identitet bez registrovanog providera je nemoguć), a `sync_provider_registry` na boot-u upisuje audience/redirect iz deploy konfiguracije. Ali `google_callback` u `app/domains/auth/router.py` i dalje veruje Authlib-ovoj validaciji i ne konsultuje registar.
 - **Zašto nije urađeno ovde:** provera callback-a je promena login putanje, a ovaj PR je namerno promena modela. Spajanje to dvoje značilo bi jedan PR koji istovremeno menja šemu autentifikacije i njeno ponašanje.
 - **Status:** `CHALLENGE_NOT_APPLIED` — sledi u M01 callback isečku, zajedno sa `AuthenticationEvent` upisom za neuspele pokušaje i rate limit-ima iz §10.
+
+### F-21 — AUTH-05 `LogoutAll` nema HTTP površinu: nedostaju §12 idempotency receipt-i
+
+- **Ugovor:** M01 §6 AUTH-05 traži da server, **pre** version bump-a i u istoj transakciji, sačuva minimalni `AuthCommandReceipt` za `(user_account_id, AUTH-05, request_id, canonical_payload_hash)`. Posle opoziva sopstvene sesije, identičan retry sme da upotrebi hash prezentovanog **opozvanog** credential-a isključivo da nađe isti receipt i vrati prethodni uspeh (M01-QA-020). §12 dodaje `Idempotency-Key` ↔ body `request_id` poklapanje, `IDEMPOTENCY_IN_PROGRESS` sa `Retry-After: 1` i `IDEMPOTENCY_KEY_REUSED`.
+- **Stanje posle ovog PR-a:** interni port **postoji** i radi — `sessions.revoke_account_sessions` zaključava nalog, bumpuje verziju, opoziva sesije, piše audit i outbox u jednoj transakciji, i ima `keep_session_id` za slučaj koji §6 dozvoljava. Nedostaje samo HTTP komanda i receipt tabela oko njega.
+- **Zašto nije ovde:** receipt je zaseban ugovor (§12) sa sopstvenim testovima trke (M01-QA-026/027), a repo već ima `app/platform/idempotency` koji treba proveriti pre nego što se M01 nakalemi na njega. Spajanje bi značilo jedan PR koji istovremeno menja session model i idempotency ugovor.
+- **Status:** `CHALLENGE_NOT_APPLIED` — sledeći M01 isečak, zajedno sa AUTH-09/10/11 (suspend/reactivate/disable), koji koriste isti receipt mehanizam.
 
 ## 5. Šta je u ovom radu stvarno urađeno
 

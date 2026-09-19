@@ -24,6 +24,7 @@ Three further separations, each load-bearing:
 from __future__ import annotations
 
 import datetime as dt
+from typing import Any
 
 from sqlalchemy import (
     BigInteger,
@@ -37,18 +38,19 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, TimestampMixin
 from app.common.columns import enum_type
-from app.common.ids import new_id
+from app.common.ids import new_id, new_random_id
 from app.domains.identity.auth_enums import (
     AccountDisableReason,
     AuthEventOutcome,
     AuthEventType,
     AuthProviderStatus,
     IdentityUnlinkReason,
+    SessionRevokeReason,
     UserAccountStatus,
 )
 
@@ -272,6 +274,111 @@ class AuthIdentity(Base, TimestampMixin):
         return self.unlinked_at is None
 
 
+class AuthSession(Base):
+    """§3.2. One active sign-in, server-side, so it can be ended.
+
+    The repo's previous session was a signed cookie holding a person id. A
+    signed cookie is a *claim* the server re-verifies, never a record the server
+    owns — so "log me out everywhere" had nothing to act on, and a cookie issued
+    on a borrowed laptop stayed valid until its signature aged out. This table
+    is the record.
+
+    Two expiries, both enforced, §3.2's fail-closed defaults: 30 minutes idle
+    and 12 hours absolute, whichever comes first. The idle one slides on use and
+    is clamped to the absolute one, because an idle window that could push past
+    the absolute deadline would make the absolute deadline advisory.
+
+    ``authorization_version_at_issue`` is the whole of §4.7. Every protected
+    request compares it against the account's current version, so a bump ends
+    every session on the next request — without an outbox consumer, a cache
+    invalidation, or any other thing that might not have run yet.
+
+    What is *not* here: the credential. Only its digest is stored, so a database
+    copy does not yield working sessions. And no ``updated_at``: this row is
+    written on nearly every request, and a second timestamp that means almost
+    but not quite ``last_seen_at`` is a trap for whoever reads it next.
+    """
+
+    __tablename__ = "auth_session"
+    __table_args__ = (
+        CheckConstraint(
+            "(revoked_at IS NULL) = (revoke_reason_code IS NULL)",
+            name="ck_auth_session_revoke_pair",
+        ),
+        # The sliding window may never outlive the hard deadline.
+        CheckConstraint(
+            "idle_expires_at <= absolute_expires_at", name="ck_auth_session_expiry_order"
+        ),
+        CheckConstraint(
+            "authorization_version_at_issue > 0", name="ck_auth_session_version"
+        ),
+        Index(
+            "ix_auth_session_account_live",
+            "user_account_id",
+            postgresql_where=text("revoked_at IS NULL"),
+        ),
+        # Sweeping expired rows is a maintenance job, and it needs a cheap way
+        # to find them.
+        Index("ix_auth_session_absolute_expiry", "absolute_expires_at"),
+    )
+
+    #: Unpredictable, not ULID-ordered: §3.2 asks for an unpredictable id, and a
+    #: time-sortable one narrows a guess to its random half.
+    id: Mapped[str] = mapped_column(
+        String(64), primary_key=True, default=lambda: new_random_id("ses")
+    )
+    #: SHA-256 of the credential the client holds. Plain SHA-256 rather than a
+    #: password KDF on purpose: the credential is 256 bits of `secrets` output,
+    #: so there is no dictionary to slow an attacker down against, and a KDF
+    #: here would only add per-request cost to every single API call.
+    credential_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    user_account_id: Mapped[str] = mapped_column(
+        ForeignKey("user_account.id", ondelete="CASCADE"), nullable=False
+    )
+    #: Which identity proved this sign-in. §6 AUTH-07 needs it: unlinking an
+    #: identity must end the sessions that identity vouched for.
+    auth_identity_id: Mapped[str] = mapped_column(
+        ForeignKey("auth_identity.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_seen_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    absolute_expires_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    idle_expires_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    revoked_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    revoke_reason_code: Mapped[SessionRevokeReason | None] = mapped_column(
+        enum_type(SessionRevokeReason), nullable=True
+    )
+    authorization_version_at_issue: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    #: When the *provider* authenticated the human, which is not when we issued
+    #: this row. §6 AUTH-06/07 require a fresh re-authentication, and "fresh"
+    #: has to mean fresh at the provider, not fresh in our session table.
+    auth_time: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    #: §3.2: assurance without the raw provider payload. AMR/ACR values and
+    #: nothing else — a JSONB column that accepted the whole token would be
+    #: filled with the whole token.
+    assurance_context: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
+    #: Shown to the account holder in the security UI (§14 `UI-AUTH-04`), so it
+    #: is a human label and stays minimized — "Chrome, Windows", never a
+    #: fingerprint or a user-agent string.
+    device_label: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
+    def is_live(self, now: dt.datetime) -> bool:
+        """Revoked and expired are both dead, and §5 gives neither a way back."""
+        return (
+            self.revoked_at is None
+            and now < self.absolute_expires_at
+            and now < self.idle_expires_at
+        )
+
+
 class LocalPasswordCredential(Base, TimestampMixin):
     """The email+password adapter's secret, one row per local-password identity.
 
@@ -339,6 +446,7 @@ class AuthenticationEvent(Base):
 
 __all__ = [
     "AuthIdentity",
+    "AuthSession",
     "AuthProviderRegistration",
     "AuthenticationEvent",
     "LocalPasswordCredential",
