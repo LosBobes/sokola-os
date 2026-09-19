@@ -4,13 +4,14 @@ import pytest
 from app.common.errors import ForbiddenError, UnauthorizedError
 from app.config import get_settings
 from app.domains.identity.enums import RoleCode, RoleScopeType
+from app.domains.people import membership as membership_service
 from app.security.auth import DEV_PERSON_HEADER, Principal, resolve_principal
 from app.security.context import RequestContext
 from app.security.deps import CONTEXT_HEADER, get_context, require_roles
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
-from tests.factories import assign_role, make_person, make_school
+from tests.factories import add_membership, assign_role, make_person, make_school
 
 
 def make_request(headers: dict[str, str]) -> Request:
@@ -54,6 +55,10 @@ def test_unknown_person_is_unauthorized(db: Session) -> None:
 def test_context_resolves_school_role_and_scope(db: Session) -> None:
     person = make_person(db)
     org = make_school(db)
+    # M03 §6.1 point 4 needs *both*: an active role assignment and current M06
+    # `ACTIVE` membership evidence. This test used to grant only the role,
+    # which the guard accepted — see the next test for why it no longer does.
+    add_membership(db, person=person, school=org)
     assignment = assign_role(db, person=person, school=org, role=RoleCode.MANAGER)
 
     ctx = get_context(
@@ -64,6 +69,44 @@ def test_context_resolves_school_role_and_scope(db: Session) -> None:
     assert ctx.role_code is RoleCode.MANAGER
     assert ctx.person_id == person.id
 
+
+def test_a_role_without_membership_grants_nothing(db: Session) -> None:
+    """M03 §6.1 point 4: a role assignment is not membership evidence.
+
+    §3 separates them deliberately — membership answers "does this person
+    belong to this school right now", the role answers "what may they do here"
+    — and §6.1 requires both. Before this guard existed, a role assignment left
+    behind after someone's membership was terminated still opened the school:
+    the role is what an admin screen revokes, and the membership is what a
+    person's departure ends, and they are not always done together.
+    """
+    person = make_person(db)
+    org = make_school(db)
+    assignment = assign_role(db, person=person, school=org, role=RoleCode.MANAGER)
+
+    with pytest.raises(ForbiddenError):
+        get_context(
+            make_request({CONTEXT_HEADER: assignment.id}), db, Principal(person.id)
+        )
+
+
+def test_a_terminated_membership_closes_the_school(db: Session) -> None:
+    """§6.1: "M06 `DRAFT`, `SUSPENDED` i `TERMINATED` članstvo ne daju redovan
+    workspace pristup." The role assignment is untouched and still active."""
+    person = make_person(db)
+    org = make_school(db)
+    membership = add_membership(db, person=person, school=org)
+    assignment = assign_role(db, person=person, school=org, role=RoleCode.MANAGER)
+    request = make_request({CONTEXT_HEADER: assignment.id})
+    assert get_context(request, db, Principal(person.id)).school_id == org.id
+
+    # Terminated through the M06 command rather than by writing columns, so
+    # the test exercises the same transition production does.
+    membership_service.terminate_membership(db, membership, reason_code="LEFT_SCHOOL")
+    db.commit()
+
+    with pytest.raises(ForbiddenError):
+        get_context(request, db, Principal(person.id))
 
 def test_context_requires_a_selection(db: Session) -> None:
     person = make_person(db)
