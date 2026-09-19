@@ -103,6 +103,17 @@ class IdempotencyKeyInvalidError(BadRequestError):
     code = "IDEMPOTENCY_KEY_INVALID"
 
 
+class ProviderNotAllowedError(BadRequestError):
+    """M01 §11: the issuer is not in the active fail-closed registry.
+
+    One message for every reason the registry refused. Distinguishing "unknown
+    issuer" from "wrong audience" from "disabled provider" would tell an
+    attacker which knob to turn.
+    """
+
+    code = "PROVIDER_NOT_ALLOWED"
+
+
 class StaleVersionError(ConflictError):
     """M01 §11: `expected_version` no longer matches. Reload and retry."""
 

@@ -78,7 +78,7 @@ authorization domen.
 
 | Modul | Klasifikacija | Putanja / dokaz |
 |---|---|---|
-| M01 Identity | `ADAPT` | §3.1–3.2, §4.7, §12 i AUTH-03/04/05/08/09/10/11 isporučeni (migracije `a7e4c2f91b08`, `b8d3f60a51c7`, `c4a71e8b35d2`). AUTH-09/10/11 su portovi bez rute dok ne postoji M05. Preostaje AUTH-06/07, callback enforcement i step-up — vidi F-19, F-20, F-21, F-22 |
+| M01 Identity | `ADAPT` | §3.1–3.2, §4.5, §4.7, §4.9, §12, §13 i AUTH-02/03/04/05/08/09/10/11 isporučeni (migracije `a7e4c2f91b08`, `b8d3f60a51c7`, `c4a71e8b35d2`). AUTH-09/10/11 su portovi bez rute dok ne postoji M05. Preostaje AUTH-06/07, §10 rate limiti i provider step-up — vidi F-21, F-22, F-23 |
 | M02 Pozivnice | `ADAPT` | `identity/invite_tokens.py`, `Invitation` model, `tests/test_invitations.py`. Invite-only postoji; M02 ugovor je znatno širi (55 KB master) |
 | M03 Multi-tenancy | `ADAPT` | `app/security/context.py`. Server-derived context postoji i testiran je; **nedostaju composite tenant FK/UNIQUE i RLS** (§7) |
 | M04 School/Subscription | `IMPLEMENT` (§2.1–2.8 urađeno) | Anchor: `organization`, `organization_school`, `school_locator`, `school_status_transition`, prošireni `school` (migracija `a4d76f2b91c0`, 30 testova). Ownership: `school_owner_nomination`, `school_primary_owner_term` sa composite tenant FK-ovima (`app/domains/school/ownership*.py`, migracija `b9e3c05a74d2`, 31 test). Entitlement: `school_product_entitlement` sa read-time pravilom efektivnosti (`app/domains/school/entitlements.py`, migracija `c1f4a86d39b7`, 23 testa). **Ostaje:** subscription usage (§2.9–2.10, blokirano — vidi F-15), komercijalni sloj (§2.12–2.20), SCH-01..06 / ORG-01..04 / OWN-01..04 / ENT-01..02 kao komande sa permisijama i step-up-om |
@@ -268,19 +268,22 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Cena, svesno prihvaćena:** ista osoba koja se ranije registrovala lozinkom, a sada se prijavi Google-om, dobija **drugu** `Person`. To je M06 merge slučaj (postoji `PersonMergeRecord` tok), ne nešto što auth sme da reši tiho. §4.4 je izričit: običan login ne kreira ni ne spaja osobe.
 - **Status:** `OTKLONJENO` — test `test_google_login_does_not_adopt_a_password_account_by_email` (M01-QA-012).
 
-### F-19 — `password_auth_enabled` je podrazumevano `True`, a §4.9 traži OFF
+### F-19 — `password_auth_enabled` je bio podrazumevano `True`, a §4.9 traži OFF (OTKLONJENO)
 
 - **Ugovor:** M01 §4.9: „Ne postoji local fallback login... ako za njega nema eksplicitnog adaptera, konfiguracije i testova. **Podrazumevano je OFF.**"
-- **Repo dokaz:** `app/config.py` → `password_auth_enabled: bool = True`. Adapter, konfiguracija i testovi **postoje** (`app/security/password_auth.py`, `SOKOLA_PASSWORD_AUTH_ENABLED`, `tests/test_password_auth.py`), pa sam metod nije sporan — sporan je default.
-- **Zašto nije promenjeno u ovom PR-u:** obrtanje defaulta na `False` zaključalo bi svaki deployment koji promenljivu ne postavlja eksplicitno — uključujući, po svemu sudeći, Hetzner instancu. To je operativna promena koja ide zajedno sa upisom `SOKOLA_PASSWORD_AUTH_ENABLED=true` u `ops/hetzner/.env` i `compose.prod.yml` (sa `:-true` fallback-om, nikad `:?`), i pripada isečku koji dira login putanju.
-- **Status:** `CHALLENGE_NOT_APPLIED` — zakazano za M01 login isečak, zajedno sa provider registry enforcement-om.
+- **Repo dokaz (pre):** `app/config.py` → `password_auth_enabled: bool = True`. Adapter, konfiguracija i testovi **postoje** (`app/security/password_auth.py`, `SOKOLA_PASSWORD_AUTH_ENABLED`, `tests/test_password_auth.py`), pa metod nije bio sporan — sporan je bio default.
+- **Rešenje (primenjeno):** default je `False`. Nijedan postojeći deployment se ne menja: `compose.prod.yml` već prosleđuje `"${SOKOLA_PASSWORD_AUTH_ENABLED:-true}"`, a `ops/hetzner/.env.prod.example` i `apps/api/.env.example` već imaju `=true`. Test suite eksplicitno postavlja `SOKOLA_PASSWORD_AUTH_ENABLED=true` u `conftest.py` — jer *jeste* deployment koji koristi adapter, i to treba da kaže naglas umesto da se osloni na default.
+- **Zašto je default bitan iako se ništa ne menja:** deployment koji nikad nije rekao „da" nije rekao „da". Način prijave koji postoji zato što ga niko nije isključio je oblik svake slučajne auth površine.
+- **Status:** `OTKLONJENO` — test `test_password_auth_is_off_by_default` proverava **deklarisani default polja**, ne konstruisani `Settings` (konstrukcija čita okruženje, pa bi dokazala samo da ga je suite uključio).
 
-### F-20 — provider registry postoji, ali callback ga još ne proverava
+### F-20 — provider registry je postojao, ali ga callback nije proveravao (OTKLONJENO)
 
 - **Ugovor:** M01 §3.2 + §6 AUTH-02: callback `issuer` mora se **tačno** poklopiti sa aktivnom registracijom, a audience/redirect/algoritam moraju biti na allowlist-i; inače `PROVIDER_NOT_ALLOWED` (M01-QA-019).
-- **Stanje posle ovog PR-a:** `auth_provider_registration` postoji, popunjena je za oba adaptera, `auth_identity.provider_key` je strani ključ ka njoj (dakle identitet bez registrovanog providera je nemoguć), a `sync_provider_registry` na boot-u upisuje audience/redirect iz deploy konfiguracije. Ali `google_callback` u `app/domains/auth/router.py` i dalje veruje Authlib-ovoj validaciji i ne konsultuje registar.
-- **Zašto nije urađeno ovde:** provera callback-a je promena login putanje, a ovaj PR je namerno promena modela. Spajanje to dvoje značilo bi jedan PR koji istovremeno menja šemu autentifikacije i njeno ponašanje.
-- **Status:** `CHALLENGE_NOT_APPLIED` — sledi u M01 callback isečku, zajedno sa `AuthenticationEvent` upisom za neuspele pokušaje i rate limit-ima iz §10.
+- **Repo dokaz (pre):** `auth_provider_registration` je postojala i bila popunjena, ali je `google_callback` verovao isključivo Authlib validaciji. Adapter koji je neko konfigurisao, a niko registrovao, mogao je da prijavljuje ljude — što je razlika između fail-closed registra i dekorativnog.
+- **Rešenje (primenjeno):** `auth_providers.verify_callback` proverava aktivnu registraciju, **bajt-za-bajt** issuer, audience na allowlist-i, `alg` iz ID token header-a i redirect URI. Prazna audience lista odbija sve — deployment koji nije deklarisao svoj client id nije ga deklarisao, i „nekonfigurisano" ne sme da znači „bilo šta". Sve odbijanja vraćaju **istu** poruku (§11: „bez detalja konfiguracije"), sa testom koji to proverava za četiri različita razloga.
+- **Šta ovo *ne* zamenjuje:** Authlib i dalje dokazuje da je token pravi. Registar odgovara na drugo pitanje — sme li pravi token od tog issuer-a uopšte da se koristi ovde.
+- **Uz to (§13):** `auth.login_started`, `auth.login_failed` i `auth.login_succeeded` se sada upisuju. Neuspeh koji se nikad nije razrešio u nalog ostavlja `user_account_id` prazan, a reason code ne razlikuje „nepoznata adresa" od „pogrešna lozinka" — inače bi audit trail rekonstruisao enumeration oracle koji §11 drži van response body-ja, a log čita više ljudi nego odgovor.
+- **Status:** `OTKLONJENO` za registry enforcement i login audit. §10 rate limiti (AUTH-01: 5/IP/10min, callback 20/IP/10min) ostaju — vidi F-23.
 
 ### F-21 — AUTH-05/09/10/11 i §12 receipt-i (DELIMIČNO OTKLONJENO)
 
@@ -298,6 +301,13 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Minimalni predlog:** Google adapter dobija `prompt=login` + `max_age` na step-up putanji i upisuje `auth_time` iz ID tokena; local-password adapter dobija eksplicitnu ponovnu proveru lozinke **označenu kao slabiju** u `assurance_context`, pa politika može da odbije step-up za osetljive komande.
 - **Status:** `CHALLENGE_NOT_APPLIED` — ide zajedno sa callback hardening isečkom (F-20), koji ionako dira isti adapter. AUTH-05 je isporučen sa aktivnom sesijom kao jedinim uslovom, i to je u PR-u eksplicitno rečeno.
 
+
+### F-23 — §10 rate limiti još ne postoje
+
+- **Ugovor:** M01 §6 AUTH-01 traži 5 startova po IP za 10 min i 10 po browser/device signalu za 24 h; §10 dodaje 20 callback neuspeha po IP za 10 min. Limiti su **keyed hash** IP/device signala, kratko se čuvaju po M17 i ne koriste se za profilisanje. Prekoračenje je `RATE_LIMITED` bez detalja (M01-QA-013).
+- **Repo dokaz:** nema nijednog rate limitera; `RateLimitedError` sa `Retry-After` postoji u `app/common/errors.py` od ovog isečka, ali ga niko ne podiže.
+- **Zašto nije ovde:** potreban je brojački store sa TTL-om. Repo nema Redis, a tabela u Postgresu za brojanje po IP-u je izvodljiva ali je zaseban dizajn (retention po M17, keyed hash sa sopstvenim ključem, čišćenje). Nakalemiti ga na ovaj isečak značilo bi jedan PR koji istovremeno menja callback validaciju i uvodi novi platform mehanizam.
+- **Status:** `CHALLENGE_NOT_APPLIED` — sledeći M01 isečak, zajedno sa step-up-om (F-22), koji dira isti adapter.
 
 ## 5. Šta je u ovom radu stvarno urađeno
 
