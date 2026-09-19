@@ -11,6 +11,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -68,6 +69,12 @@ class Group(Base, TimestampMixin, RecordStatusMixin):
             name="fk_group_default_location_tenant",
             ondelete="SET NULL (default_location_id)",
         ),
+        # M03 §7.2: the composite target another tenant table's foreign key
+        # names. It adds no uniqueness — `id` is already the primary key — but
+        # it lets a child's reference carry the tenant *as part of the
+        # reference*, which is what makes a cross-tenant link impossible rather
+        # than merely incorrect.
+        UniqueConstraint("school_id", "id", name="uq_group_tenant"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("grp"))
@@ -110,6 +117,13 @@ class GroupMembership(Base, TimestampMixin):
 
     __tablename__ = "group_membership"
     __table_args__ = (
+        # A person cannot be enrolled into another school's group.
+        ForeignKeyConstraint(
+            ["school_id", "group_id"],
+            ["group.school_id", "group.id"],
+            name="fk_group_membership_group_tenant",
+            ondelete="CASCADE",
+        ),
         Index(
             "uq_group_membership_active",
             "group_id",
@@ -120,9 +134,7 @@ class GroupMembership(Base, TimestampMixin):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("gmb"))
-    group_id: Mapped[str] = mapped_column(
-        ForeignKey("group.id", ondelete="CASCADE"), nullable=False
-    )
+    group_id: Mapped[str] = mapped_column(String(64), nullable=False)
     school_id: Mapped[str] = mapped_column(
         ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )

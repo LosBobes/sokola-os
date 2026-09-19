@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import ForeignKey, ForeignKeyConstraint, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, TimestampMixin
@@ -16,15 +16,20 @@ class AttendanceRecord(Base, TimestampMixin):
     __tablename__ = "attendance_record"
     __table_args__ = (
         UniqueConstraint("session_id", "person_id", name="uq_attendance_record"),
+        # Attendance is taken for one of the school's own sessions. §7.3.
+        ForeignKeyConstraint(
+            ["school_id", "session_id"],
+            ["session.school_id", "session.id"],
+            name="fk_attendance_record_session_tenant",
+            ondelete="CASCADE",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("att"))
     school_id: Mapped[str] = mapped_column(
         ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
-    session_id: Mapped[str] = mapped_column(
-        ForeignKey("session.id", ondelete="CASCADE"), nullable=False
-    )
+    session_id: Mapped[str] = mapped_column(String(64), nullable=False)
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False
     )
