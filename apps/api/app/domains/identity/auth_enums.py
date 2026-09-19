@@ -150,3 +150,34 @@ class SessionRevokeReason(enum.StrEnum):
 #: one global account can reach many schools, and M01 must not read memberships
 #: to find out which — that coupling is exactly what §13 forbids.
 AUTHORIZATION_INVALIDATED_EVENT = "identity.authorization_invalidated"
+
+
+class AuthCommand(enum.StrEnum):
+    """§12's command scope for a receipt.
+
+    The AUTH-nn name rather than an HTTP path: §6 defines these as commands, and
+    two transports for one command must share a receipt scope or the same
+    ``request_id`` would execute twice.
+    """
+
+    LOGOUT_ALL = "AUTH-05"
+    LINK_IDENTITY = "AUTH-06"
+    UNLINK_IDENTITY = "AUTH-07"
+    SUSPEND_ACCOUNT = "AUTH-09"
+    REACTIVATE_ACCOUNT = "AUTH-10"
+    DISABLE_ACCOUNT = "AUTH-11"
+
+
+class AuthCommandReceiptStatus(enum.StrEnum):
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+
+
+#: M05 permission codes §6 requires for the administrative account commands.
+#: Declared here, as names, so M05 has something concrete to register rather
+#: than a string invented at each call site. M01 does not check them — it has no
+#: permission registry to check against, and inventing one would be M05's job
+#: done badly. The HTTP surfaces for AUTH-09/10/11 wait for M05 to exist.
+PERMISSION_SUSPEND_ACCOUNT = "platform.accounts.suspend"
+PERMISSION_REACTIVATE_ACCOUNT = "platform.accounts.reactivate"
+PERMISSION_DISABLE_ACCOUNT = "platform.accounts.disable"

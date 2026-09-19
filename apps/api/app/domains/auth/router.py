@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import logging
 import secrets
-from typing import Any, TypeVar, cast
+from typing import Annotated, Any, TypeVar, cast
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Header, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -26,8 +26,12 @@ from starlette.status import HTTP_204_NO_CONTENT
 from app.common.errors import NotFoundError, UnauthorizedError
 from app.config import Settings
 from app.db import SessionLocal
-from app.domains.identity import accounts, sessions
-from app.domains.identity.auth_enums import SessionRevokeReason, UserAccountStatus
+from app.domains.identity import accounts, auth_commands, sessions
+from app.domains.identity.auth_enums import (
+    AuthCommand,
+    SessionRevokeReason,
+    UserAccountStatus,
+)
 from app.domains.identity.auth_models import AuthIdentity, AuthSession, UserAccount
 from app.domains.identity.models import Person
 from app.security.auth import SESSION_CREDENTIAL_KEY
@@ -238,6 +242,75 @@ def logout(request: Request) -> Response:
     resp = Response(status_code=HTTP_204_NO_CONTENT)
     resp.delete_cookie(CSRF_COOKIE, path="/")
     return resp
+
+
+class LogoutAllRequest(BaseModel):
+    """§12: every mutation carries a stable UUID, and on HTTP the
+    ``Idempotency-Key`` header must equal it exactly."""
+
+    request_id: str = Field(min_length=1, max_length=64)
+
+
+class LogoutAllResponse(BaseModel):
+    revoked_sessions: int
+
+
+@router.post(
+    "/auth/logout-all",
+    response_model=LogoutAllResponse,
+    operation_id="logoutAllSessions",
+)
+def logout_all_sessions(
+    body: LogoutAllRequest,
+    request: Request,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> LogoutAllResponse:
+    """§6 AUTH-05: end every session of this account, including this one.
+
+    The interesting part is the retry. This command revokes the credential that
+    authorized it, so the identical retry arrives holding something that no
+    longer authenticates anything — and §6 says it must still get the first
+    result, not a 401 and not a second execution. The digest of that revoked
+    credential finds exactly one receipt and returns exactly what it stored;
+    it authorizes nothing else (M01-QA-020).
+
+    Not yet done, and not pretended: §6 also wants a fresh re-authentication
+    "kada je provider podržava". Neither adapter here supports step-up, so this
+    requires an active session and no more — recorded rather than faked.
+    """
+    credential = request.session.get(SESSION_CREDENTIAL_KEY)
+    if not credential:
+        raise UnauthorizedError("Nedostaje prijava.")
+    request_id = auth_commands.require_request_id(body.request_id, idempotency_key)
+
+    with SessionLocal() as db:
+        validated = sessions.validate_session(db, credential)
+        if validated is None:
+            # The session may be gone precisely because this command already
+            # ran. That is the one case §6 lets a revoked credential be used
+            # for: to collect the result it produced.
+            replay = auth_commands.replay_for_revoked_credential(
+                db,
+                credential=credential,
+                command=AuthCommand.LOGOUT_ALL,
+                request_id=request_id,
+            )
+            if replay is None:
+                raise UnauthorizedError("Prijava ne važi.")
+            request.session.clear()
+            return LogoutAllResponse(**replay["body"])
+
+        _, account = validated
+        result = auth_commands.logout_all(
+            db,
+            account=account,
+            request_id=request_id,
+            current_credential=credential,
+        )
+        db.commit()
+
+    request.session.clear()
+    return LogoutAllResponse(**result["body"])
 
 
 def _account_and_identity(db: Session, person: Person) -> tuple[UserAccount, AuthIdentity]:

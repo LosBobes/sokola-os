@@ -22,6 +22,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 class AppError(Exception):
     status_code: int = 400
     code: str = "BAD_REQUEST"
+    #: Response headers this error carries. Some errors are only actionable with
+    #: one — M01 §11 pairs `IDEMPOTENCY_IN_PROGRESS` and `RATE_LIMITED` with
+    #: `Retry-After`, and without it the client is told to wait but not how long.
+    headers: dict[str, str] = {}
 
     def __init__(self, message: str, *, details: dict[str, Any] | None = None) -> None:
         super().__init__(message)
@@ -66,6 +70,63 @@ class IdempotencyConflictError(ConflictError):
     code = "IDEMPOTENCY_CONFLICT"
 
 
+class IdempotencyKeyReusedError(IdempotencyConflictError):
+    """M01 §11: same key, different canonical payload.
+
+    Distinct from the generic conflict above because M01's contract names this
+    code, and a client that retries a *changed* payload under an old key has a
+    bug the generic message would hide.
+    """
+
+    code = "IDEMPOTENCY_KEY_REUSED"
+
+
+class IdempotencyInProgressError(ConflictError):
+    """M01 §12: an identical request is still running and has no durable result.
+
+    The client is told to come back in a second rather than being served a
+    half-finished answer — and never by executing the side effect a second time.
+    """
+
+    code = "IDEMPOTENCY_IN_PROGRESS"
+    headers = {"Retry-After": "1"}
+
+
+class IdempotencyKeyInvalidError(BadRequestError):
+    """M01 §12: a write with no valid UUID key, or an `Idempotency-Key` header
+    that does not match the body's `request_id`.
+
+    Refused before any business write, so a mismatched pair never produces a
+    state change, a receipt, an audit success or an outbox message.
+    """
+
+    code = "IDEMPOTENCY_KEY_INVALID"
+
+
+class StaleVersionError(ConflictError):
+    """M01 §11: `expected_version` no longer matches. Reload and retry."""
+
+    code = "STALE_VERSION"
+
+
+class InvalidAccountTransitionError(ConflictError):
+    """M01 §11: the requested status change is not allowed from the current one.
+
+    §5's table has no row out of `DISABLED` or `MERGED_RETIRED`, and this is
+    what a caller who tries anyway gets — never a silent no-op.
+    """
+
+    code = "INVALID_ACCOUNT_TRANSITION"
+
+
+class RateLimitedError(AppError):
+    """M01 §11: generic "please wait", with no confirmation of what exists."""
+
+    status_code = 429
+    code = "RATE_LIMITED"
+    headers = {"Retry-After": "60"}
+
+
 def _envelope(code: str, message: str, details: dict[str, Any] | None = None) -> dict[str, Any]:
     body: dict[str, Any] = {"error": {"code": code, "message": message}}
     if details:
@@ -79,6 +140,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content=_envelope(exc.code, exc.message, exc.details),
+            headers=exc.headers or None,
         )
 
     @app.exception_handler(RequestValidationError)

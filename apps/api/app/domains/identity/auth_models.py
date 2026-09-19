@@ -46,6 +46,8 @@ from app.common.columns import enum_type
 from app.common.ids import new_id, new_random_id
 from app.domains.identity.auth_enums import (
     AccountDisableReason,
+    AuthCommand,
+    AuthCommandReceiptStatus,
     AuthEventOutcome,
     AuthEventType,
     AuthProviderStatus,
@@ -397,6 +399,70 @@ class LocalPasswordCredential(Base, TimestampMixin):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
 
 
+class AuthCommandReceipt(Base, TimestampMixin):
+    """§6 AUTH-05 / §12: the durable result of one security command.
+
+    Security commands have a problem ordinary idempotency does not: the command
+    can revoke the caller's own session. §6 is explicit about the consequence —
+    after `LogoutAll` succeeds, the identical retry arrives holding a credential
+    that no longer authenticates anything, and it must still receive the first
+    result rather than a 401 or a second execution. So the retry is allowed to
+    find this row by the digest of the *revoked* credential it presented. That
+    lookup returns a stored result and nothing else; it is not authorization for
+    any other action, which is why the column is scoped to one receipt.
+
+    §12 also insists the scope must not vanish because the command logged the
+    actor out. Hence a plain row with its own retention, rather than anything
+    hanging off the session.
+    """
+
+    __tablename__ = "auth_command_receipt"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_account_id", "command", "request_id", name="uq_auth_command_receipt"
+        ),
+        # A completed receipt has a result; an in-progress one does not yet.
+        # Without this, a crash mid-command could leave a row that replays
+        # `null` as though it were the answer.
+        CheckConstraint(
+            "(status = 'COMPLETED') = (response_status IS NOT NULL)",
+            name="ck_auth_command_receipt_result",
+        ),
+        Index("ix_auth_command_receipt_revoked", "revoked_credential_hash"),
+        Index("ix_auth_command_receipt_retention", "retain_until"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("acr"))
+    user_account_id: Mapped[str] = mapped_column(
+        ForeignKey("user_account.id", ondelete="CASCADE"), nullable=False
+    )
+    command: Mapped[AuthCommand] = mapped_column(enum_type(AuthCommand), nullable=False)
+    #: The client's stable UUID for this attempt (§12).
+    request_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    #: SHA-256 of the canonical payload. A retry whose payload differs is
+    #: `IDEMPOTENCY_KEY_REUSED`, not a replay — the same key naming two
+    #: different requests is a client bug, and serving the first result would
+    #: hide it.
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[AuthCommandReceiptStatus] = mapped_column(
+        enum_type(AuthCommandReceiptStatus),
+        nullable=False,
+        default=AuthCommandReceiptStatus.IN_PROGRESS,
+    )
+    response_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    response_body: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    #: Set only by a command that revoked the credential presenting it, so that
+    #: credential's holder can still collect this one result.
+    revoked_credential_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: §12: kept "najmanje do isteka maksimalne session+retry granice". Stored
+    #: rather than computed at sweep time, so shortening the session lifetime
+    #: later cannot retroactively delete receipts a client may still retry
+    #: against.
+    retain_until: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
 class AuthenticationEvent(Base):
     """§13's security audit of sign-in, logout, revocation and linking.
 
@@ -445,6 +511,7 @@ class AuthenticationEvent(Base):
 
 
 __all__ = [
+    "AuthCommandReceipt",
     "AuthIdentity",
     "AuthSession",
     "AuthProviderRegistration",
