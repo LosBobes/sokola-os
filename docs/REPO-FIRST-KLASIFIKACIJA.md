@@ -78,7 +78,7 @@ authorization domen.
 
 | Modul | Klasifikacija | Putanja / dokaz |
 |---|---|---|
-| M01 Identity | `ADAPT` | §3.1–3.2, §4.7 i AUTH-03/04/08 isporučeni: `user_account`, `auth_identity`, `auth_provider_registration`, `local_password_credential`, `authentication_event`, `auth_session` (migracije `a7e4c2f91b08`, `b8d3f60a51c7`). Preostaje AUTH-05/06/07/09/10/11 sa §12 receipt-ima i callback enforcement — vidi F-19, F-20, F-21 |
+| M01 Identity | `ADAPT` | §3.1–3.2, §4.7, §12 i AUTH-03/04/05/08/09/10/11 isporučeni (migracije `a7e4c2f91b08`, `b8d3f60a51c7`, `c4a71e8b35d2`). AUTH-09/10/11 su portovi bez rute dok ne postoji M05. Preostaje AUTH-06/07, callback enforcement i step-up — vidi F-19, F-20, F-21, F-22 |
 | M02 Pozivnice | `ADAPT` | `identity/invite_tokens.py`, `Invitation` model, `tests/test_invitations.py`. Invite-only postoji; M02 ugovor je znatno širi (55 KB master) |
 | M03 Multi-tenancy | `ADAPT` | `app/security/context.py`. Server-derived context postoji i testiran je; **nedostaju composite tenant FK/UNIQUE i RLS** (§7) |
 | M04 School/Subscription | `IMPLEMENT` (§2.1–2.8 urađeno) | Anchor: `organization`, `organization_school`, `school_locator`, `school_status_transition`, prošireni `school` (migracija `a4d76f2b91c0`, 30 testova). Ownership: `school_owner_nomination`, `school_primary_owner_term` sa composite tenant FK-ovima (`app/domains/school/ownership*.py`, migracija `b9e3c05a74d2`, 31 test). Entitlement: `school_product_entitlement` sa read-time pravilom efektivnosti (`app/domains/school/entitlements.py`, migracija `c1f4a86d39b7`, 23 testa). **Ostaje:** subscription usage (§2.9–2.10, blokirano — vidi F-15), komercijalni sloj (§2.12–2.20), SCH-01..06 / ORG-01..04 / OWN-01..04 / ENT-01..02 kao komande sa permisijama i step-up-om |
@@ -282,12 +282,22 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Zašto nije urađeno ovde:** provera callback-a je promena login putanje, a ovaj PR je namerno promena modela. Spajanje to dvoje značilo bi jedan PR koji istovremeno menja šemu autentifikacije i njeno ponašanje.
 - **Status:** `CHALLENGE_NOT_APPLIED` — sledi u M01 callback isečku, zajedno sa `AuthenticationEvent` upisom za neuspele pokušaje i rate limit-ima iz §10.
 
-### F-21 — AUTH-05 `LogoutAll` nema HTTP površinu: nedostaju §12 idempotency receipt-i
+### F-21 — AUTH-05/09/10/11 i §12 receipt-i (DELIMIČNO OTKLONJENO)
 
 - **Ugovor:** M01 §6 AUTH-05 traži da server, **pre** version bump-a i u istoj transakciji, sačuva minimalni `AuthCommandReceipt` za `(user_account_id, AUTH-05, request_id, canonical_payload_hash)`. Posle opoziva sopstvene sesije, identičan retry sme da upotrebi hash prezentovanog **opozvanog** credential-a isključivo da nađe isti receipt i vrati prethodni uspeh (M01-QA-020). §12 dodaje `Idempotency-Key` ↔ body `request_id` poklapanje, `IDEMPOTENCY_IN_PROGRESS` sa `Retry-After: 1` i `IDEMPOTENCY_KEY_REUSED`.
-- **Stanje posle ovog PR-a:** interni port **postoji** i radi — `sessions.revoke_account_sessions` zaključava nalog, bumpuje verziju, opoziva sesije, piše audit i outbox u jednoj transakciji, i ima `keep_session_id` za slučaj koji §6 dozvoljava. Nedostaje samo HTTP komanda i receipt tabela oko njega.
-- **Zašto nije ovde:** receipt je zaseban ugovor (§12) sa sopstvenim testovima trke (M01-QA-026/027), a repo već ima `app/platform/idempotency` koji treba proveriti pre nego što se M01 nakalemi na njega. Spajanje bi značilo jedan PR koji istovremeno menja session model i idempotency ugovor.
-- **Status:** `CHALLENGE_NOT_APPLIED` — sledeći M01 isečak, zajedno sa AUTH-09/10/11 (suspend/reactivate/disable), koji koriste isti receipt mehanizam.
+- **Rešenje (primenjeno, migracija `c4a71e8b35d2`):** `auth_command_receipt` je **account-scoped**, ne school-scoped — jedan nalog dopire do više škola, a §8 drži tenancy van auth putanje, pa postojeći `app/platform/idempotency` (sa `school_id NOT NULL`) ne odgovara. Kolona `revoked_credential_hash` je tačno ono što §6 traži: digest credential-a koji je ta komanda opozvala, kojim njegov nosilac može da preuzme **taj jedan** rezultat i ništa drugo. `retain_until` se upisuje, ne računa pri sweep-u, da naknadno skraćivanje session lifetime-a ne bi retroaktivno obrisalo receipt-e na koje klijent još ima pravo.
+- **Šta je isporučeno:** AUTH-05 `LogoutAll` sa HTTP površinom (`POST /auth/logout-all`); AUTH-09/10/11 kao **portovi**, sa `expected_version`, zatvorenim reason kodovima, revoke-all i auditom.
+- **Zašto AUTH-09/10/11 nemaju rutu:** §6 za svaku traži M05 dozvolu (`platform.accounts.suspend` i srodne), a M05 permission registry ne postoji. Ruta koja ne proverava ništa — ili proverava dozvolu koju je ovaj repo sam izmislio — bila bi gora od nepostojeće: izgledala bi kao da je ugovor ispunjen. Imena dozvola su deklarisana u `auth_enums.py` da M05 ima šta da registruje.
+- **Status:** `OTKLONJENO` za §12 receipt-e, AUTH-05, AUTH-09, AUTH-10 i AUTH-11 kao portove. `CHALLENGE_NOT_APPLIED` za HTTP površine AUTH-09/10/11 — čekaju M05.
+
+### F-22 — AUTH-05/06/07 traže „svežu ponovnu autentifikaciju", a nijedan adapter ne podržava step-up
+
+- **Ugovor:** §6 AUTH-05 traži „aktivnu sesiju i **svežu ponovnu autentifikaciju** kada je provider podržava"; AUTH-06 i AUTH-07 traže je bezuslovno. §10 dodaje da step-up aktivira „samo provider ili eksplicitno odobrena konfiguracija, nikad ne aplikacioni improvizovani tok".
+- **Repo dokaz:** Google adapter (`app/security/oidc.py`) ne šalje `prompt=login` ni `max_age`, i ne čita `auth_time` iz tokena; local-password adapter nema pojam step-up-a. `auth_session.auth_time` postoji i puni se, ali trenutno vremenom izdavanja sesije, ne trenutkom kada je provider stvarno autentifikovao osobu.
+- **Zašto nije improvizovano:** §10 izričito zabranjuje aplikacioni improvizovani tok. Ponovno traženje lozinke u našoj formi nije provider step-up i dalo bi lažan osećaj da je AUTH-06/07 uslov ispunjen.
+- **Minimalni predlog:** Google adapter dobija `prompt=login` + `max_age` na step-up putanji i upisuje `auth_time` iz ID tokena; local-password adapter dobija eksplicitnu ponovnu proveru lozinke **označenu kao slabiju** u `assurance_context`, pa politika može da odbije step-up za osetljive komande.
+- **Status:** `CHALLENGE_NOT_APPLIED` — ide zajedno sa callback hardening isečkom (F-20), koji ionako dira isti adapter. AUTH-05 je isporučen sa aktivnom sesijom kao jedinim uslovom, i to je u PR-u eksplicitno rečeno.
+
 
 ## 5. Šta je u ovom radu stvarno urađeno
 
