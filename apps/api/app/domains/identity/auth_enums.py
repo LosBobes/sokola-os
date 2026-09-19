@@ -112,3 +112,41 @@ LOCAL_PASSWORD_ISSUER = "urn:sokola:local-password"
 
 GOOGLE_PROVIDER = "google"
 GOOGLE_ISSUER = "https://accounts.google.com"
+
+
+class SessionRevokeReason(enum.StrEnum):
+    """§3.2 `revoke_reason_code`, and §5's row for `aktivna → REVOKED`.
+
+    Closed, because the reason is what a security reviewer reads months later to
+    answer "why did everyone get logged out on the 14th". A free-text field
+    answers that with whatever the caller was thinking at the time.
+    """
+
+    #: AUTH-04: this session, by its own holder.
+    LOGOUT = "LOGOUT"
+    #: AUTH-05: every session of the account, by its holder.
+    LOGOUT_ALL = "LOGOUT_ALL"
+    ACCOUNT_SUSPENDED = "ACCOUNT_SUSPENDED"
+    ACCOUNT_DISABLED = "ACCOUNT_DISABLED"
+    ACCOUNT_MERGED = "ACCOUNT_MERGED"
+    IDENTITY_LINKED = "IDENTITY_LINKED"
+    IDENTITY_UNLINKED = "IDENTITY_UNLINKED"
+    #: §5: a provider told us, through back-channel logout or equivalent, that
+    #: the authentication behind this session no longer stands.
+    PROVIDER_REVOKED = "PROVIDER_REVOKED"
+    #: §4.8: M03/M05 changed what the account may reach. The session is not
+    #: necessarily ended — that is their decision — but its authorization
+    #: projection is not to be trusted.
+    ACCESS_CHANGED = "ACCESS_CHANGED"
+    SECURITY_EVENT = "SECURITY_EVENT"
+    #: Not a revocation decision at all: the row was already past its idle or
+    #: absolute expiry when someone presented it. §5 distinguishes EXPIRED from
+    #: REVOKED, and recording expiry as a security action would bury the real
+    #: ones.
+    EXPIRED = "EXPIRED"
+
+
+#: §13's outbox event for §4.7. PLATFORM-scoped (`school_id IS NULL`) because
+#: one global account can reach many schools, and M01 must not read memberships
+#: to find out which — that coupling is exactly what §13 forbids.
+AUTHORIZATION_INVALIDATED_EVENT = "identity.authorization_invalidated"

@@ -6408,6 +6408,7 @@
     },
     "/auth/logout": {
       "post": {
+        "description": "\u00a76 AUTH-04: revoke exactly the session presented, and nothing else.\n\nThe server-side revocation is the part that matters \u2014 clearing the cookie\nonly affects this browser, and \u00a76 is explicit that a credential presented\nafter this must fail on the server, not merely be missing on the client.\nThe other sessions of the same account stay live (M01-QA-008); ending those\nis `LogoutAll`, a different command with different proof requirements.\n\nWith no credential, \u00a76 allows a safe empty success: the client cleans up and\nthe endpoint does not claim a revocation it did not perform.",
         "operationId": "logout",
         "responses": {
           "204": {

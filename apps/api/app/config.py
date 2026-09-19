@@ -44,8 +44,16 @@ class Settings(BaseSettings):
     # for the interface a future S3/GCS backend would implement instead. ---
     documents_storage_dir: str = "var/documents"
 
-    # --- Auth session (signed cookie). Change the secret outside local. ---
+    # --- Auth session. The server-side `auth_session` row is the session
+    # (M01 §3.2); the signed cookie only carries its opaque credential, so the
+    # secret still has to change outside local. ---
     session_secret: str = "dev-insecure-session-secret-change-me"
+    # M01 §3.2's fail-closed defaults, and the spec is emphatic that these are
+    # "strukturirana bezbednosna konfiguracija, ne dokumentaciona pretpostavka":
+    # a session ends after 30 minutes idle or 12 hours absolute, whichever comes
+    # first. Raising either is a deliberate, audited security decision.
+    session_idle_minutes: int = 30
+    session_absolute_hours: int = 12
 
     # --- Google OIDC. When client id + secret are set, the Google login flow
     # is enabled; otherwise the app falls back to the dev header adapter. ---

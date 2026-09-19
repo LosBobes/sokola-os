@@ -67,7 +67,19 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Logout */
+        /**
+         * Logout
+         * @description §6 AUTH-04: revoke exactly the session presented, and nothing else.
+         *
+         *     The server-side revocation is the part that matters — clearing the cookie
+         *     only affects this browser, and §6 is explicit that a credential presented
+         *     after this must fail on the server, not merely be missing on the client.
+         *     The other sessions of the same account stay live (M01-QA-008); ending those
+         *     is `LogoutAll`, a different command with different proof requirements.
+         *
+         *     With no credential, §6 allows a safe empty success: the client cleans up and
+         *     the endpoint does not claim a revocation it did not perform.
+         */
         post: operations["logout"];
         delete?: never;
         options?: never;
