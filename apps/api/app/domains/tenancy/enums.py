@@ -74,3 +74,33 @@ WORKSPACE_PAYER = "PAYER"
 WORKSPACE_KEYS = frozenset(
     {WORKSPACE_ADMIN, WORKSPACE_INSTRUCTOR, WORKSPACE_GUARDIAN, WORKSPACE_PAYER}
 )
+
+
+class SchoolMode(enum.StrEnum):
+    """§6.1 vs §6.2: what a context is allowed to be used *for*.
+
+    Not the school's status — the status is M04's and lives on `School`. This
+    is what the status plus the actor means for this one session: a school
+    that is `ACTIVE` gives `REGULAR` work, a school that is `IN_PREPARATION`
+    gives only setup, and `DEACTIVATED` gives no context at all (§6.3), so it
+    has no mode here.
+    """
+
+    REGULAR = "REGULAR"
+    #: §6.2. Opens only O01–O07 and the explicit M20/M04 setup commands — never
+    #: regular Finance, Attendance, Documents, Reporting or a guardian
+    #: workspace.
+    SETUP_ONLY = "SETUP_ONLY"
+
+
+#: Where a client may start once a context resolves.
+#:
+#: For regular work this is the role home, which already dispatches by role in
+#: the web app; naming a per-workspace route here would put the same decision
+#: in two places and let them drift.
+START_ROUTE_REGULAR = "/"
+#: The setup surface a `SETUP_ONLY` context may open. §14's UI for this does
+#: not exist yet (recorded as F-28); the contract still says what the route is
+#: rather than sending a setup-only actor to the regular home, which §6.2
+#: forbids.
+START_ROUTE_SETUP = "/skola/priprema"

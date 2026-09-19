@@ -27,6 +27,45 @@
         "title": "AcceptInvitationResponse",
         "type": "object"
       },
+      "ActiveTenantContextResponse": {
+        "description": "\u00a712's TEN-Q02 result, and nothing beyond it.\n\nNo permission list: \u00a712 forbids returning one as authority, and a list on\nthe wire becomes a cached authority the first time a client trusts it\ninstead of asking. What the person may do is decided per action, by M05.",
+        "properties": {
+          "allowed_start_route": {
+            "title": "Allowed Start Route",
+            "type": "string"
+          },
+          "context_etag": {
+            "description": "Opaque; compare for equality only.",
+            "title": "Context Etag",
+            "type": "string"
+          },
+          "context_version": {
+            "title": "Context Version",
+            "type": "integer"
+          },
+          "school_id": {
+            "title": "School Id",
+            "type": "string"
+          },
+          "school_mode": {
+            "$ref": "#/components/schemas/SchoolMode"
+          },
+          "workspace_key": {
+            "title": "Workspace Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "school_id",
+          "school_mode",
+          "workspace_key",
+          "context_version",
+          "context_etag",
+          "allowed_start_route"
+        ],
+        "title": "ActiveTenantContextResponse",
+        "type": "object"
+      },
       "AddGroupMemberRequest": {
         "description": "Attach a person to a group. ``role`` says in what capacity , defaults to\n``MEMBER`` (polaznik), the only role that is rostered and billed.",
         "properties": {
@@ -5063,6 +5102,15 @@
           "OTHER"
         ],
         "title": "SchoolKind",
+        "type": "string"
+      },
+      "SchoolMode": {
+        "description": "\u00a76.1 vs \u00a76.2: what a context is allowed to be used *for*.\n\nNot the school's status \u2014 the status is M04's and lives on `School`. This\nis what the status plus the actor means for this one session: a school\nthat is `ACTIVE` gives `REGULAR` work, a school that is `IN_PREPARATION`\ngives only setup, and `DEACTIVATED` gives no context at all (\u00a76.3), so it\nhas no mode here.",
+        "enum": [
+          "REGULAR",
+          "SETUP_ONLY"
+        ],
+        "title": "SchoolMode",
         "type": "string"
       },
       "SchoolResponse": {
@@ -12925,6 +12973,28 @@
         "summary": "Search",
         "tags": [
           "search"
+        ]
+      }
+    },
+    "/tenant/context": {
+      "get": {
+        "description": "TEN-Q02. No body, no query, no school id \u2014 \u00a712 takes the session from\nthe M01 credential alone, because a client that names its own tenant is\nthe thing M03 exists to prevent.\n\nEvery refusal here is the same neutral `TENANT_CONTEXT_REQUIRED`: no\nsession, no selection yet, or a selection that has gone stale all mean\n\"choose a school\", and distinguishing them would tell an unauthenticated\ncaller which case they are in.",
+        "operationId": "getActiveTenantContext",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveTenantContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Active Context",
+        "tags": [
+          "tenancy"
         ]
       }
     },

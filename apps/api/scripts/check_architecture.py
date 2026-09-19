@@ -77,6 +77,28 @@ def check_domain_boundaries() -> list[str]:
     return problems
 
 
+def check_application_direction() -> list[str]:
+    """``app/application`` may import any domain; no domain may import it.
+
+    That package exists because some questions need more than one domain to
+    answer (M03 §12's application coordinator). The direction has to stay
+    one-way, or it becomes the back door for exactly the domain-to-domain
+    coupling ``check_domain_boundaries`` exists to prevent: domain A imports
+    the coordinator, the coordinator imports domain B, and the gate above sees
+    nothing.
+    """
+    problems: list[str] = []
+    for py in DOMAINS.rglob("*.py"):
+        for module in _imports(py):
+            if module == "app.application" or module.startswith("app.application."):
+                problems.append(
+                    f"{py.relative_to(APP.parent)}: a domain imports "
+                    f"'{module}' (the application layer depends on domains, "
+                    "never the other way round)"
+                )
+    return problems
+
+
 def check_common_purity() -> list[str]:
     problems: list[str] = []
     for py in (APP / "common").rglob("*.py"):
@@ -152,6 +174,7 @@ def check_user_account_columns() -> list[str]:
 def main() -> int:
     checks = [
         check_domain_boundaries(),
+        check_application_direction(),
         check_common_purity(),
         check_service_sizes(),
         check_credential_columns(),
