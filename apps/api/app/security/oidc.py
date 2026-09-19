@@ -111,6 +111,40 @@ def auth_time_of(claims: dict[str, Any]) -> dt.datetime | None:
         return None
 
 
+def step_up_parameters(max_age: dt.timedelta) -> dict[str, str | int]:
+    """What to send Google when the *provider* must re-authenticate the person.
+
+    §10 is firm that step-up comes from the provider or from approved
+    configuration, "nikad ne aplikacioni improvizovani tok" — so this asks
+    Google to prove the person again rather than asking them for a password in
+    our own form. Our form proves the person knows a secret we stored; only the
+    provider can prove the person is present right now.
+
+    Both parameters, because they fail differently: `prompt=login` asks for a
+    fresh authentication, and `max_age` makes the resulting `auth_time` a claim
+    we can check rather than a promise we have to trust. A provider that honours
+    neither gives us an `auth_time` too old, and the caller refuses.
+    """
+    return {"prompt": "login", "max_age": int(max_age.total_seconds())}
+
+
+def assurance_of(claims: dict[str, Any]) -> dict[str, Any]:
+    """§3.2's `assurance_context`: AMR/ACR and nothing else.
+
+    Explicitly not the token. §13 forbids the raw provider payload, and a column
+    that accepted the whole claim set would end up holding the whole claim set
+    — including the email, the picture URL and whatever the provider adds next.
+    """
+    context: dict[str, Any] = {}
+    amr = claims.get("amr")
+    if isinstance(amr, list) and all(isinstance(v, str) for v in amr):
+        context["amr"] = amr
+    acr = claims.get("acr")
+    if isinstance(acr, str):
+        context["acr"] = acr
+    return context
+
+
 def jit_provision(db: Session, claims: dict[str, Any]) -> Person:
     """Return the Person for these verified ID-token claims.
 

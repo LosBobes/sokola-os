@@ -114,6 +114,40 @@ class ProviderNotAllowedError(BadRequestError):
     code = "PROVIDER_NOT_ALLOWED"
 
 
+class IdentityAlreadyLinkedError(ConflictError):
+    """M01 §11: this provider subject already belongs to an account.
+
+    §11 adds "samo ovlašćenom potvrđenom akteru; ne otkriva drugi nalog" — the
+    caller learns the subject is taken and nothing about who has it, because
+    "which account owns this Google address" is exactly the question an attacker
+    would like answered.
+    """
+
+    code = "IDENTITY_ALREADY_LINKED"
+
+
+class LastIdentityProtectedError(ConflictError):
+    """M01 §11: the account's last way to sign in cannot be removed.
+
+    §2 requires every ACTIVE or SUSPENDED account to keep at least one linked
+    identity. Without this an account-security screen could lock someone out of
+    their own account in one click, and nothing in M01 could let them back in.
+    """
+
+    code = "LAST_IDENTITY_PROTECTED"
+
+
+class ReauthenticationRequiredError(ForbiddenError):
+    """M01 §6 AUTH-06/07: the action needs a fresh provider authentication.
+
+    Distinct from `UNAUTHENTICATED`: the session is perfectly valid, it is just
+    not *recent* enough to authorize changing how the account signs in. Telling
+    the two apart is what lets a client re-authenticate instead of logging out.
+    """
+
+    code = "REAUTHENTICATION_REQUIRED"
+
+
 class StaleVersionError(ConflictError):
     """M01 §11: `expected_version` no longer matches. Reload and retry."""
 

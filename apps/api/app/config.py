@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     # first. Raising either is a deliberate, audited security decision.
     session_idle_minutes: int = 30
     session_absolute_hours: int = 12
+    # M01 §6 AUTH-06/07: how recently the provider must have authenticated the
+    # person before they may change how the account signs in. Short on purpose —
+    # this is the window in which a borrowed, unlocked laptop can be used to add
+    # a second way in, and everything after that looks like a legitimate login.
+    step_up_max_age_minutes: int = 5
 
     # --- Google OIDC. When client id + secret are set, the Google login flow
     # is enabled; otherwise the app falls back to the dev header adapter. ---

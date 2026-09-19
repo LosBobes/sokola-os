@@ -12,6 +12,7 @@ every request.
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import secrets
 from contextlib import suppress
@@ -54,7 +55,13 @@ from app.security import rate_guard
 from app.security.auth import SESSION_CREDENTIAL_KEY
 from app.security.csrf import CSRF_COOKIE
 from app.security.deps import SettingsDep
-from app.security.oidc import claims_for_registry, get_oauth, jit_provision
+from app.security.oidc import (
+    assurance_of,
+    auth_time_of,
+    claims_for_registry,
+    get_oauth,
+    jit_provision,
+)
 from app.security.password import MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH
 from app.security.password_auth import authenticate_with_password, register_with_password
 
@@ -124,7 +131,13 @@ _ResponseT = TypeVar("_ResponseT", RedirectResponse, JSONResponse)
 
 
 def _establish_session(
-    request: Request, settings: Settings, person: Person, resp: _ResponseT
+    request: Request,
+    settings: Settings,
+    person: Person,
+    resp: _ResponseT,
+    *,
+    auth_time: dt.datetime | None = None,
+    assurance_context: dict[str, Any] | None = None,
 ) -> _ResponseT:
     """Issue a server-side session and put its credential in the signed cookie.
 
@@ -144,6 +157,12 @@ def _establish_session(
             identity=identity,
             idle_minutes=settings.session_idle_minutes,
             absolute_hours=settings.session_absolute_hours,
+            # §3.2: when the *provider* authenticated the person. Falling back
+            # to now is right for the local adapter — it authenticated them
+            # just now — and wrong to assume for a provider that told us
+            # otherwise, which is why the callback passes its claim through.
+            auth_time=auth_time,
+            assurance_context=assurance_context,
         )
         accounts.record_authentication(db, account, identity)
         db.commit()
@@ -165,11 +184,25 @@ def _establish_session(
     return resp
 
 
-def _issue_session(request: Request, settings: Settings, person: Person) -> RedirectResponse:
+def _issue_session(
+    request: Request,
+    settings: Settings,
+    person: Person,
+    *,
+    auth_time: dt.datetime | None = None,
+    assurance_context: dict[str, Any] | None = None,
+) -> RedirectResponse:
     """Redirect-flow session issuance: land the browser in the SPA already
     authenticated (the Google callback)."""
     resp = RedirectResponse(url=settings.web_post_login_url)
-    return _establish_session(request, settings, person, resp)
+    return _establish_session(
+        request,
+        settings,
+        person,
+        resp,
+        auth_time=auth_time,
+        assurance_context=assurance_context,
+    )
 
 
 @router.get("/auth/google/callback", operation_id="googleCallback")
@@ -217,7 +250,13 @@ async def google_callback(request: Request, settings: SettingsDep) -> RedirectRe
 
         person = jit_provision(db, dict(claims))
 
-    return _issue_session(request, settings, person)
+    return _issue_session(
+        request,
+        settings,
+        person,
+        auth_time=auth_time_of(dict(claims)),
+        assurance_context=assurance_of(dict(claims)),
+    )
 
 
 def _count_failure(
