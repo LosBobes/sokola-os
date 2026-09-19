@@ -1,6 +1,13 @@
-"""M07 §2.3: one school's verified link between an adult and a child.
+"""M07 §2.1-2.3: families, who is in them, and who may act for a child.
 
-This goes in **alongside** `people.GuardianRelationship` and
+The three tables here are three *separate facts*, which §3.1 states outright:
+a family grouping, someone's place in it, and a verified guardian relationship
+are not derived from one another, nor from a surname, an email or an address.
+Nothing in this module grants access on the strength of a shared household —
+that is `GuardianChildLink` and only `GuardianChildLink`, and §3.2 says even a
+shared child leaves two families invisible to each other.
+
+`GuardianChildLink` goes in **alongside** `people.GuardianRelationship` and
 `people.GuardianSchoolAccess` rather than replacing them. Those two have 107
 readers between them across identity, the parent router, communications and
 events (F-31), so the replacement is staged: the new table first, readers moved
@@ -17,6 +24,7 @@ import datetime as dt
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
@@ -30,7 +38,14 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.common.base import Base, TimestampMixin
 from app.common.columns import enum_type
 from app.common.ids import new_id
-from app.domains.family.enums import LinkStatus, RelationshipKind
+from app.domains.family.enums import (
+    FamilyMembershipStatus,
+    FamilyStatus,
+    LinkStatus,
+    MemberKind,
+    RelationshipKind,
+)
+from app.platform import clock
 
 
 class GuardianChildLink(Base, TimestampMixin):
@@ -194,4 +209,149 @@ class GuardianChildLink(Base, TimestampMixin):
     #: decision is made and tested there.
     decision_by_account_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     decision_reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
+
+
+class Family(Base, TimestampMixin):
+    """§2.1. A grouping one school recorded — a household, as that school sees it.
+
+    §3.1 is the rule that gives this table its shape: family, membership,
+    guardian link, payer link and primacy are **five separate facts**, and none
+    is derived from a surname, an email, an address or another table. So this
+    row carries almost nothing. It has no name of its own beyond an internal
+    label the school may set for its own lists, and §2.1 says that label "ne
+    koristi se za identitet" — it is not a key, not a search handle, not a way
+    to find a family you were not already allowed to see.
+
+    What it deliberately does *not* do is grant anything. Two people in one
+    family see nothing of each other because of it; §3.2 says even a shared
+    child does not make two families visible to one another. Whether an adult
+    may act for a child is `GuardianChildLink`, and only that.
+    """
+
+    __tablename__ = "family"
+    __table_args__ = (
+        UniqueConstraint("school_id", "id", name="uq_family_tenant"),
+        # §2.1: a reason is required exactly when the family is archived.
+        # Symmetric rather than one-sided, because an ACTIVE family carrying an
+        # archive reason is a row that was archived and then quietly brought
+        # back — which §5.1 does not allow at all.
+        CheckConstraint(
+            "(status = 'ARCHIVED') = (archive_reason_code IS NOT NULL)",
+            name="ck_family_archive_reason",
+        ),
+        CheckConstraint(
+            "display_label IS NULL OR length(display_label) BETWEEN 1 AND 100",
+            name="ck_family_display_label_length",
+        ),
+        CheckConstraint("version >= 1", name="ck_family_version"),
+        Index("ix_family_school_status", "school_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("fam"))
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
+    )
+    #: §2.1: the school's internal label, never an identity. Nullable because a
+    #: school that has not named a grouping still has the grouping.
+    display_label: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    status: Mapped[FamilyStatus] = mapped_column(
+        enum_type(FamilyStatus), nullable=False, default=FamilyStatus.ACTIVE
+    )
+    #: No foreign key, for the reason the guardian link's actor columns have
+    #: none: who created this is an audit fact, not a live reference.
+    created_by_account_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    archive_reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
+
+
+class FamilyMembership(Base, TimestampMixin):
+    """§2.2. One person's place in one family grouping, for a period.
+
+    The composite foreign key names the **person** as well as the tenant —
+    `(school_id, school_membership_id, person_id)` against M06's
+    `uq_school_membership_tenant_person`. `person_id` is therefore not a
+    denormalized convenience that could drift from the membership it sits
+    beside: the database will not hold a row where the two disagree.
+
+    §2.2's closing sentence is the one worth keeping in view: the same person
+    may belong to several families in one school — separated households are the
+    normal case, not an anomaly — "to samo po sebi ne daje međusobnu
+    vidljivost". The partial unique below is scoped to one family for exactly
+    that reason.
+    """
+
+    __tablename__ = "family_membership"
+    __table_args__ = (
+        UniqueConstraint("school_id", "id", name="uq_family_membership_tenant"),
+        # §2.2's partial unique: one open place per person per family. Partial
+        # because ENDED rows are the history and §5.2 makes a return a new row,
+        # so a family someone left and rejoined holds two.
+        Index(
+            "uq_family_membership_open",
+            "school_id",
+            "family_id",
+            "person_id",
+            unique=True,
+            postgresql_where=text("status = 'ACTIVE'"),
+        ),
+        ForeignKeyConstraint(
+            ["school_id", "family_id"],
+            ["family.school_id", "family.id"],
+            name="fk_family_membership_family",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["school_id", "school_membership_id", "person_id"],
+            [
+                "school_membership.school_id",
+                "school_membership.id",
+                "school_membership.person_id",
+            ],
+            name="fk_family_membership_school_membership",
+            ondelete="RESTRICT",
+        ),
+        # §2.2: an ended membership says when and why; an active one says
+        # neither. Both directions, so a row cannot carry an end date while
+        # still claiming to be ACTIVE.
+        CheckConstraint(
+            "(status = 'ENDED') = (effective_until IS NOT NULL)",
+            name="ck_family_membership_effective_until",
+        ),
+        CheckConstraint(
+            "(status = 'ENDED') = (end_reason_code IS NOT NULL)",
+            name="ck_family_membership_end_reason",
+        ),
+        # §2.2: "ne pre from".
+        CheckConstraint(
+            "effective_until IS NULL OR effective_until >= effective_from",
+            name="ck_family_membership_period",
+        ),
+        CheckConstraint("version >= 1", name="ck_family_membership_version"),
+        Index("ix_family_membership_person", "school_id", "person_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("fmem"))
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
+    )
+    family_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    person_id: Mapped[str] = mapped_column(
+        ForeignKey("person.id", ondelete="CASCADE"), nullable=False
+    )
+    school_membership_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    member_kind: Mapped[MemberKind] = mapped_column(enum_type(MemberKind), nullable=False)
+    status: Mapped[FamilyMembershipStatus] = mapped_column(
+        enum_type(FamilyMembershipStatus),
+        nullable=False,
+        default=FamilyMembershipStatus.ACTIVE,
+    )
+    #: §2.2 calls these business dates rather than timestamps: when a school
+    #: considers someone part of a household is a decision, and it has no time
+    #: of day. Same choice M06 made for a membership's start.
+    effective_from: Mapped[dt.date] = mapped_column(
+        Date, nullable=False, default=lambda: clock.now().date()
+    )
+    effective_until: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
+    end_reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
