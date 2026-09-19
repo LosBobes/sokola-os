@@ -1,4 +1,4 @@
-"""M07 §2.1-2.5: families, guardianship, who pays, and the proof behind each.
+"""M07 §2: families, guardianship, payers, their proofs and who comes first.
 
 The three tables here are three *separate facts*, which §3.1 states outright:
 a family grouping, someone's place in it, and a verified guardian relationship
@@ -39,6 +39,7 @@ from app.common.base import Base, TimestampMixin
 from app.common.columns import enum_type
 from app.common.ids import new_id
 from app.domains.family.enums import (
+    DesignationStatus,
     FamilyMembershipStatus,
     FamilyStatus,
     LinkKind,
@@ -67,6 +68,13 @@ class GuardianChildLink(Base, TimestampMixin):
         # row (a verification record, a primary-contact designation) can name
         # the tenant as part of its reference.
         UniqueConstraint("school_id", "id", name="uq_guardian_child_link_tenant"),
+        # Lets a primary-contact designation require the *child* as part of
+        # its reference (§2.6), so a designation cannot name a valid link
+        # belonging to a different child in the same school.
+        UniqueConstraint(
+            "school_id", "id", "child_person_id",
+            name="uq_guardian_child_link_tenant_child",
+        ),
         # §2.3's partial unique. Partial because REJECTED and REVOKED rows are
         # the history and several are expected — §5.3 makes a fresh check a new
         # id rather than a revived row, so without the WHERE clause the second
@@ -395,6 +403,11 @@ class PayerChildLink(Base, TimestampMixin):
     __tablename__ = "payer_child_link"
     __table_args__ = (
         UniqueConstraint("school_id", "id", name="uq_payer_child_link_tenant"),
+        # The same target for §2.7's primary payer designation.
+        UniqueConstraint(
+            "school_id", "id", "child_person_id",
+            name="uq_payer_child_link_tenant_child",
+        ),
         # §2.5's partial unique, same reasoning as the guardian link's: §5.3
         # makes a fresh check a new row, so refused and revoked rows are the
         # history. §2.5 adds that several *different* ACTIVE payers for one
@@ -638,3 +651,165 @@ class RelationshipVerificationRecord(Base, TimestampMixin):
     #: later change of procedure does not retroactively reinterpret what an
     #: older record means.
     policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class PrimaryGuardianContactDesignation(Base, TimestampMixin):
+    """§2.6. Which guardian the school calls first — and nothing more than that.
+
+    §3.8 is unusually direct: primacy "je samo redosled službene komunikacije
+    škole; ne daje dodatne child permissions". A primary contact sees exactly
+    what their guardian link already let them see. This table decides who gets
+    rung first, not who may know anything.
+
+    It is a **history row**, per §2.6, which is why replacing a primary contact
+    writes a new row and marks the old one `SUPERSEDED` rather than updating
+    one row in place. Six months later "who was the primary contact when this
+    happened" has an answer, and an in-place update would have made that
+    question unanswerable — the one question an incident actually raises.
+
+    The foreign key names the **child** as part of the reference, against the
+    link's `UNIQUE(school_id, id, child_person_id)`. §2.6 requires the link to
+    be "za isto dete/školu", and with only `(school_id, id)` in the key this
+    row could name a perfectly valid link belonging to a *different* child in
+    the same school — designating the school's first call about Iva to an adult
+    verified only for Marko. That the two children are in the same school is
+    exactly what would make it plausible enough to survive review.
+
+    What the database cannot do is require the link to be ACTIVE: status
+    changes after the row is written. §3.10 puts that where it belongs, making
+    revocation of a link and closure of every designation referencing it one
+    transaction.
+    """
+
+    __tablename__ = "primary_guardian_contact_designation"
+    __table_args__ = (
+        UniqueConstraint(
+            "school_id", "id", name="uq_primary_guardian_contact_tenant"
+        ),
+        # §2.6's partial unique: at most one active primary contact per child.
+        # `zero or one`, never two — and zero is a legitimate state (§3.1),
+        # which a NOT NULL column on the child would have quietly forbidden.
+        Index(
+            "uq_primary_guardian_contact_active",
+            "school_id",
+            "child_person_id",
+            unique=True,
+            postgresql_where=text("status = 'ACTIVE'"),
+        ),
+        ForeignKeyConstraint(
+            ["school_id", "guardian_child_link_id", "child_person_id"],
+            [
+                "guardian_child_link.school_id",
+                "guardian_child_link.id",
+                "guardian_child_link.child_person_id",
+            ],
+            name="fk_primary_guardian_contact_link",
+            ondelete="CASCADE",
+        ),
+        # §2.6: both fields are required for the terminal statuses, and
+        # forbidden while ACTIVE — a live designation that already says when it
+        # ended is one nobody can trust either half of.
+        CheckConstraint(
+            "(status <> 'ACTIVE') = (ended_at IS NOT NULL)",
+            name="ck_primary_guardian_contact_ended_at",
+        ),
+        CheckConstraint(
+            "(status <> 'ACTIVE') = (end_reason_code IS NOT NULL)",
+            name="ck_primary_guardian_contact_end_reason",
+        ),
+        CheckConstraint("version >= 1", name="ck_primary_guardian_contact_version"),
+        Index(
+            "ix_primary_guardian_contact_child",
+            "school_id",
+            "child_person_id",
+            "status",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("pgc"))
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
+    )
+    child_person_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    guardian_child_link_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[DesignationStatus] = mapped_column(
+        enum_type(DesignationStatus), nullable=False, default=DesignationStatus.ACTIVE
+    )
+    designated_by_account_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    designated_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    ended_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    end_reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
+
+
+class PrimaryPayerDesignation(Base, TimestampMixin):
+    """§2.7. The default billing contact — "ne određuje procenat odgovornosti".
+
+    Same shape as §2.6 with a payer link in place of the guardian one, and a
+    separate table rather than a shared one with a discriminator because the
+    two primacies are independent: §2.7 says a child has zero or one active
+    primary payer while "ostali ACTIVE payer linkovi ostaju dozvoljeni", and
+    §2.6 says the same of the primary contact. One table would have needed the
+    kind inside the unique key to express two independent primacies, which is
+    the discriminator earning nothing and costing a column.
+
+    §3.9 draws the line this table must not cross: the primary payer is the
+    default billing contact and decides no share of anything. M12 may use
+    several ACTIVE payer links to split an obligation, and nothing here says
+    how.
+    """
+
+    __tablename__ = "primary_payer_designation"
+    __table_args__ = (
+        UniqueConstraint("school_id", "id", name="uq_primary_payer_tenant"),
+        Index(
+            "uq_primary_payer_active",
+            "school_id",
+            "child_person_id",
+            unique=True,
+            postgresql_where=text("status = 'ACTIVE'"),
+        ),
+        ForeignKeyConstraint(
+            ["school_id", "payer_child_link_id", "child_person_id"],
+            [
+                "payer_child_link.school_id",
+                "payer_child_link.id",
+                "payer_child_link.child_person_id",
+            ],
+            name="fk_primary_payer_link",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint(
+            "(status <> 'ACTIVE') = (ended_at IS NOT NULL)",
+            name="ck_primary_payer_ended_at",
+        ),
+        CheckConstraint(
+            "(status <> 'ACTIVE') = (end_reason_code IS NOT NULL)",
+            name="ck_primary_payer_end_reason",
+        ),
+        CheckConstraint("version >= 1", name="ck_primary_payer_version"),
+        Index("ix_primary_payer_child", "school_id", "child_person_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("ppd"))
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
+    )
+    child_person_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    payer_child_link_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[DesignationStatus] = mapped_column(
+        enum_type(DesignationStatus), nullable=False, default=DesignationStatus.ACTIVE
+    )
+    designated_by_account_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    designated_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    ended_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    end_reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)

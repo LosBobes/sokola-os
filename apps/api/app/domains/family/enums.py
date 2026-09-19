@@ -141,6 +141,24 @@ class VerificationMethod(enum.StrEnum):
     MIGRATION_VERIFIED = "MIGRATION_VERIFIED"
 
 
+class DesignationStatus(enum.StrEnum):
+    """§2.6, §5.4. The lifecycle of "this is the one the school calls first".
+
+    Both terminal states exist because the two ways a primacy ends mean
+    different things. `SUPERSEDED` is an ordinary replacement — someone else is
+    primary now — and `REVOKED` is the primacy being withdrawn with nothing put
+    in its place, which §3.1 says happens the moment the underlying link is
+    revoked. Collapsing them would lose the difference between "the other
+    parent is primary now" and "this child currently has no primary contact",
+    and §3.1 is explicit that the latter is allowed: "primarni kontakt može
+    privremeno biti nula, nikad stale".
+    """
+
+    ACTIVE = "ACTIVE"
+    SUPERSEDED = "SUPERSEDED"
+    REVOKED = "REVOKED"
+
+
 #: The membership type each side of a guardian link must hold (§2.3). Stored on
 #: the row and pinned by a CHECK so the composite foreign key can require it:
 #: without the type in the key, a guardian link could name the same person's
