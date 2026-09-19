@@ -3,7 +3,18 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal
 
-from sqlalchemy import Date, ForeignKey, Index, Integer, Numeric, String, Text, text
+from sqlalchemy import (
+    Date,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, TimestampMixin
@@ -23,6 +34,14 @@ class BillingRun(Base, TimestampMixin):
     posted, from a preview the manager reviewed."""
 
     __tablename__ = "billing_run"
+    __table_args__ = (
+        # M03 §7.2: the composite target another tenant table's foreign key
+        # names. It adds no uniqueness — `id` is already the primary key — but
+        # it lets a child's reference carry the tenant *as part of the
+        # reference*, which is what makes a cross-tenant link impossible rather
+        # than merely incorrect.
+        UniqueConstraint("school_id", "id", name="uq_billing_run_tenant"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("brn"))
     school_id: Mapped[str] = mapped_column(
@@ -53,6 +72,19 @@ class Charge(Base, TimestampMixin):
             unique=True,
             postgresql_where=text("payment_reference IS NOT NULL"),
         ),
+        # M03 §7.2: the composite target another tenant table's foreign key
+        # names. It adds no uniqueness — `id` is already the primary key — but
+        # it lets a child's reference carry the tenant *as part of the
+        # reference*, which is what makes a cross-tenant link impossible rather
+        # than merely incorrect.
+        UniqueConstraint("school_id", "id", name="uq_charge_tenant"),
+        # A charge cannot have been posted by another school's billing run.
+        ForeignKeyConstraint(
+            ["school_id", "billing_run_id"],
+            ["billing_run.school_id", "billing_run.id"],
+            name="fk_charge_billing_run_tenant",
+            ondelete="SET NULL (billing_run_id)",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("chg"))
@@ -62,9 +94,7 @@ class Charge(Base, TimestampMixin):
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False
     )
-    billing_run_id: Mapped[str | None] = mapped_column(
-        ForeignKey("billing_run.id", ondelete="SET NULL"), nullable=True
-    )
+    billing_run_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     source_type: Mapped[ChargeSourceType] = mapped_column(
         enum_type(ChargeSourceType), nullable=False, default=ChargeSourceType.MANUAL
     )

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, Numeric, String
+from sqlalchemy import ForeignKey, ForeignKeyConstraint, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, TimestampMixin
@@ -17,14 +17,21 @@ class PaymentRecord(Base, TimestampMixin):
     edited in place; corrections are new records."""
 
     __tablename__ = "payment_record"
+    __table_args__ = (
+        # Money cannot be recorded against another school's charge. §7.3.
+        ForeignKeyConstraint(
+            ["school_id", "charge_id"],
+            ["charge.school_id", "charge.id"],
+            name="fk_payment_record_charge_tenant",
+            ondelete="CASCADE",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("pay"))
     school_id: Mapped[str] = mapped_column(
         ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
-    charge_id: Mapped[str] = mapped_column(
-        ForeignKey("charge.id", ondelete="CASCADE"), nullable=False
-    )
+    charge_id: Mapped[str] = mapped_column(String(64), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     method: Mapped[PaymentMethod] = mapped_column(enum_type(PaymentMethod), nullable=False)

@@ -7,11 +7,13 @@ from sqlalchemy import (
     BigInteger,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Identity,
     Index,
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
     text,
 )
@@ -34,6 +36,9 @@ class OutboxMessage(Base, TimestampMixin):
     __tablename__ = "outbox_message"
     __table_args__ = (
         Index("ix_outbox_claimable", "status", "available_at"),
+        # M03 §7.2: the composite target the dead-letter review's foreign key
+        # names. It adds no uniqueness — `id` is already the primary key.
+        UniqueConstraint("school_id", "id", name="uq_outbox_message_tenant"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("obx"))
@@ -82,6 +87,23 @@ class DeadLetterReview(Base, TimestampMixin):
             "message_id",
             unique=True,
             postgresql_where=text("status = 'PENDING'"),
+        ),
+        # M03 §7.3, but *added to* the single-column key above rather than
+        # replacing it, which is what the other twenty-two relations did.
+        #
+        # `school_id` is nullable on both sides here, because the outbox also
+        # carries platform-level messages that belong to no school. Postgres's
+        # MATCH SIMPLE does not check a composite foreign key at all when any
+        # of its columns is NULL, so a composite key *alone* would stop
+        # checking exactly those rows — it would be weaker than what is here
+        # today, not stronger. Keeping both means the single-column key still
+        # guarantees the message exists, and the composite one additionally
+        # refuses a school-scoped review of another school's message.
+        ForeignKeyConstraint(
+            ["school_id", "message_id"],
+            ["outbox_message.school_id", "outbox_message.id"],
+            name="fk_dead_letter_review_message_tenant",
+            ondelete="CASCADE",
         ),
     )
 

@@ -10,6 +10,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     String,
     Text,
@@ -294,6 +295,25 @@ class SchoolLocator(Base):
         ),
         CheckConstraint("version >= 1", name="ck_school_locator_version"),
         Index("ix_school_locator_school", "school_id", "kind", "status"),
+        # M03 §7.2: the composite target another tenant table's foreign key
+        # names. It adds no uniqueness — `id` is already the primary key — but
+        # it lets a child's reference carry the tenant *as part of the
+        # reference*, which is what makes a cross-tenant link impossible rather
+        # than merely incorrect.
+        UniqueConstraint("school_id", "id", name="uq_school_locator_tenant"),
+        # `replaced_by_locator_id` says "same school" a few lines below, and
+        # until now that was only a comment. This is the same statement made to
+        # the database: a retired locator can only point at its own school's
+        # replacement, so an old URL can never say it was replaced by someone
+        # else's. Note this constrains the locator *row's* tenant, which is not
+        # the thing the class docstring rules out — a locator's *value* still
+        # takes no part in any composite key.
+        ForeignKeyConstraint(
+            ["school_id", "replaced_by_locator_id"],
+            ["school_locator.school_id", "school_locator.id"],
+            name="fk_school_locator_replaced_by_tenant",
+            ondelete="SET NULL (replaced_by_locator_id)",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("loc"))
@@ -309,9 +329,7 @@ class SchoolLocator(Base):
     retired_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     #: Same school. Set on rotation, so an old URL can say what replaced it
     #: without that itself being a redirect into protected content (§3.7.3).
-    replaced_by_locator_id: Mapped[str | None] = mapped_column(
-        ForeignKey("school_locator.id", ondelete="SET NULL"), nullable=True
-    )
+    replaced_by_locator_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_by_actor_ref: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
 

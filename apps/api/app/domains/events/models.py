@@ -46,6 +46,12 @@ class Event(Base, TimestampMixin, RecordStatusMixin):
             name="fk_event_location_tenant",
             ondelete="SET NULL (location_id)",
         ),
+        # M03 §7.2: the composite target another tenant table's foreign key
+        # names. It adds no uniqueness — `id` is already the primary key — but
+        # it lets a child's reference carry the tenant *as part of the
+        # reference*, which is what makes a cross-tenant link impossible rather
+        # than merely incorrect.
+        UniqueConstraint("school_id", "id", name="uq_event_tenant"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("evt"))
@@ -84,15 +90,20 @@ class EventRegistration(Base, TimestampMixin):
     __tablename__ = "event_registration"
     __table_args__ = (
         UniqueConstraint("event_id", "child_person_id", name="uq_event_registration"),
+        # A child cannot be registered for another school's event. §7.3.
+        ForeignKeyConstraint(
+            ["school_id", "event_id"],
+            ["event.school_id", "event.id"],
+            name="fk_event_registration_event_tenant",
+            ondelete="CASCADE",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("erg"))
     school_id: Mapped[str] = mapped_column(
         ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
-    event_id: Mapped[str] = mapped_column(
-        ForeignKey("event.id", ondelete="CASCADE"), nullable=False
-    )
+    event_id: Mapped[str] = mapped_column(String(64), nullable=False)
     child_person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False
     )

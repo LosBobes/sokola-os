@@ -2,7 +2,16 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, TimestampMixin
@@ -20,6 +29,14 @@ class Announcement(Base, TimestampMixin):
     only if the recipient snapshot still matches what the author reviewed."""
 
     __tablename__ = "announcement"
+    __table_args__ = (
+        # M03 §7.2: the composite target another tenant table's foreign key
+        # names. It adds no uniqueness — `id` is already the primary key — but
+        # it lets a child's reference carry the tenant *as part of the
+        # reference*, which is what makes a cross-tenant link impossible rather
+        # than merely incorrect.
+        UniqueConstraint("school_id", "id", name="uq_announcement_tenant"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("ann"))
     school_id: Mapped[str] = mapped_column(
@@ -43,11 +60,19 @@ class AnnouncementRecipient(Base, TimestampMixin):
     """A snapshotted recipient at publish time (the delivery ledger)."""
 
     __tablename__ = "announcement_recipient"
+    __table_args__ = (
+        # The delivery ledger cannot record a recipient against another
+        # school's announcement. §7.3.
+        ForeignKeyConstraint(
+            ["school_id", "announcement_id"],
+            ["announcement.school_id", "announcement.id"],
+            name="fk_announcement_recipient_announcement_tenant",
+            ondelete="CASCADE",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("arc"))
-    announcement_id: Mapped[str] = mapped_column(
-        ForeignKey("announcement.id", ondelete="CASCADE"), nullable=False
-    )
+    announcement_id: Mapped[str] = mapped_column(String(64), nullable=False)
     school_id: Mapped[str] = mapped_column(
         ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )

@@ -198,6 +198,7 @@ def test_the_composite_foreign_key_actually_exists(
                 "SELECT array_to_string(ARRAY("
                 "  SELECT attname FROM unnest(c.conkey) k"
                 "  JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k"
+                "  ORDER BY attname"
                 "), ',')"
                 " FROM pg_constraint c"
                 " WHERE c.contype = 'f'"
@@ -206,7 +207,9 @@ def test_the_composite_foreign_key_actually_exists(
             {"table": f'"{table}"'},
         ).all()
     }
-    assert f"school_id,{column}" in columns or f"{column},school_id" in columns
+    # Sorted by the query, so there is one spelling to compare against —
+    # `unnest ... JOIN` on its own does not promise the array's order.
+    assert ",".join(sorted(("school_id", column))) in columns
 
 
 @pytest.mark.parametrize("table", ["group", "session", "session_series"])
