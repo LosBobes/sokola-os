@@ -11,7 +11,7 @@ import type {
   EventType,
   GroupMemberRole,
   LocationKind,
-  OrgMemberType,
+  MembershipType,
   SessionStatus,
 } from "../api/types";
 
@@ -57,17 +57,17 @@ export const GROUP_MEMBER_ROLE_LABEL: Record<GroupMemberRole, string> = {
   OTHER_STAFF: "Drugo stručno lice",
 };
 
-/** What a person is to the school. Only ATTENDEE counts as an active member. */
-export const ORG_MEMBER_TYPE_LABEL: Record<OrgMemberType, string> = {
-  ATTENDEE: "Polaznik",
+/** What a person is to the school. Only PARTICIPANT counts as an active member. */
+export const ORG_MEMBER_TYPE_LABEL: Record<MembershipType, string> = {
+  PARTICIPANT: "Polaznik",
   STAFF: "Trener / osoblje",
   GUARDIAN: "Roditelj / staratelj",
   CONTACT: "Kontakt osoba",
 };
 
 /** The one-line explanation each member type gets where it is chosen. */
-export const ORG_MEMBER_TYPE_HINT: Record<OrgMemberType, string> = {
-  ATTENDEE: "Ulazi u evidenciju prisustva, obračun članarine i broj aktivnih članova.",
+export const ORG_MEMBER_TYPE_HINT: Record<MembershipType, string> = {
+  PARTICIPANT: "Ulazi u evidenciju prisustva, obračun članarine i broj aktivnih članova.",
   STAFF: "Vodi grupe i termine. Ne plaća članarinu i ne broji se kao član.",
   GUARDIAN: "Prati svoje dete. Ne plaća članarinu za sebe i ne broji se kao član.",
   CONTACT: "Samo kontakt podatak, bez učešća u aktivnostima.",

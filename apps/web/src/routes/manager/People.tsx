@@ -9,7 +9,7 @@ import type {
   PersonResponse,
   PersonSummary,
   GroupMemberRole,
-  OrgMemberType,
+  MembershipType,
 } from "../../api/types";
 import { PageHeader } from "../../components/shell";
 import {
@@ -68,15 +68,17 @@ const IDENTITY_TONE: Record<string, BadgeTone> = {
 };
 
 const MEMBERSHIP_LABEL: Record<string, string> = {
+  DRAFT: "U pripremi",
   ACTIVE: "Aktivno članstvo",
   SUSPENDED: "Suspendovano",
-  ENDED: "Završeno",
+  TERMINATED: "Završeno",
 };
 
 const MEMBERSHIP_TONE: Record<string, BadgeTone> = {
+  DRAFT: "neutral",
   ACTIVE: "success",
   SUSPENDED: "warning",
-  ENDED: "neutral",
+  TERMINATED: "neutral",
 };
 
 const RELATIONSHIP_LABEL: Record<string, string> = {
@@ -197,7 +199,7 @@ function AddPerson({ onCreated, onClose }: { onCreated: () => void; onClose: () 
    * into the member figure and onto the invoice list, so the choice is on the
    * form with its consequence spelled out under it.
    */
-  const [memberType, setMemberType] = useState<OrgMemberType>("ATTENDEE");
+  const [memberType, setMemberType] = useState<MembershipType>("PARTICIPANT");
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
@@ -206,7 +208,7 @@ function AddPerson({ onCreated, onClose }: { onCreated: () => void; onClose: () 
   function reset() {
     setGiven("");
     setFamily("");
-    setMemberType("ATTENDEE");
+    setMemberType("PARTICIPANT");
     setReason("");
     setCandidates(null);
   }
@@ -264,10 +266,10 @@ function AddPerson({ onCreated, onClose }: { onCreated: () => void; onClose: () 
           <select
             id="p-type"
             value={memberType}
-            onChange={(e) => setMemberType(e.target.value as OrgMemberType)}
+            onChange={(e) => setMemberType(e.target.value as MembershipType)}
             data-cy="person-member-type"
           >
-            {(Object.keys(ORG_MEMBER_TYPE_LABEL) as OrgMemberType[]).map((type) => (
+            {(Object.keys(ORG_MEMBER_TYPE_LABEL) as MembershipType[]).map((type) => (
               <option key={type} value={type}>
                 {ORG_MEMBER_TYPE_LABEL[type]}
               </option>

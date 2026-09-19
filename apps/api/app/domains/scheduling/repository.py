@@ -11,7 +11,7 @@ from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
 from app.domains.identity.models import RoleAssignment
 from app.domains.scheduling.enums import SessionStatus
 from app.domains.scheduling.models import Session, SessionSeries
-from app.domains.school.enums import MembershipStatus, OrgMemberType
+from app.domains.school.enums import MembershipStatus, MembershipType
 from app.domains.school.models import SchoolMembership
 from app.domains.structure.models import Location
 
@@ -45,7 +45,7 @@ def is_school_trainer(db: DbSession, school_id: str, person_id: str) -> bool:
     staff_stmt = select(SchoolMembership.id).where(
         SchoolMembership.person_id == person_id,
         SchoolMembership.school_id == school_id,
-        SchoolMembership.member_type == OrgMemberType.STAFF,
+        SchoolMembership.membership_type == MembershipType.STAFF,
         SchoolMembership.status == MembershipStatus.ACTIVE,
         SchoolMembership.record_status == RecordStatus.ACTIVE,
     )

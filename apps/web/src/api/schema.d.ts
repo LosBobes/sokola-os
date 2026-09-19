@@ -2478,8 +2478,8 @@ export interface components {
             family_name: string;
             /** Given Name */
             given_name: string;
-            /** @default ATTENDEE */
-            member_type: components["schemas"]["OrgMemberType"];
+            /** @default PARTICIPANT */
+            member_type: components["schemas"]["MembershipType"];
         };
         /** CreateProgramRequest */
         CreateProgramRequest: {
@@ -3063,16 +3063,26 @@ export interface components {
             id: string;
             /** Local Member Code */
             local_member_code: string | null;
-            member_type: components["schemas"]["OrgMemberType"];
+            member_type: components["schemas"]["MembershipType"];
             /** Person Id */
             person_id: string;
             status: components["schemas"]["MembershipStatus"];
         };
         /**
          * MembershipStatus
+         * @description M06 §2.3, §5.1.
+         *
+         *     ``DRAFT`` exists so a membership can be prepared before it takes effect;
+         *     §5.1 lets it be terminated straight from there, which is how you abandon a
+         *     membership you never activated without pretending it was once real.
+         *
+         *     ``TERMINATED`` is terminal. Coming back is a **new episode** — a new row —
+         *     never a revived one: reusing the row would overwrite when the person was
+         *     previously a member, and that history is what ``is_first_activation`` and
+         *     every retrospective count depend on.
          * @enum {string}
          */
-        MembershipStatus: "ACTIVE" | "SUSPENDED" | "ENDED";
+        MembershipStatus: "DRAFT" | "ACTIVE" | "SUSPENDED" | "TERMINATED";
         /**
          * MembershipTransitionRequest
          * @description Optional operator note explaining an end/suspend/resume.
@@ -3130,6 +3140,24 @@ export interface components {
             /** Trend */
             trend: components["schemas"]["MembershipTrendPoint"][];
         };
+        /**
+         * MembershipType
+         * @description M06 §2.3. What a person *is* to the school, independent of whether they
+         *     can sign in.
+         *
+         *     A school's headline "aktivni članovi" figure must count enrolled
+         *     participants and nobody else, so an owner, a coach, a parent and an
+         *     emergency contact all belong to the tenant without inflating it. That is
+         *     what this field separates; :class:`app.domains.identity.enums.RoleCode`
+         *     answers a different question (what may this account *do*), and many people
+         *     here have no account at all.
+         *
+         *     §3.2: one person may hold several of these in one school — a parent who
+         *     also coaches is both — and holding any of them in one school carries no
+         *     right in another.
+         * @enum {string}
+         */
+        MembershipType: "PARTICIPANT" | "GUARDIAN" | "STAFF" | "CONTACT";
         /** MergeDecisionRequest */
         MergeDecisionRequest: {
             /**
@@ -3233,22 +3261,6 @@ export interface components {
             completed_at: string | null;
             step: components["schemas"]["OnboardingStep"];
         };
-        /**
-         * OrgMemberType
-         * @description What a person *is* to the school, independent of whether they can sign in.
-         *
-         *     A school's headline "aktivni članovi" figure must count enrolled
-         *     participants and nobody else, so an owner, a coach, a parent and an
-         *     emergency contact all belong to the tenant without inflating it. That is
-         *     what this field separates; :class:`app.domains.identity.enums.RoleCode`
-         *     answers a different question (what may this account *do*), and many people
-         *     here have no account at all.
-         *
-         *     ``ATTENDEE`` is the default and the backfill value for pre-existing rows,
-         *     except for people who already hold a staff role assignment.
-         * @enum {string}
-         */
-        OrgMemberType: "ATTENDEE" | "STAFF" | "GUARDIAN" | "CONTACT";
         /** OutstandingByStatus */
         OutstandingByStatus: {
             /** Charge Count */
@@ -3615,7 +3627,7 @@ export interface components {
             /** Id */
             id: string;
             identity_status: components["schemas"]["PersonIdentityStatus"];
-            member_type: components["schemas"]["OrgMemberType"];
+            member_type: components["schemas"]["MembershipType"];
         };
         /** PostBillingRunRequest */
         PostBillingRunRequest: {
@@ -4263,7 +4275,7 @@ export interface components {
          *     changed; omit a field to leave it untouched, send ``null`` to clear it.
          *
          *     ``member_type`` is not school-local trivia , moving someone in or out of
-         *     ATTENDEE changes the school's active-member figure , so it is settable here
+         *     PARTICIPANT changes the school's active-member figure , so it is settable here
          *     but never nullable.
          */
         UpdateMemberDataRequest: {
@@ -4271,7 +4283,7 @@ export interface components {
             admin_note?: string | null;
             /** Local Member Code */
             local_member_code?: string | null;
-            member_type?: components["schemas"]["OrgMemberType"] | null;
+            member_type?: components["schemas"]["MembershipType"] | null;
         };
         /** UpdateProgramRequest */
         UpdateProgramRequest: {
@@ -7026,7 +7038,7 @@ export interface operations {
     listPeople: {
         parameters: {
             query?: {
-                member_type?: components["schemas"]["OrgMemberType"] | null;
+                member_type?: components["schemas"]["MembershipType"] | null;
                 limit?: number;
                 offset?: number;
             };

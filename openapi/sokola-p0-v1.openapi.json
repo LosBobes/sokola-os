@@ -1391,8 +1391,8 @@
             "type": "string"
           },
           "member_type": {
-            "$ref": "#/components/schemas/OrgMemberType",
-            "default": "ATTENDEE"
+            "$ref": "#/components/schemas/MembershipType",
+            "default": "PARTICIPANT"
           }
         },
         "required": [
@@ -2987,7 +2987,7 @@
             "title": "Local Member Code"
           },
           "member_type": {
-            "$ref": "#/components/schemas/OrgMemberType"
+            "$ref": "#/components/schemas/MembershipType"
           },
           "person_id": {
             "title": "Person Id",
@@ -3009,10 +3009,12 @@
         "type": "object"
       },
       "MembershipStatus": {
+        "description": "M06 \u00a72.3, \u00a75.1.\n\n``DRAFT`` exists so a membership can be prepared before it takes effect;\n\u00a75.1 lets it be terminated straight from there, which is how you abandon a\nmembership you never activated without pretending it was once real.\n\n``TERMINATED`` is terminal. Coming back is a **new episode** \u2014 a new row \u2014\nnever a revived one: reusing the row would overwrite when the person was\npreviously a member, and that history is what ``is_first_activation`` and\nevery retrospective count depend on.",
         "enum": [
+          "DRAFT",
           "ACTIVE",
           "SUSPENDED",
-          "ENDED"
+          "TERMINATED"
         ],
         "title": "MembershipStatus",
         "type": "string"
@@ -3132,6 +3134,17 @@
         ],
         "title": "MembershipTrendReport",
         "type": "object"
+      },
+      "MembershipType": {
+        "description": "M06 \u00a72.3. What a person *is* to the school, independent of whether they\ncan sign in.\n\nA school's headline \"aktivni \u010dlanovi\" figure must count enrolled\nparticipants and nobody else, so an owner, a coach, a parent and an\nemergency contact all belong to the tenant without inflating it. That is\nwhat this field separates; :class:`app.domains.identity.enums.RoleCode`\nanswers a different question (what may this account *do*), and many people\nhere have no account at all.\n\n\u00a73.2: one person may hold several of these in one school \u2014 a parent who\nalso coaches is both \u2014 and holding any of them in one school carries no\nright in another.",
+        "enum": [
+          "PARTICIPANT",
+          "GUARDIAN",
+          "STAFF",
+          "CONTACT"
+        ],
+        "title": "MembershipType",
+        "type": "string"
       },
       "MergeDecisionRequest": {
         "properties": {
@@ -3367,17 +3380,6 @@
         ],
         "title": "OnboardingStepStatus",
         "type": "object"
-      },
-      "OrgMemberType": {
-        "description": "What a person *is* to the school, independent of whether they can sign in.\n\nA school's headline \"aktivni \u010dlanovi\" figure must count enrolled\nparticipants and nobody else, so an owner, a coach, a parent and an\nemergency contact all belong to the tenant without inflating it. That is\nwhat this field separates; :class:`app.domains.identity.enums.RoleCode`\nanswers a different question (what may this account *do*), and many people\nhere have no account at all.\n\n``ATTENDEE`` is the default and the backfill value for pre-existing rows,\nexcept for people who already hold a staff role assignment.",
-        "enum": [
-          "ATTENDEE",
-          "STAFF",
-          "GUARDIAN",
-          "CONTACT"
-        ],
-        "title": "OrgMemberType",
-        "type": "string"
       },
       "OutstandingByStatus": {
         "properties": {
@@ -4317,7 +4319,7 @@
             "$ref": "#/components/schemas/PersonIdentityStatus"
           },
           "member_type": {
-            "$ref": "#/components/schemas/OrgMemberType"
+            "$ref": "#/components/schemas/MembershipType"
           }
         },
         "required": [
@@ -6109,7 +6111,7 @@
         "type": "object"
       },
       "UpdateMemberDataRequest": {
-        "description": "School-local member data. Only fields present in the request body are\nchanged; omit a field to leave it untouched, send ``null`` to clear it.\n\n``member_type`` is not school-local trivia , moving someone in or out of\nATTENDEE changes the school's active-member figure , so it is settable here\nbut never nullable.",
+        "description": "School-local member data. Only fields present in the request body are\nchanged; omit a field to leave it untouched, send ``null`` to clear it.\n\n``member_type`` is not school-local trivia , moving someone in or out of\nPARTICIPANT changes the school's active-member figure , so it is settable here\nbut never nullable.",
         "properties": {
           "admin_note": {
             "anyOf": [
@@ -6138,7 +6140,7 @@
           "member_type": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/OrgMemberType"
+                "$ref": "#/components/schemas/MembershipType"
               },
               {
                 "type": "null"
@@ -10089,7 +10091,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/OrgMemberType"
+                  "$ref": "#/components/schemas/MembershipType"
                 },
                 {
                   "type": "null"

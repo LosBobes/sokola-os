@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 
 from app.common.pagination import Page, PageParams, page_params
-from app.domains.people import service
+from app.domains.people import merge, service
 from app.domains.people.schemas import (
     CreateMergeReviewRequest,
     CreatePersonRequest,
@@ -20,7 +20,7 @@ from app.domains.people.schemas import (
     RevokeGuardianAccessRequest,
     UpdateMemberDataRequest,
 )
-from app.domains.school.enums import OrgMemberType
+from app.domains.school.enums import MembershipType
 from app.security.deps import ContextDep, DbDep
 from app.security.permissions import PermissionArea, require_permission
 
@@ -49,7 +49,7 @@ def list_people(
     db: DbDep,
     context: ContextDep,
     params: Annotated[PageParams, Depends(page_params)],
-    member_type: Annotated[OrgMemberType | None, Query()] = None,
+    member_type: Annotated[MembershipType | None, Query()] = None,
 ) -> Page[PersonSummary]:
     return service.list_people(db, context, params, member_type=member_type)
 
@@ -64,7 +64,7 @@ def list_people(
     operation_id="listDuplicatePeople",
 )
 def list_duplicate_people(db: DbDep, context: StaffContext) -> list[DuplicateCluster]:
-    return service.list_duplicates(db, context)
+    return merge.list_duplicates(db, context)
 
 
 @router.get(
@@ -73,7 +73,7 @@ def list_duplicate_people(db: DbDep, context: StaffContext) -> list[DuplicateClu
     operation_id="listMergeReviews",
 )
 def list_merge_reviews(db: DbDep, context: StaffContext) -> list[MergeReviewResponse]:
-    return service.list_merge_reviews(db, context)
+    return merge.list_merge_reviews(db, context)
 
 
 @router.post(
@@ -85,7 +85,7 @@ def list_merge_reviews(db: DbDep, context: StaffContext) -> list[MergeReviewResp
 def create_merge_review(
     body: CreateMergeReviewRequest, db: DbDep, context: StaffContext
 ) -> MergeReviewResponse:
-    return service.create_merge_review(db, context, body)
+    return merge.create_merge_review(db, context, body)
 
 
 @router.post(
@@ -96,7 +96,7 @@ def create_merge_review(
 def decide_merge_review(
     review_id: str, body: MergeDecisionRequest, db: DbDep, context: StaffContext
 ) -> MergeReviewResponse:
-    return service.decide_merge_review(db, context, review_id, body)
+    return merge.decide_merge_review(db, context, review_id, body)
 
 
 # --- Membership lifecycle (§16/§19/§20/§21) and school-local data (§8/§9/§10) ---

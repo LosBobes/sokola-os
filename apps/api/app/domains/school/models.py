@@ -5,7 +5,9 @@ from typing import Any
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -25,7 +27,7 @@ from app.domains.school.enums import (
     LocatorKind,
     LocatorStatus,
     MembershipStatus,
-    OrgMemberType,
+    MembershipType,
     SchoolKind,
     SchoolStatus,
     SchoolStatusReason,
@@ -364,29 +366,60 @@ class SchoolStatusTransition(Base):
 
 
 class SchoolMembership(Base, TimestampMixin, RecordStatusMixin):
-    """A person's belonging to an school. This is the relationship that
-    makes a global Person visible inside a tenant. Ending it opens no new period;
-    reactivation is a new membership period (see billing/attendance patterns)."""
+    """A person's belonging to a school (M06 §2.3).
+
+    This is the relationship that makes a global Person a *member* of a tenant;
+    :class:`app.domains.people.profile_models.SchoolPersonProfile` is what makes
+    them known to the school at all, and the school-local code and note live
+    there rather than here — a person holding three membership types has one
+    code, not three.
+
+    Ending a membership opens no new period. ``TERMINATED`` is terminal and
+    coming back is a new row (§5.1): reusing the row would overwrite when the
+    person was previously a member, and that history is what
+    ``is_first_activation`` and every retrospective count depend on.
+
+    Carries no ``role`` column, deliberately (§2.3). What someone may *do* is
+    M05's question, answered by
+    :class:`~app.domains.identity.models.RoleAssignment`.
+    """
 
     __tablename__ = "school_membership"
     __table_args__ = (
-        UniqueConstraint("school_id", "person_id", name="uq_school_membership"),
-        # Redundant as a uniqueness claim — `id` alone is already the PK — but
-        # it is what lets another table's foreign key name the tenant as part of
-        # the reference (see school_owner_nomination). That turns "belongs to
-        # this school" from something a query must remember to check into
-        # something the row cannot be written without.
+        # One open episode per natural key. Partial on purpose: terminated rows
+        # are the history, and several of them are expected.
+        Index(
+            "uq_school_membership_open_episode",
+            "school_id",
+            "person_id",
+            "membership_type",
+            unique=True,
+            postgresql_where=text("status <> 'TERMINATED'"),
+        ),
+        # Tenant-safe reference keys for other modules (§2.3). Neither adds a
+        # uniqueness guarantee — `id` is already the primary key — they exist so
+        # a foreign key elsewhere can name the tenant as part of the reference.
+        UniqueConstraint("school_id", "id", name="uq_school_membership_tenant"),
         UniqueConstraint(
             "school_id", "id", "person_id", name="uq_school_membership_tenant_person"
         ),
-        # School-local member code is unique within the tenant *when set* (§8/§9).
-        Index(
-            "uq_school_local_member_code",
-            "school_id",
-            "local_member_code",
-            unique=True,
-            postgresql_where=text("local_member_code IS NOT NULL"),
+        CheckConstraint(
+            "(status = 'SUSPENDED') = (suspension_reason_code IS NOT NULL)",
+            name="ck_school_membership_suspension_reason",
         ),
+        CheckConstraint(
+            "(status = 'TERMINATED') = (termination_reason_code IS NOT NULL)",
+            name="ck_school_membership_termination_reason",
+        ),
+        CheckConstraint(
+            "(status = 'TERMINATED') = (end_date IS NOT NULL)",
+            name="ck_school_membership_end_date",
+        ),
+        CheckConstraint(
+            "end_date IS NULL OR end_date >= start_date",
+            name="ck_school_membership_period",
+        ),
+        CheckConstraint("version >= 1", name="ck_school_membership_version"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("mem"))
@@ -399,11 +432,21 @@ class SchoolMembership(Base, TimestampMixin, RecordStatusMixin):
     status: Mapped[MembershipStatus] = mapped_column(
         enum_type(MembershipStatus), nullable=False, default=MembershipStatus.ACTIVE
     )
-    # Participant / staff / guardian / contact. See :class:`OrgMemberType`.
-    member_type: Mapped[OrgMemberType] = mapped_column(
-        enum_type(OrgMemberType), nullable=False, default=OrgMemberType.ATTENDEE
+    #: Participant / guardian / staff / contact. See :class:`MembershipType`.
+    membership_type: Mapped[MembershipType] = mapped_column(
+        enum_type(MembershipType), nullable=False, default=MembershipType.PARTICIPANT
     )
-    # School-local ("na ruke") member data. Lives on the org-scoped membership, so
-    # it is never shared across tenants and never touches the global Person.
-    local_member_code: Mapped[str | None] = mapped_column(String(60), nullable=True)
-    admin_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: The school's business date, not a timestamp: when a membership starts is
+    #: a decision a school makes, and it has no time of day.
+    start_date: Mapped[dt.date] = mapped_column(
+        Date, nullable=False, default=lambda: clock.now().date()
+    )
+    end_date: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
+    suspension_reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    termination_reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: §2.3: derived from the history of the same (school, person, type) and
+    #: immutable afterwards. A returning member gets a new row with ``False``,
+    #: which keeps "how many joined us for the first time this year" answerable
+    #: after someone leaves and comes back.
+    is_first_activation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)

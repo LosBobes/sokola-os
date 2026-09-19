@@ -6,16 +6,16 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.domains.identity.enums import PersonIdentityStatus, PersonMergeStatus
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
-from app.domains.school.enums import MembershipStatus, OrgMemberType
+from app.domains.school.enums import MembershipStatus, MembershipType
 
 
 class CreatePersonRequest(BaseModel):
     given_name: str = Field(min_length=1, max_length=120)
     family_name: str = Field(min_length=1, max_length=120)
-    # What this person is to the school. Defaults to ATTENDEE (polaznik) because
+    # What this person is to the school. Defaults to PARTICIPANT (polaznik) because
     # that is who a school adds most often; staff, guardians and plain contacts
     # are recorded with their own type so they are never counted as members.
-    member_type: OrgMemberType = OrgMemberType.ATTENDEE
+    member_type: MembershipType = MembershipType.PARTICIPANT
     # Safety branch: creating a likely duplicate must be a deliberate, reasoned act.
     allow_possible_duplicate: bool = False
     duplicate_reason: str | None = Field(default=None, max_length=500)
@@ -33,7 +33,7 @@ class PersonSummary(BaseModel):
     id: str
     display_name: str
     identity_status: PersonIdentityStatus
-    member_type: OrgMemberType
+    member_type: MembershipType
 
 
 class PersonResponse(BaseModel):
@@ -62,7 +62,7 @@ class MembershipResponse(BaseModel):
     id: str
     person_id: str
     status: MembershipStatus
-    member_type: OrgMemberType
+    member_type: MembershipType
     local_member_code: str | None
     admin_note: str | None
 
@@ -78,12 +78,12 @@ class UpdateMemberDataRequest(BaseModel):
     changed; omit a field to leave it untouched, send ``null`` to clear it.
 
     ``member_type`` is not school-local trivia , moving someone in or out of
-    ATTENDEE changes the school's active-member figure , so it is settable here
+    PARTICIPANT changes the school's active-member figure , so it is settable here
     but never nullable."""
 
     local_member_code: str | None = Field(default=None, max_length=60)
     admin_note: str | None = Field(default=None, max_length=2000)
-    member_type: OrgMemberType | None = None
+    member_type: MembershipType | None = None
 
 
 # ---------------------------------------------------------------------------

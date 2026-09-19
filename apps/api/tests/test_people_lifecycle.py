@@ -72,7 +72,7 @@ def test_membership_end_suspend_resume(client: TestClient, db: Session) -> None:
         json={"reason": "Ispisan"},
     )
     assert ended.status_code == 200
-    assert ended.json()["status"] == "ENDED"
+    assert ended.json()["status"] == "TERMINATED"
 
     # … resuming an ended membership is refused, and ending twice is refused.
     assert (
@@ -111,7 +111,7 @@ def test_ending_last_owner_is_blocked_until_a_second_owner_exists(
         f"/people/{owner.person.id}/membership/end", headers=owner.headers, json={}
     )
     assert ok.status_code == 200
-    assert ok.json()["status"] == "ENDED"
+    assert ok.json()["status"] == "TERMINATED"
 
 
 # ---------------------------------------------------------------------------

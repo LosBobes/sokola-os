@@ -35,7 +35,7 @@ from app.domains.identity.schemas import (
 )
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
 from app.domains.people.models import GuardianRelationship, GuardianSchoolAccess
-from app.domains.school.enums import MembershipStatus, OrgMemberType
+from app.domains.school.enums import MembershipStatus, MembershipType
 from app.domains.school.models import School, SchoolMembership
 from app.platform import clock
 from app.platform.audit.service import record_audit
@@ -245,13 +245,13 @@ def reissue_invitation(
     )
 
 
-_INVITED_MEMBER_TYPE: dict[RoleCode, OrgMemberType] = {
-    RoleCode.OWNER: OrgMemberType.STAFF,
-    RoleCode.MANAGER: OrgMemberType.STAFF,
-    RoleCode.ADMIN: OrgMemberType.STAFF,
-    RoleCode.TRAINER: OrgMemberType.STAFF,
-    RoleCode.PARENT: OrgMemberType.GUARDIAN,
-    RoleCode.STUDENT: OrgMemberType.ATTENDEE,
+_INVITED_MEMBER_TYPE: dict[RoleCode, MembershipType] = {
+    RoleCode.OWNER: MembershipType.STAFF,
+    RoleCode.MANAGER: MembershipType.STAFF,
+    RoleCode.ADMIN: MembershipType.STAFF,
+    RoleCode.TRAINER: MembershipType.STAFF,
+    RoleCode.PARENT: MembershipType.GUARDIAN,
+    RoleCode.STUDENT: MembershipType.PARTICIPANT,
 }
 
 
@@ -271,11 +271,11 @@ def _open_membership(
             SchoolMembership(
                 school_id=school_id,
                 person_id=person_id,
-                member_type=_INVITED_MEMBER_TYPE.get(role_code, OrgMemberType.ATTENDEE),
+                membership_type=_INVITED_MEMBER_TYPE.get(role_code, MembershipType.PARTICIPANT),
             )
         )
         return
-    if membership.status is MembershipStatus.ENDED:
+    if membership.status is MembershipStatus.TERMINATED:
         # A deliberate staff invitation re-opens access even though the generic
         # resume-membership endpoint treats ENDED as terminal (people/service.py) , 
         # accepting a fresh, explicit invite is a distinct re-grant.

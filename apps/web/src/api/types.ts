@@ -70,16 +70,16 @@ export interface Page<T> {
 export type PersonIdentityStatus = "PROVISIONAL" | "CLAIMED" | "VERIFIED" | "MERGED" | "ARCHIVED";
 
 /**
- * What a person is to the school. Only ATTENDEE counts as an active member,
+ * What a person is to the school. Only PARTICIPANT counts as an active member,
  * which is why the roster screens ask for it rather than defaulting silently.
  */
-export type OrgMemberType = "ATTENDEE" | "STAFF" | "GUARDIAN" | "CONTACT";
+export type MembershipType = "PARTICIPANT" | "STAFF" | "GUARDIAN" | "CONTACT";
 
 export interface PersonSummary {
   id: string;
   display_name: string;
   identity_status: PersonIdentityStatus;
-  member_type: OrgMemberType;
+  member_type: MembershipType;
 }
 
 export interface Person {
@@ -117,7 +117,7 @@ export interface GroupMember {
 
 /* --- Membership (increment #6, merged to main) ------------------------ */
 
-export type MembershipStatus = "ACTIVE" | "SUSPENDED" | "ENDED";
+export type MembershipStatus = "DRAFT" | "ACTIVE" | "SUSPENDED" | "TERMINATED";
 
 export interface MembershipResponse {
   id: string;
@@ -375,7 +375,7 @@ export interface Announcement {
  * GET /reports/overview , the school's health right now.
  *
  * `active_member_count` is the authoritative "Aktivni članovi" figure: active
- * ATTENDEE memberships only, so owners, trainers, guardians and contacts are
+ * PARTICIPANT memberships only, so owners, trainers, guardians and contacts are
  * excluded. Screens must read it from here rather than counting /people.
  */
 export interface OverviewReport {

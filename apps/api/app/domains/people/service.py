@@ -3,30 +3,26 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.common.enums import AuditDataClass, RecordStatus
+from app.common.enums import AuditDataClass
 from app.common.errors import BadRequestError, ConflictError, NotFoundError
 from app.common.pagination import Page, PageParams
-from app.domains.identity.enums import PersonIdentityStatus, PersonMergeStatus
-from app.domains.identity.models import Person, PersonMergeRecord
-from app.domains.people import repository
+from app.domains.identity.enums import PersonIdentityStatus
+from app.domains.identity.models import Person
+from app.domains.people import membership as membership_service
+from app.domains.people import profile_models, repository
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
 from app.domains.people.models import GuardianRelationship, GuardianSchoolAccess
 from app.domains.people.schemas import (
-    CreateMergeReviewRequest,
     CreatePersonRequest,
-    DuplicateCandidate,
-    DuplicateCluster,
     GuardianContactResponse,
     MembershipResponse,
     MembershipTransitionRequest,
-    MergeDecisionRequest,
-    MergeReviewResponse,
     PersonResponse,
     PersonSummary,
     RevokeGuardianAccessRequest,
     UpdateMemberDataRequest,
 )
-from app.domains.school.enums import MembershipStatus, OrgMemberType
+from app.domains.school.enums import MembershipStatus, MembershipType
 from app.domains.school.models import SchoolMembership
 from app.platform.audit.service import record_audit
 from app.platform.outbox.service import enqueue
@@ -73,9 +69,11 @@ def create_provisional_person(
         SchoolMembership(
             school_id=context.school_id,
             person_id=person.id,
-            member_type=req.member_type,
+            membership_type=req.member_type,
         )
     )
+
+    repository.get_or_create_profile(db, context.school_id, person.id)
 
     summary = f"Dodata osoba „{person.display_name}“."
     if req.allow_possible_duplicate:
@@ -106,7 +104,7 @@ def list_people(
     context: RequestContext,
     params: PageParams,
     *,
-    member_type: OrgMemberType | None = None,
+    member_type: MembershipType | None = None,
 ) -> Page[PersonSummary]:
     rows, total = repository.list_school_people(
         db, context.school_id, params, member_type=member_type
@@ -194,35 +192,75 @@ def get_membership(
     db: Session, context: RequestContext, person_id: str
 ) -> MembershipResponse:
     membership, _ = _load_member(db, context, person_id)
-    return MembershipResponse.model_validate(membership)
+    return _membership_response(db, context.school_id, membership)
+
+
+def _membership_response(
+    db: Session, school_id: str, membership: SchoolMembership
+) -> MembershipResponse:
+    """Compose the wire shape from the two rows it now spans.
+
+    The API keeps ``member_type``, ``local_member_code`` and ``admin_note``:
+    those names are the existing public contract, and M06 does not dictate an
+    API shape. Only the storage moved — the code and note describe the person as
+    this school files them (§2.4), not one of their memberships.
+    """
+    profile = repository.get_or_create_profile(db, school_id, membership.person_id)
+    return MembershipResponse(
+        id=membership.id,
+        person_id=membership.person_id,
+        status=membership.status,
+        member_type=membership.membership_type,
+        local_member_code=profile.local_person_code,
+        admin_note=profile.administrative_note,
+    )
+
+
+def _reason_code(reason: str | None, fallback: str) -> str:
+    """A closed-registry code for the transition, derived from the free-text
+    reason the current API accepts.
+
+    M06 §2.3 wants a code; this endpoint predates that and takes prose. Rather
+    than invent a mapping that would read as authoritative, the prose is kept
+    in the audit entry and the code records only *which command* ran — which is
+    true, and is replaced by a real registry when the MEM commands get their own
+    surface.
+    """
+    return fallback
 
 
 def end_membership(
     db: Session, context: RequestContext, person_id: str, req: MembershipTransitionRequest
 ) -> MembershipResponse:
     membership, person = _load_member(db, context, person_id)
-    if membership.status is MembershipStatus.ENDED:
+    if membership.status is MembershipStatus.TERMINATED:
         raise ConflictError("Članstvo je već okončano.")
+    # §3.9: the owner invariant is checked before the M06 transition, by the
+    # use-case that owns both — M06 must not reach into M05 itself.
     _guard_not_last_owner(db, context.school_id, person_id)
-    membership.status = MembershipStatus.ENDED
+    membership_service.terminate_membership(
+        db, membership, reason_code=_reason_code(req.reason, "MEMBERSHIP_ENDED")
+    )
     _emit_membership_change(db, context, membership, person, "ended", req.reason)
     db.commit()
-    return MembershipResponse.model_validate(membership)
+    return _membership_response(db, context.school_id, membership)
 
 
 def suspend_membership(
     db: Session, context: RequestContext, person_id: str, req: MembershipTransitionRequest
 ) -> MembershipResponse:
     membership, person = _load_member(db, context, person_id)
-    if membership.status is MembershipStatus.ENDED:
+    if membership.status is MembershipStatus.TERMINATED:
         raise ConflictError("Okončano članstvo ne može biti suspendovano.")
     if membership.status is MembershipStatus.SUSPENDED:
         raise ConflictError("Članstvo je već suspendovano.")
     _guard_not_last_owner(db, context.school_id, person_id)
-    membership.status = MembershipStatus.SUSPENDED
+    membership_service.suspend_membership(
+        db, membership, reason_code=_reason_code(req.reason, "MEMBERSHIP_SUSPENDED")
+    )
     _emit_membership_change(db, context, membership, person, "suspended", req.reason)
     db.commit()
-    return MembershipResponse.model_validate(membership)
+    return _membership_response(db, context.school_id, membership)
 
 
 def resume_membership(
@@ -231,13 +269,13 @@ def resume_membership(
     membership, person = _load_member(db, context, person_id)
     if membership.status is MembershipStatus.ACTIVE:
         raise ConflictError("Članstvo je već aktivno.")
-    if membership.status is MembershipStatus.ENDED:
+    if membership.status is MembershipStatus.TERMINATED:
         # Ended is terminal; reactivation is a new membership, never a revived row.
         raise ConflictError("Okončano članstvo se ne može nastaviti.")
-    membership.status = MembershipStatus.ACTIVE
+    membership_service.activate_membership(db, membership)
     _emit_membership_change(db, context, membership, person, "resumed", req.reason)
     db.commit()
-    return MembershipResponse.model_validate(membership)
+    return _membership_response(db, context.school_id, membership)
 
 
 # ---------------------------------------------------------------------------
@@ -251,19 +289,35 @@ def update_member_data(
     membership, person = _load_member(db, context, person_id)
     fields = req.model_fields_set
 
+    # The school-local code and note describe the *person* as this school files
+    # them, not one of their memberships (§2.4), so they live on the profile.
+    profile = repository.get_or_create_profile(db, context.school_id, person_id)
+
     if "local_member_code" in fields:
-        code = (req.local_member_code or "").strip() or None
-        if code is not None and repository.find_local_code_owner(
-            db, context.school_id, code, person_id
-        ) is not None:
-            raise ConflictError("Lokalna šifra člana se već koristi u ovoj školi.")
-        membership.local_member_code = code
+        raw = (req.local_member_code or "").strip() or None
+        if raw is None:
+            profile.local_person_code = None
+            profile.normalized_local_person_code = None
+        else:
+            try:
+                normalized = profile_models.normalize_local_person_code(raw)
+            except ValueError as exc:
+                raise BadRequestError("Lokalna šifra člana nije u ispravnom obliku.") from exc
+            if (
+                repository.find_local_code_owner(db, context.school_id, raw, person_id)
+                is not None
+            ):
+                raise ConflictError("Lokalna šifra člana se već koristi u ovoj školi.")
+            profile.local_person_code = raw
+            profile.normalized_local_person_code = normalized
+        profile.version += 1
 
     if "admin_note" in fields:
-        membership.admin_note = (req.admin_note or "").strip() or None
+        profile.administrative_note = (req.admin_note or "").strip() or None
+        profile.version += 1
 
     if "member_type" in fields and req.member_type is not None:
-        membership.member_type = req.member_type
+        membership.membership_type = req.member_type
 
     record_audit(
         db,
@@ -277,7 +331,7 @@ def update_member_data(
         context={"person_id": person.id},
     )
     db.commit()
-    return MembershipResponse.model_validate(membership)
+    return _membership_response(db, context.school_id, membership)
 
 
 # ---------------------------------------------------------------------------
@@ -427,144 +481,3 @@ def set_primary_contact(
     )
     db.commit()
     return _contact_response(db, access, guardian)
-
-
-# ---------------------------------------------------------------------------
-# Duplicate detection + review (§13–15)
-# ---------------------------------------------------------------------------
-
-
-def list_duplicates(db: Session, context: RequestContext) -> list[DuplicateCluster]:
-    clusters: list[DuplicateCluster] = []
-    for given, family in repository.list_duplicate_clusters(db, context.school_id):
-        people = repository.find_duplicate_candidates(
-            db, context.school_id, given, family
-        )
-        if len(people) > 1:
-            clusters.append(
-                DuplicateCluster(
-                    given_name=given,
-                    family_name=family,
-                    candidates=[
-                        DuplicateCandidate(person_id=p.id, display_name=p.display_name)
-                        for p in people
-                    ],
-                )
-            )
-    return clusters
-
-
-def create_merge_review(
-    db: Session, context: RequestContext, req: CreateMergeReviewRequest
-) -> MergeReviewResponse:
-    if req.source_person_id == req.target_person_id:
-        raise BadRequestError("Izvor i cilj spajanja moraju biti različite osobe.")
-    source = repository.get_school_person(db, context.school_id, req.source_person_id)
-    target = repository.get_school_person(db, context.school_id, req.target_person_id)
-    if source is None or target is None:
-        raise NotFoundError("Osoba nije pronađena.")
-    if repository.find_open_review(
-        db, context.school_id, source.id, target.id
-    ) is not None:
-        raise ConflictError("Predmet spajanja za ove osobe je već otvoren.")
-
-    review = PersonMergeRecord(
-        school_id=context.school_id,
-        source_person_id=source.id,
-        target_person_id=target.id,
-        status=PersonMergeStatus.FLAGGED,
-        reason=req.reason.strip(),
-        flagged_by_person_id=context.person_id,
-    )
-    db.add(review)
-    db.flush()
-    record_audit(
-        db,
-        data_class=AuditDataClass.IDENTITY,
-        action="person.merge_flagged",
-        entity_type="person_merge_record",
-        entity_id=review.id,
-        summary=(
-            f"Označen mogući duplikat: „{source.display_name}“ ↔ „{target.display_name}“."
-        ),
-        school_id=context.school_id,
-        actor_person_id=context.person_id,
-        context={"source_person_id": source.id, "target_person_id": target.id},
-    )
-    db.commit()
-    return MergeReviewResponse.model_validate(review)
-
-
-def list_merge_reviews(db: Session, context: RequestContext) -> list[MergeReviewResponse]:
-    return [
-        MergeReviewResponse.model_validate(r)
-        for r in repository.list_open_merge_reviews(db, context.school_id)
-    ]
-
-
-def decide_merge_review(
-    db: Session, context: RequestContext, review_id: str, req: MergeDecisionRequest
-) -> MergeReviewResponse:
-    review = repository.get_merge_review(db, context.school_id, review_id)
-    if review is None:
-        raise NotFoundError("Predmet spajanja nije pronađen.")
-    if review.status is not PersonMergeStatus.FLAGGED:
-        raise ConflictError("Predmet spajanja je već rešen.")
-
-    if req.decision == "DISMISS":
-        review.status = PersonMergeStatus.DISMISSED
-        review.performed_by_person_id = context.person_id
-        review.reason = f"{review.reason} | Odbačeno: {req.reason.strip()}"
-        record_audit(
-            db,
-            data_class=AuditDataClass.IDENTITY,
-            action="person.merge_dismissed",
-            entity_type="person_merge_record",
-            entity_id=review.id,
-            summary="Predmet spajanja je odbačen: osobe su različite.",
-            school_id=context.school_id,
-            actor_person_id=context.person_id,
-        )
-        db.commit()
-        return MergeReviewResponse.model_validate(review)
-
-    # MERGE, conservative: mark the source merged and end its org membership.
-    # Repointing of the source's relationships/payments is a deliberate follow-up.
-    source = repository.get_school_person(db, context.school_id, review.source_person_id)
-    target = repository.get_school_person(db, context.school_id, review.target_person_id)
-    if source is None or target is None:
-        raise ConflictError("Osobe iz predmeta više nisu dostupne za spajanje.")
-    _guard_not_last_owner(db, context.school_id, source.id)
-
-    source.identity_status = PersonIdentityStatus.MERGED
-    source_membership = repository.get_membership(db, context.school_id, source.id)
-    if source_membership is not None:
-        source_membership.status = MembershipStatus.ENDED
-        source_membership.record_status = RecordStatus.ARCHIVED
-
-    review.status = PersonMergeStatus.MERGED
-    review.performed_by_person_id = context.person_id
-    review.reason = f"{review.reason} | Spojeno u {target.id}: {req.reason.strip()}"
-    record_audit(
-        db,
-        data_class=AuditDataClass.IDENTITY,
-        action="person.merged",
-        entity_type="person",
-        entity_id=source.id,
-        summary=f"„{source.display_name}“ je spojen/a u „{target.display_name}“.",
-        school_id=context.school_id,
-        actor_person_id=context.person_id,
-        context={"source_person_id": source.id, "target_person_id": target.id},
-    )
-    enqueue(
-        db,
-        event_type="person.merged",
-        payload={
-            "source_person_id": source.id,
-            "target_person_id": target.id,
-            "school_id": context.school_id,
-        },
-        school_id=context.school_id,
-    )
-    db.commit()
-    return MergeReviewResponse.model_validate(review)
