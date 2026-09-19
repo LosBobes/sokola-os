@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import secrets
+from contextlib import suppress
 from typing import Annotated, Any, TypeVar, cast
 
 from fastapi import APIRouter, Header, Request
@@ -26,6 +27,7 @@ from starlette.status import HTTP_204_NO_CONTENT
 from app.common.errors import (
     NotFoundError,
     ProviderNotAllowedError,
+    RateLimitedError,
     UnauthorizedError,
 )
 from app.config import Settings
@@ -47,6 +49,8 @@ from app.domains.identity.auth_models import (
 )
 from app.domains.identity.models import Person
 from app.platform import clock
+from app.platform.rate_limit.enums import RateLimitScope
+from app.security import rate_guard
 from app.security.auth import SESSION_CREDENTIAL_KEY
 from app.security.csrf import CSRF_COOKIE
 from app.security.deps import SettingsDep
@@ -80,6 +84,9 @@ async def google_login(request: Request, settings: SettingsDep) -> RedirectRespo
     if not settings.oidc_enabled:
         raise NotFoundError("Google prijava nije konfigurisana.")
     oauth = get_oauth()
+    with SessionLocal() as db:
+        rate_guard.guard_login_start(db, request, settings)
+        db.commit()
     _record_login_started(GOOGLE_PROVIDER)
     try:
         redirect = await oauth.google.authorize_redirect(request, settings.oidc_redirect_url)
@@ -88,7 +95,13 @@ async def google_login(request: Request, settings: SettingsDep) -> RedirectRespo
         # to the sign-in page with a soft failure notice.
         logger.exception("Google login redirect failed")
         return RedirectResponse(url=f"{settings.web_post_login_url}?login=failed")
-    return cast(RedirectResponse, redirect)
+    response = cast(RedirectResponse, redirect)
+    if rate_guard.device_signal(request) is None:
+        # First visit: give this browser an id so the per-device budget has
+        # something to count next time. Issued on the way *out* so a refused
+        # request never hands out a fresh one.
+        rate_guard.issue_device_cookie(response, settings)
+    return response
 
 
 def _record_login_started(provider_key: str) -> None:
@@ -174,6 +187,7 @@ async def google_callback(request: Request, settings: SettingsDep) -> RedirectRe
         # failed and why in closed terms.
         logger.exception("Google token exchange failed")
         _record_failed_login(GOOGLE_PROVIDER, "CALLBACK_INVALID")
+        _count_failure(request, settings, RateLimitScope.CALLBACK_FAILURE_IP)
         return RedirectResponse(url=f"{settings.web_post_login_url}?login=failed")
 
     claims: dict[str, Any] | None = token.get("userinfo")
@@ -198,11 +212,28 @@ async def google_callback(request: Request, settings: SettingsDep) -> RedirectRe
                 db, provider_key=GOOGLE_PROVIDER, reason_code="PROVIDER_NOT_ALLOWED"
             )
             db.commit()
+            _count_failure(request, settings, RateLimitScope.CALLBACK_FAILURE_IP)
             raise
 
         person = jit_provision(db, dict(claims))
 
     return _issue_session(request, settings, person)
+
+
+def _count_failure(
+    request: Request, settings: Settings, scope: RateLimitScope
+) -> None:
+    """Count a failed attempt in its own transaction.
+
+    Its own, because the request that failed has usually abandoned whatever
+    transaction it had — and a failure count that rolls back with the failure
+    is no count at all. Never raises: being over the limit is discovered on the
+    *next* attempt, and a counter that could break the error path would turn a
+    failed login into a 500.
+    """
+    with SessionLocal() as db, suppress(RateLimitedError):
+        rate_guard.guard_failure(db, request, settings, scope)
+        db.commit()
 
 
 def _record_failed_login(provider_key: str, reason_code: str) -> None:
@@ -273,6 +304,12 @@ def password_login(
 ) -> JSONResponse:
     if not settings.password_auth_enabled:
         raise NotFoundError("Prijava lozinkom nije omogućena.")
+    with SessionLocal() as db:
+        # A password POST is itself the attempt, so it consumes the failure
+        # budget up front: an attacker who is already over the limit does not
+        # get one more guess checked before being told no.
+        rate_guard.guard_failure(db, request, settings, RateLimitScope.PASSWORD_FAILURE_IP)
+        db.commit()
     with SessionLocal() as db:
         person = authenticate_with_password(db, body.email, body.password)
     return _password_session_response(request, settings, person)

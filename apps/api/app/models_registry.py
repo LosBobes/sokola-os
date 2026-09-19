@@ -36,5 +36,6 @@ from app.platform.audit import models as _audit_models  # noqa: F401
 from app.platform.idempotency import models as _idempotency_models  # noqa: F401
 from app.platform.inbox import models as _inbox_models  # noqa: F401
 from app.platform.outbox import models as _outbox_models  # noqa: F401
+from app.platform.rate_limit import models as _rate_limit_models  # noqa: F401
 
 __all__ = ["Base"]
