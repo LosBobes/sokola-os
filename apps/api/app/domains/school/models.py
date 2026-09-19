@@ -403,6 +403,12 @@ class SchoolMembership(Base, TimestampMixin, RecordStatusMixin):
         UniqueConstraint(
             "school_id", "id", "person_id", name="uq_school_membership_tenant_person"
         ),
+        # Lets a profile's foreign key require the membership's *type* as part
+        # of the reference, so a participant profile on a STAFF membership is
+        # impossible rather than merely incorrect (M06 §2.5, §2.6).
+        UniqueConstraint(
+            "school_id", "id", "membership_type", name="uq_school_membership_tenant_type"
+        ),
         CheckConstraint(
             "(status = 'SUSPENDED') = (suspension_reason_code IS NOT NULL)",
             name="ck_school_membership_suspension_reason",
