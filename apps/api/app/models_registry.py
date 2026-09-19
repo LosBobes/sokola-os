@@ -17,6 +17,7 @@ from app.domains.communications import models as _communications_models  # noqa:
 from app.domains.data_import import models as _data_import_models  # noqa: F401
 from app.domains.documents import models as _documents_models  # noqa: F401
 from app.domains.events import models as _events_models  # noqa: F401
+from app.domains.family import models as _family_models  # noqa: F401
 from app.domains.groups import models as _groups_models  # noqa: F401
 from app.domains.identity import auth_models as _identity_auth_models  # noqa: F401
 from app.domains.identity import models as _identity_models  # noqa: F401
