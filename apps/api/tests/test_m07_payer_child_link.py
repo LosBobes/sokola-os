@@ -395,3 +395,22 @@ def test_a_half_decided_payer_link_is_refused(
 ) -> None:
     case = _Case(db)
     _refused(db, _link(case, **overrides), constraint)
+
+
+def test_an_activated_payer_link_keeps_its_start_time_after_revocation(
+    db: Session,
+) -> None:
+    """The same correction as the guardian link's, and the same reason: when a
+    payment arrangement started is the fact a revocation must not erase."""
+    case = _Case(db)
+    link = _active(case)
+    db.add(link)
+    db.commit()
+    started_at = link.activated_at
+
+    link.status = LinkStatus.REVOKED
+    link.revoked_at = clock.now()
+    link.decision_reason_code = "ARRANGEMENT_ENDED"
+    db.commit()
+
+    assert link.activated_at == started_at
