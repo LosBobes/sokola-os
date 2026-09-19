@@ -408,7 +408,14 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Ispravka ranijeg stava (dva puta):**
   1. Prvo sam zapisao da revizija 1.3 ne sme da se objavi dok nije potpuna. Tačniji stav je: ne sme da se objavi **nepotpuna iz nepažnje**. Pošto 39 redova *nije određeno ugovorom*, revizija 1.3 se objavljuje sa 74 ključa i zapisanim jazom; §2.2 ionako predviđa da dopune stižu kao nova revizija. Držati ceo registry (a sa njim TEN-Q01 i resolver) taocem nejasnih redova bilo bi gore od zapisanog jaza.
   2. Zatim sam u prvoj verziji ovog nalaza napisao **82 zasejiva / 31 nejasan**. To je bilo pogrešno: gledao sam samo fajl 03 kad sam tražio nedefinisana zaglavlja, a `STAFF` se pojavljuje i u fajlu 04. Tačno je **74 / 39**.
-- **Status:** `CHALLENGE_NOT_APPLIED` za 39 redova. Traži definiciju `STAFF` i `Ostale role` u M05 registry dokumentima; do tada ti ključevi nisu u nijednoj reviziji i zato su fail-closed deny, što je ispravno ponašanje.
+- **Još dva nedostajuća obavezna polja (nađeno pri pisanju seed generatora):** §2.3 traži `delegation_class` i `child_data_class` kao **obavezna** polja svakog `PermissionDefinition`-a. Nastavci ih uglavnom ne daju:
+  - `delegation_class` je naveden u prozi za **12 od 36** odredivih redova; za preostala 24 ga nema.
+  - `child_data_class` se **ne pominje nijednom** ni u jednom od dva nastavka.
+- **Zašto to nije „stavi default":**
+  - Za `delegation_class` fail-closed default **jeste** branjiv: `ROLE_ONLY` znači da se pravo ne može delegirati direct grantom. Kasnija revizija ga može olabaviti; nikad se ne širi tiho. To je preporuka.
+  - Za `child_data_class` default **nije** bezbedan. §2.3 formalno daje `NONE`, ali `school.people.basic.view` i `school.participant.safety.view` očigledno dodiruju podatke dece, a `NONE` bi slagao svakoj masking/retention logici koja to polje čita. Suprotno — sve proglasiti `SPECIAL_CATEGORY` — učinilo bi polje beskorisnim. Ovo polje postoji baš da bi maskiranje znalo šta drži, pa pogrešna vrednost nije konzervativna, nego netačna.
+- **Ukupno stanje odredivosti nastavaka:** 36 redova ima jasne role binding-e, ali čak i za njih 24 nema `delegation_class`, a svih 36 nema `child_data_class`. Registry nastavaka je, dakle, bitno nedodefinisan — ne samo u dve kolone uloga.
+- **Status:** `CHALLENGE_NOT_APPLIED` za 39 redova (nedefinisana grupa uloga) i dodatno za `delegation_class`/`child_data_class`. Traži se: definicija `STAFF` i `Ostale role`; potvrda da je `ROLE_ONLY` ispravan fail-closed default za nenavedeni `delegation_class`; i `child_data_class` po ključu (ili pravilo po kome se izvodi). Do tada ti ključevi nisu u nijednoj reviziji i zato su fail-closed deny, što je ispravno ponašanje.
 
 ## 5. Šta je u ovom radu stvarno urađeno
 
