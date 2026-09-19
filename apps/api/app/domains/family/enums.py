@@ -108,6 +108,39 @@ class PayerBasisKind(enum.StrEnum):
 PAYER_MEMBERSHIP_TYPES = ("CONTACT", "GUARDIAN")
 
 
+class LinkKind(enum.StrEnum):
+    """§2.4. Which kind of link a verification record proves.
+
+    Two kinds rather than one table each, because the *evidence* is the same
+    shape whichever link it supports — a method, a moment, an authorized
+    verifier and a policy version — while what it proves is not. Keeping them
+    in one table with a discriminator is what lets §5.3's "tačno jedan
+    verification record" be a single partial unique index rather than an
+    invariant spread over two places.
+    """
+
+    GUARDIAN_CHILD = "GUARDIAN_CHILD"
+    PAYER_CHILD = "PAYER_CHILD"
+
+
+class VerificationMethod(enum.StrEnum):
+    """§2.4. How the school satisfied itself, recorded as a category only.
+
+    None of these stores what was seen. §2.4 is explicit for the document case:
+    "čuva se samo činjenica provere i opcioni keyed case digest; nema slike,
+    broja ili običnog hash-a dokumenta u M07". A school that checked an ID
+    records *that* it checked one.
+    """
+
+    #: The school already held the relationship in its own records.
+    SCHOOL_RECORD = "SCHOOL_RECORD"
+    #: Someone presented a document in person and a school actor looked at it.
+    IN_PERSON_DOCUMENT_CHECK = "IN_PERSON_DOCUMENT_CHECK"
+    SIGNED_DECLARATION = "SIGNED_DECLARATION"
+    #: Carried over from a prior system by an operator-directed migration.
+    MIGRATION_VERIFIED = "MIGRATION_VERIFIED"
+
+
 #: The membership type each side of a guardian link must hold (§2.3). Stored on
 #: the row and pinned by a CHECK so the composite foreign key can require it:
 #: without the type in the key, a guardian link could name the same person's

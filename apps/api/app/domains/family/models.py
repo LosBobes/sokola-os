@@ -1,4 +1,4 @@
-"""M07 §2.1-2.3, §2.5: families, guardianship, and who pays.
+"""M07 §2.1-2.5: families, guardianship, who pays, and the proof behind each.
 
 The three tables here are three *separate facts*, which §3.1 states outright:
 a family grouping, someone's place in it, and a verified guardian relationship
@@ -41,10 +41,12 @@ from app.common.ids import new_id
 from app.domains.family.enums import (
     FamilyMembershipStatus,
     FamilyStatus,
+    LinkKind,
     LinkStatus,
     MemberKind,
     PayerBasisKind,
     RelationshipKind,
+    VerificationMethod,
 )
 from app.platform import clock
 
@@ -516,3 +518,123 @@ class PayerChildLink(Base, TimestampMixin):
     decision_by_account_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     decision_reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
+
+
+class RelationshipVerificationRecord(Base, TimestampMixin):
+    """§2.4. The immutable proof that a school checked a link before activating it.
+
+    §3.5 makes this and the link's activation one transaction: a link becomes
+    ACTIVE "i tačno jedan odgovarajući immutable verification record nastaju
+    atomarno tek posle school approval-a". A link that is ACTIVE with no record
+    is an activation nobody can account for afterwards, which is the state this
+    table exists to make impossible.
+
+    One table with a `link_kind` discriminator rather than one per link type.
+    The evidence has the same shape either way — a method, a moment, an
+    authorized verifier, a policy version — while what it proves does not, and
+    keeping them together is what lets §5.3's "exactly one activation proof per
+    link" be a single partial unique index instead of an invariant maintained
+    in two places that can drift apart.
+
+    **Nothing here stores what was seen.** §2.4 is explicit for the document
+    case: "čuva se samo činjenica provere i opcioni keyed case digest; nema
+    slike, broja ili običnog hash-a dokumenta u M07." A school that inspected an
+    identity document records *that* it did.
+
+    §2.4's rule that the verifier may not be the account of the person whose
+    link is being checked (`M07_SELF_VERIFICATION_FORBIDDEN`) is not a
+    constraint here, for the same reason the guardian link's distinct-approver
+    rule is not: the database cannot know which human an account belongs to.
+    It is enforced where the decision is made.
+    """
+
+    __tablename__ = "relationship_verification_record"
+    __table_args__ = (
+        UniqueConstraint(
+            "school_id", "id", name="uq_relationship_verification_record_tenant"
+        ),
+        # §2.4: exactly one activation proof per link. Two separate partial
+        # uniques rather than one over a coalesced column, because each is a
+        # real index on a real column and Postgres can use them for the lookup
+        # "does this link have its proof" that §3.5 needs on every activation.
+        Index(
+            "uq_relationship_verification_guardian_link",
+            "guardian_child_link_id",
+            unique=True,
+            postgresql_where=text("guardian_child_link_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_relationship_verification_payer_link",
+            "payer_child_link_id",
+            unique=True,
+            postgresql_where=text("payer_child_link_id IS NOT NULL"),
+        ),
+        ForeignKeyConstraint(
+            ["school_id", "guardian_child_link_id"],
+            ["guardian_child_link.school_id", "guardian_child_link.id"],
+            name="fk_relationship_verification_guardian_link",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["school_id", "payer_child_link_id"],
+            ["payer_child_link.school_id", "payer_child_link.id"],
+            name="fk_relationship_verification_payer_link",
+            ondelete="CASCADE",
+        ),
+        # §2.4: "CHECK zahteva tačno jedan link FK u skladu sa `link_kind`."
+        # Both halves matter. Without the agreement clause a GUARDIAN_CHILD
+        # record could hold a payer link and satisfy "exactly one"; without
+        # "exactly one" a record could hold both or neither.
+        CheckConstraint(
+            "(guardian_child_link_id IS NOT NULL)::int "
+            "+ (payer_child_link_id IS NOT NULL)::int = 1",
+            name="ck_relationship_verification_one_link",
+        ),
+        CheckConstraint(
+            "(link_kind = 'GUARDIAN_CHILD') = (guardian_child_link_id IS NOT NULL)",
+            name="ck_relationship_verification_link_kind",
+        ),
+        # The digest is 64 hex characters or absent. §2.4 makes it optional —
+        # `SCHOOL_RECORD` has no case reference to point at — and the length
+        # check is what stops the column quietly accepting a raw reference
+        # someone forgot to hash.
+        CheckConstraint(
+            "evidence_reference_digest IS NULL "
+            "OR evidence_reference_digest ~ '^[0-9a-f]{64}$'",
+            name="ck_relationship_verification_digest_shape",
+        ),
+        Index(
+            "ix_relationship_verification_school",
+            "school_id",
+            "link_kind",
+            "verified_at",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("rvr"))
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
+    )
+    link_kind: Mapped[LinkKind] = mapped_column(enum_type(LinkKind), nullable=False)
+    guardian_child_link_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    payer_child_link_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    verification_method: Mapped[VerificationMethod] = mapped_column(
+        enum_type(VerificationMethod), nullable=False
+    )
+    #: Keyed HMAC of the school's own case reference, never a document number,
+    #: a name, or a plain hash of low-entropy PII (§2.4). Produced by
+    #: :func:`app.domains.family.evidence.evidence_reference_digest`, which
+    #: explains why the key is not optional.
+    evidence_reference_digest: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    #: §2.4: an authorized school actor, and not the account of the person
+    #: whose link is being verified. The second half is a service rule.
+    verified_by_account_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    verified_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    #: Which version of the school's checking procedure was followed. Kept so a
+    #: later change of procedure does not retroactively reinterpret what an
+    #: older record means.
+    policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
