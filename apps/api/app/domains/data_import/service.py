@@ -54,6 +54,10 @@ from app.domains.data_import.schemas import (
 from app.domains.groups.models import GroupMembership
 from app.domains.identity.enums import PersonIdentityStatus
 from app.domains.identity.models import Person
+from app.domains.people.profile_models import (
+    SchoolPersonProfile,
+    normalize_local_person_code,
+)
 from app.domains.school.models import SchoolMembership
 from app.platform import clock
 from app.platform.audit.service import record_audit
@@ -292,12 +296,18 @@ def commit_batch(db: Session, context: RequestContext, batch_id: str) -> ImportC
         db.add(person)
         db.flush()
         db.add(
-            SchoolMembership(
-                school_id=context.school_id,
-                person_id=person.id,
-                local_member_code=row.local_member_code,
-            )
+            SchoolMembership(school_id=context.school_id, person_id=person.id)
         )
+        # The school-local code belongs to the person as this school files them
+        # (§2.4), not to one of their memberships. The CSV column keeps its
+        # name: that header is M20's contract with whoever exports the file.
+        profile = SchoolPersonProfile(school_id=context.school_id, person_id=person.id)
+        if row.local_member_code:
+            profile.local_person_code = row.local_member_code
+            profile.normalized_local_person_code = normalize_local_person_code(
+                row.local_member_code
+            )
+        db.add(profile)
 
         if row.group_name:
             group = repository.find_group_by_name(db, context.school_id, row.group_name)

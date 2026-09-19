@@ -39,13 +39,13 @@ def search(
     org_id = context.school_id
     results: list[SearchResultItem] = []
 
-    for person, membership in repository.search_people(db, org_id, term):
+    for person, local_code in repository.search_people(db, org_id, term):
         results.append(
             SearchResultItem(
                 type=SearchResultType.PERSON,
                 id=person.id,
                 title=person.display_name,
-                subtitle=membership.local_member_code or "Član organizacije",
+                subtitle=local_code or "Član organizacije",
             )
         )
 

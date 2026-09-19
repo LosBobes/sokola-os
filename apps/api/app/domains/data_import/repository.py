@@ -8,6 +8,10 @@ from app.common.pagination import PageParams
 from app.domains.data_import.models import ImportBatch, ImportRow
 from app.domains.groups.models import Group
 from app.domains.identity.models import Person
+from app.domains.people.profile_models import (
+    SchoolPersonProfile,
+    normalize_local_person_code,
+)
 from app.domains.school.models import SchoolMembership
 
 
@@ -59,15 +63,25 @@ def find_group_by_name(db: Session, school_id: str, name: str) -> Group | None:
 
 def find_local_code_owner(
     db: Session, school_id: str, local_member_code: str
-) -> SchoolMembership | None:
-    """An existing member in this org already holding ``local_member_code``
-    (§9), mirrors ``app.domains.people.repository.find_local_code_owner``,
-    minus the ``exclude_person_id`` (import rows describe brand-new people, so
-    there is no existing membership row of their own to exclude)."""
-    stmt = select(SchoolMembership).where(
-        SchoolMembership.school_id == school_id,
-        SchoolMembership.local_member_code == local_member_code,
-        SchoolMembership.record_status == RecordStatus.ACTIVE,
+) -> SchoolPersonProfile | None:
+    """Someone in this school already holding this local code.
+
+    Mirrors ``app.domains.people.repository.find_local_code_owner`` minus the
+    ``exclude_person_id``: import rows describe brand-new people, so there is no
+    row of their own to exclude. Reads the M06 §2.4 profile, where the code now
+    lives — a code identifies a person to the school, not one membership.
+
+    A code that cannot be normalized has no owner rather than raising: the
+    import reports the row as invalid through its own validation path, and a
+    lookup is not the place to decide that.
+    """
+    try:
+        normalized = normalize_local_person_code(local_member_code)
+    except ValueError:
+        return None
+    stmt = select(SchoolPersonProfile).where(
+        SchoolPersonProfile.school_id == school_id,
+        SchoolPersonProfile.normalized_local_person_code == normalized,
     )
     return db.execute(stmt).scalar_one_or_none()
 

@@ -8,7 +8,11 @@ from app.common.pagination import PageParams
 from app.domains.identity.enums import PersonMergeStatus, RoleAssignmentStatus, RoleCode
 from app.domains.identity.models import Person, PersonMergeRecord, RoleAssignment
 from app.domains.people.models import GuardianRelationship, GuardianSchoolAccess
-from app.domains.school.enums import MembershipStatus, OrgMemberType
+from app.domains.people.profile_models import (
+    SchoolPersonProfile,
+    normalize_local_person_code,
+)
+from app.domains.school.enums import MembershipStatus, MembershipType
 from app.domains.school.models import SchoolMembership
 
 
@@ -37,8 +41,8 @@ def list_school_people(
     school_id: str,
     params: PageParams,
     *,
-    member_type: OrgMemberType | None = None,
-) -> tuple[list[tuple[Person, OrgMemberType]], int]:
+    member_type: MembershipType | None = None,
+) -> tuple[list[tuple[Person, MembershipType]], int]:
     """People visible in this school, each paired with what they are to it.
 
     ``member_type`` narrows the page to one kind (e.g. ``STAFF`` to populate a
@@ -46,7 +50,7 @@ def list_school_people(
     page never reports the whole roster's size.
     """
     base = (
-        select(Person, SchoolMembership.member_type)
+        select(Person, SchoolMembership.membership_type)
         .join(SchoolMembership, SchoolMembership.person_id == Person.id)
         .where(
             SchoolMembership.school_id == school_id,
@@ -56,7 +60,7 @@ def list_school_people(
         )
     )
     if member_type is not None:
-        base = base.where(SchoolMembership.member_type == member_type)
+        base = base.where(SchoolMembership.membership_type == member_type)
     total = db.execute(
         select(func.count()).select_from(base.order_by(None).subquery())
     ).scalar_one()
@@ -124,15 +128,36 @@ def is_active_owner(db: Session, school_id: str, person_id: str) -> bool:
 
 def find_local_code_owner(
     db: Session, school_id: str, local_member_code: str, exclude_person_id: str
-) -> SchoolMembership | None:
-    """Another member in this org already holding ``local_member_code`` (§9)."""
-    stmt = select(SchoolMembership).where(
-        SchoolMembership.school_id == school_id,
-        SchoolMembership.local_member_code == local_member_code,
-        SchoolMembership.person_id != exclude_person_id,
-        SchoolMembership.record_status == RecordStatus.ACTIVE,
+) -> SchoolPersonProfile | None:
+    """Another person in this school already holding this local code.
+
+    Reads the M06 §2.4 profile rather than the membership: the code identifies a
+    *person* to the school, so someone who is both a parent and a coach has one
+    code, not one per membership type.
+    """
+    normalized = normalize_local_person_code(local_member_code)
+    stmt = select(SchoolPersonProfile).where(
+        SchoolPersonProfile.school_id == school_id,
+        SchoolPersonProfile.normalized_local_person_code == normalized,
+        SchoolPersonProfile.person_id != exclude_person_id,
     )
     return db.execute(stmt).scalar_one_or_none()
+
+
+def get_or_create_profile(db: Session, school_id: str, person_id: str) -> SchoolPersonProfile:
+    """The school's view of this person, created on first need (§2.4)."""
+    existing = db.execute(
+        select(SchoolPersonProfile).where(
+            SchoolPersonProfile.school_id == school_id,
+            SchoolPersonProfile.person_id == person_id,
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+    profile = SchoolPersonProfile(school_id=school_id, person_id=person_id)
+    db.add(profile)
+    db.flush()
+    return profile
 
 
 # ---------------------------------------------------------------------------

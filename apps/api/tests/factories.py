@@ -24,6 +24,7 @@ from app.domains.school.enums import (
     SchoolType,
 )
 from app.domains.school.models import School, SchoolMembership
+from app.platform import clock
 from app.security.auth import DEV_PERSON_HEADER
 from app.security.deps import CONTEXT_HEADER
 from sqlalchemy import select
@@ -109,6 +110,14 @@ def add_membership(
     membership = SchoolMembership(
         school_id=school.id, person_id=person.id, status=status
     )
+    # A suspended or terminated membership carries why, and a terminated one
+    # carries when — the §2.3 CHECKs say so, and a fixture that sidesteps them
+    # would be testing against rows production cannot hold.
+    if status is MembershipStatus.SUSPENDED:
+        membership.suspension_reason_code = "TEST_SUSPENDED"
+    elif status is MembershipStatus.TERMINATED:
+        membership.termination_reason_code = "TEST_TERMINATED"
+        membership.end_date = membership.start_date or clock.now().date()
     if created_at is not None:
         membership.created_at = created_at
     db.add(membership)

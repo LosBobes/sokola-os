@@ -16,7 +16,7 @@ from app.domains.organization.models import Organization
 from app.domains.school import anchor
 from app.domains.school.enums import (
     LocatorKind,
-    OrgMemberType,
+    MembershipType,
     SchoolStatus,
     SchoolStatusReason,
 )
@@ -113,7 +113,7 @@ def create_school(
         SchoolMembership(
             school_id=org.id,
             person_id=principal.person_id,
-            member_type=OrgMemberType.STAFF,
+            membership_type=MembershipType.STAFF,
         )
     )
     db.add(

@@ -27,7 +27,7 @@ from app.domains.groups.models import Group, GroupMembership
 from app.domains.payments.enums import PaymentRecordStatus
 from app.domains.payments.models import PaymentRecord
 from app.domains.scheduling.models import Session as ScheduleSession
-from app.domains.school.enums import MembershipStatus, OrgMemberType
+from app.domains.school.enums import MembershipStatus, MembershipType
 from app.domains.school.models import SchoolMembership
 
 _OPEN_CHARGE_STATUSES = (ChargeStatus.OPEN, ChargeStatus.PARTIALLY_PAID)
@@ -51,12 +51,12 @@ def active_member_count(db: Session, school_id: str) -> int:
     Owners, trainers, guardians and plain contacts all hold an school
     membership too, so counting memberships flatters the number by everyone who
     merely works at or is related to the school. Filtering on
-    :class:`OrgMemberType.ATTENDEE` counts polaznici and nobody else; archived
+    :class:`MembershipType.PARTICIPANT` counts polaznici and nobody else; archived
     and ended people are already excluded by the status filters.
     """
     stmt = select(func.count()).select_from(SchoolMembership).where(
         SchoolMembership.school_id == school_id,
-        SchoolMembership.member_type == OrgMemberType.ATTENDEE,
+        SchoolMembership.membership_type == MembershipType.PARTICIPANT,
         SchoolMembership.status == MembershipStatus.ACTIVE,
         SchoolMembership.record_status == RecordStatus.ACTIVE,
     )
@@ -65,11 +65,11 @@ def active_member_count(db: Session, school_id: str) -> int:
 
 def active_membership_count_as_of(db: Session, school_id: str, as_of: dt.datetime) -> int:
     """Currently-active *participant* memberships that had already joined by
-    ``as_of``. Same ATTENDEE-only rule as :func:`active_member_count`, so the
+    ``as_of``. Same PARTICIPANT-only rule as :func:`active_member_count`, so the
     trend curve and the headline figure can never disagree."""
     stmt = select(func.count()).select_from(SchoolMembership).where(
         SchoolMembership.school_id == school_id,
-        SchoolMembership.member_type == OrgMemberType.ATTENDEE,
+        SchoolMembership.membership_type == MembershipType.PARTICIPANT,
         SchoolMembership.status == MembershipStatus.ACTIVE,
         SchoolMembership.record_status == RecordStatus.ACTIVE,
         SchoolMembership.created_at < as_of,

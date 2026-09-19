@@ -26,6 +26,7 @@ from app.domains.billing.models import Charge
 from app.domains.events.models import Event
 from app.domains.groups.models import Group
 from app.domains.identity.models import Person
+from app.domains.people.profile_models import SchoolPersonProfile
 from app.domains.scheduling.models import Session as ScheduledSession
 from app.domains.school.enums import MembershipStatus
 from app.domains.school.models import SchoolMembership
@@ -41,13 +42,24 @@ def _prefix_rank(*columns: Any, term: str) -> ColumnElement[int]:
 
 def search_people(
     db: Session, school_id: str, term: str
-) -> list[tuple[Person, SchoolMembership]]:
+) -> list[tuple[Person, str | None]]:
     """People visible to this org via an active membership (mirrors
-    ``people.repository.list_school_people``) whose display name matches."""
+    ``people.repository.list_school_people``) whose display name matches.
+
+    Returns the school-local code alongside, read from the M06 §2.4 profile
+    rather than the membership: the code identifies the person to the school,
+    and an outer join keeps people who have no profile row visible rather than
+    silently dropping them from search.
+    """
     like = f"%{term}%"
     stmt = (
-        select(Person, SchoolMembership)
+        select(Person, SchoolPersonProfile.local_person_code)
         .join(SchoolMembership, SchoolMembership.person_id == Person.id)
+        .outerjoin(
+            SchoolPersonProfile,
+            (SchoolPersonProfile.person_id == Person.id)
+            & (SchoolPersonProfile.school_id == school_id),
+        )
         .where(
             SchoolMembership.school_id == school_id,
             SchoolMembership.status == MembershipStatus.ACTIVE,

@@ -13,8 +13,9 @@ class SchoolType(enum.StrEnum):
     OTHER = "OTHER"
 
 
-class OrgMemberType(enum.StrEnum):
-    """What a person *is* to the school, independent of whether they can sign in.
+class MembershipType(enum.StrEnum):
+    """M06 §2.3. What a person *is* to the school, independent of whether they
+    can sign in.
 
     A school's headline "aktivni članovi" figure must count enrolled
     participants and nobody else, so an owner, a coach, a parent and an
@@ -23,26 +24,41 @@ class OrgMemberType(enum.StrEnum):
     answers a different question (what may this account *do*), and many people
     here have no account at all.
 
-    ``ATTENDEE`` is the default and the backfill value for pre-existing rows,
-    except for people who already hold a staff role assignment.
+    §3.2: one person may hold several of these in one school — a parent who
+    also coaches is both — and holding any of them in one school carries no
+    right in another.
     """
 
-    #: Polaznik / član , the only type counted as an active member.
-    ATTENDEE = "ATTENDEE"
-    #: Trener, nastavnik, asistent, administracija.
-    STAFF = "STAFF"
+    #: Polaznik / član, the only type counted as an active member.
+    PARTICIPANT = "PARTICIPANT"
     #: Roditelj / staratelj.
     GUARDIAN = "GUARDIAN"
+    #: Trener, nastavnik, asistent, administracija.
+    STAFF = "STAFF"
     #: Kontakt osoba (no participation, no account).
     CONTACT = "CONTACT"
 
 
 class MembershipStatus(enum.StrEnum):
+    """M06 §2.3, §5.1.
+
+    ``DRAFT`` exists so a membership can be prepared before it takes effect;
+    §5.1 lets it be terminated straight from there, which is how you abandon a
+    membership you never activated without pretending it was once real.
+
+    ``TERMINATED`` is terminal. Coming back is a **new episode** — a new row —
+    never a revived one: reusing the row would overwrite when the person was
+    previously a member, and that history is what ``is_first_activation`` and
+    every retrospective count depend on.
+    """
+
+    #: Prepared, not yet in effect.
+    DRAFT = "DRAFT"
     ACTIVE = "ACTIVE"
-    # Temporarily inactive; membership may be resumed (§20/§21).
+    #: Temporarily inactive. §3.8: immediately ineffective for M03/M05, even if
+    #: an invalidation event is late.
     SUSPENDED = "SUSPENDED"
-    # Terminal. Reactivation is a new membership period, never a revived row.
-    ENDED = "ENDED"
+    TERMINATED = "TERMINATED"
 
 
 class MembershipPeriodStatus(enum.StrEnum):
@@ -187,3 +203,19 @@ TYPE_TO_KIND: dict[SchoolType, tuple[SchoolKind, str | None]] = {
     SchoolType.BUSINESS: (SchoolKind.OTHER, "Preduzeće"),
     SchoolType.OTHER: (SchoolKind.OTHER, "Ostalo"),
 }
+
+
+#: §5.1, the whole table. Anything not listed is refused; note especially that
+#: nothing leaves ``TERMINATED``.
+ALLOWED_MEMBERSHIP_TRANSITIONS: frozenset[tuple[MembershipStatus, MembershipStatus]] = (
+    frozenset(
+        {
+            (MembershipStatus.DRAFT, MembershipStatus.ACTIVE),
+            (MembershipStatus.DRAFT, MembershipStatus.TERMINATED),
+            (MembershipStatus.ACTIVE, MembershipStatus.SUSPENDED),
+            (MembershipStatus.ACTIVE, MembershipStatus.TERMINATED),
+            (MembershipStatus.SUSPENDED, MembershipStatus.ACTIVE),
+            (MembershipStatus.SUSPENDED, MembershipStatus.TERMINATED),
+        }
+    )
+)
