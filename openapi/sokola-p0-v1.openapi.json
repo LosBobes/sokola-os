@@ -2928,6 +2928,35 @@
         "title": "LocationResponse",
         "type": "object"
       },
+      "LogoutAllRequest": {
+        "description": "\u00a712: every mutation carries a stable UUID, and on HTTP the\n``Idempotency-Key`` header must equal it exactly.",
+        "properties": {
+          "request_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "LogoutAllRequest",
+        "type": "object"
+      },
+      "LogoutAllResponse": {
+        "properties": {
+          "revoked_sessions": {
+            "title": "Revoked Sessions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revoked_sessions"
+        ],
+        "title": "LogoutAllResponse",
+        "type": "object"
+      },
       "MeResponse": {
         "properties": {
           "contexts": {
@@ -6416,6 +6445,66 @@
           }
         },
         "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout-all": {
+      "post": {
+        "description": "\u00a76 AUTH-05: end every session of this account, including this one.\n\nThe interesting part is the retry. This command revokes the credential that\nauthorized it, so the identical retry arrives holding something that no\nlonger authenticates anything \u2014 and \u00a76 says it must still get the first\nresult, not a 401 and not a second execution. The digest of that revoked\ncredential finds exactly one receipt and returns exactly what it stored;\nit authorizes nothing else (M01-QA-020).\n\nNot yet done, and not pretended: \u00a76 also wants a fresh re-authentication\n\"kada je provider podr\u017eava\". Neither adapter here supports step-up, so this\nrequires an active session and no more \u2014 recorded rather than faked.",
+        "operationId": "logoutAllSessions",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutAllRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutAllResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Logout All Sessions",
         "tags": [
           "auth"
         ]

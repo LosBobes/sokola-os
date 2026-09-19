@@ -87,6 +87,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/logout-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout All Sessions
+         * @description §6 AUTH-05: end every session of this account, including this one.
+         *
+         *     The interesting part is the retry. This command revokes the credential that
+         *     authorized it, so the identical retry arrives holding something that no
+         *     longer authenticates anything — and §6 says it must still get the first
+         *     result, not a 401 and not a second execution. The digest of that revoked
+         *     credential finds exactly one receipt and returns exactly what it stored;
+         *     it authorizes nothing else (M01-QA-020).
+         *
+         *     Not yet done, and not pretended: §6 also wants a fresh re-authentication
+         *     "kada je provider podržava". Neither adapter here supports step-up, so this
+         *     requires an active session and no more — recorded rather than faked.
+         */
+        post: operations["logoutAllSessions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/password/login": {
         parameters: {
             query?: never;
@@ -3057,6 +3088,20 @@ export interface components {
             name: string;
             status: components["schemas"]["RecordStatus"];
         };
+        /**
+         * LogoutAllRequest
+         * @description §12: every mutation carries a stable UUID, and on HTTP the
+         *     ``Idempotency-Key`` header must equal it exactly.
+         */
+        LogoutAllRequest: {
+            /** Request Id */
+            request_id: string;
+        };
+        /** LogoutAllResponse */
+        LogoutAllResponse: {
+            /** Revoked Sessions */
+            revoked_sessions: number;
+        };
         /** MeResponse */
         MeResponse: {
             /** Contexts */
@@ -4428,6 +4473,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    logoutAllSessions: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LogoutAllRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogoutAllResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

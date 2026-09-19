@@ -201,6 +201,7 @@ def revoke_account_sessions(
     reason: SessionRevokeReason,
     correlation_id: str | None = None,
     keep_session_id: str | None = None,
+    lock: bool = True,
     now: dt.datetime | None = None,
 ) -> int:
     """§6 AUTH-08: the internal port M02/M03/M05/M06/M07/M17 call.
@@ -219,10 +220,18 @@ def revoke_account_sessions(
     performed the action. It is re-stamped with the new version, because a kept
     session carrying the old one would fail its very next request and the "keep"
     would be a lie.
+
+    ``lock=False`` is for a caller that already locked the account and has since
+    edited it — the status commands do exactly that, and the refresh below would
+    otherwise throw their edit away.
     """
     moment = now or clock.now()
-    _lock_account(db, account.id)
-    db.refresh(account)
+    if lock:
+        # `refresh` re-reads the row and *discards* pending changes to it, which
+        # is why a caller that has already modified `account` passes
+        # ``lock=False`` and takes the lock itself, before its own edit.
+        lock_account(db, account.id)
+        db.refresh(account)
 
     account.authorization_version += 1
     account.version += 1
@@ -267,7 +276,7 @@ def revoke_account_sessions(
     return revoked
 
 
-def _lock_account(db: Session, account_id: str) -> None:
+def lock_account(db: Session, account_id: str) -> None:
     """Serialize concurrent revocations of one account.
 
     Without it, two callers can read the same version, both write version+1, and
