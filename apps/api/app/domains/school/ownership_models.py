@@ -31,6 +31,7 @@ from sqlalchemy import (
     ForeignKeyConstraint,
     Index,
     String,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -97,6 +98,12 @@ class SchoolOwnerNomination(Base, TimestampMixin):
             name="ck_owner_nomination_cancel_reason",
         ),
         CheckConstraint("version >= 1", name="ck_owner_nomination_version"),
+        # M03 §7.2: the composite target another tenant table's foreign key
+        # names. It adds no uniqueness — `id` is already the primary key — but
+        # it lets a child's reference carry the tenant *as part of the
+        # reference*, which is what makes a cross-tenant link impossible rather
+        # than merely incorrect.
+        UniqueConstraint("school_id", "id", name="uq_owner_nomination_tenant"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("nom"))
@@ -174,6 +181,16 @@ class SchoolPrimaryOwnerTerm(Base):
             name="ck_primary_owner_term_override_case",
         ),
         Index("ix_primary_owner_term_school", "school_id", "valid_from"),
+        # And the nomination it came from must be this school's too — the same
+        # argument as the role assignment above, one step back: a term whose
+        # source nomination belonged to another school would read as proof of
+        # something that school never decided. §7.3.
+        ForeignKeyConstraint(
+            ["school_id", "source_nomination_id"],
+            ["school_owner_nomination.school_id", "school_owner_nomination.id"],
+            name="fk_primary_owner_term_nomination_tenant",
+            ondelete="SET NULL (source_nomination_id)",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("pot"))
@@ -187,9 +204,7 @@ class SchoolPrimaryOwnerTerm(Base):
     owner_role_code: Mapped[str] = mapped_column(String(40), nullable=False, default="OWNER")
     valid_from: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     valid_to: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    source_nomination_id: Mapped[str | None] = mapped_column(
-        ForeignKey("school_owner_nomination.id", ondelete="SET NULL"), nullable=True
-    )
+    source_nomination_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     reason_code: Mapped[PrimaryOwnerTermReason] = mapped_column(
         enum_type(PrimaryOwnerTermReason), nullable=False
     )

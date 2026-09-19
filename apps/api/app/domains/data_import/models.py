@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,6 +35,14 @@ class ImportBatch(Base, TimestampMixin):
     """
 
     __tablename__ = "import_batch"
+    __table_args__ = (
+        # M03 §7.2: the composite target another tenant table's foreign key
+        # names. It adds no uniqueness — `id` is already the primary key — but
+        # it lets a child's reference carry the tenant *as part of the
+        # reference*, which is what makes a cross-tenant link impossible rather
+        # than merely incorrect.
+        UniqueConstraint("school_id", "id", name="uq_import_batch_tenant"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("imb"))
     school_id: Mapped[str] = mapped_column(
@@ -54,11 +70,20 @@ class ImportRow(Base, TimestampMixin):
     table's own tenant-isolation queries never need a join."""
 
     __tablename__ = "import_row"
+    __table_args__ = (
+        # `school_id` here is denormalized from the batch (see the docstring),
+        # and this is what keeps the two honest: a row cannot belong to a batch
+        # of a different school. §7.3.
+        ForeignKeyConstraint(
+            ["school_id", "batch_id"],
+            ["import_batch.school_id", "import_batch.id"],
+            name="fk_import_row_batch_tenant",
+            ondelete="CASCADE",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("imr"))
-    batch_id: Mapped[str] = mapped_column(
-        ForeignKey("import_batch.id", ondelete="CASCADE"), nullable=False
-    )
+    batch_id: Mapped[str] = mapped_column(String(64), nullable=False)
     school_id: Mapped[str] = mapped_column(
         ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
