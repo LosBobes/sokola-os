@@ -4,7 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    # `main` and any branch a stacked PR can target. A PR based on another PR's
+    # branch otherwise gets no run at all — and an empty checks list reads as
+    # "passed" to everyone glancing at the page, which is the worst of both
+    # worlds: unverified work that looks verified.
+    branches: [main, "claude/**"]
 
 concurrency:
   group: ci-${{ github.ref }}
