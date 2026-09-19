@@ -82,7 +82,7 @@ authorization domen.
 | M02 Pozivnice | `ADAPT` | `identity/invite_tokens.py`, `Invitation` model, `tests/test_invitations.py`. Invite-only postoji; M02 ugovor je znatno širi (55 KB master) |
 | M03 Multi-tenancy | `ADAPT` | §5.2, §5.3, §8 koraci 3–5 i TEN-01/02/04/05 isporučeni (`app/domains/tenancy/`, migracije `e5f83a19d24b`, `f8c21e64b0a7`, 36 testova). Guard sada poredi sve tri verzije i ponovo dokazuje M06 članstvo. §7.2–7.3 composite tenant FK-ovi isporučeni za sve 23 veze (migracije `a1d47f38e6c2`, `b2e59c14d7a3`, `c3f16a80d95e`, 100 testova) — F-26 otklonjen. **Ostaje:** kontekst se bira role assignment-om umesto škola+workspace (F-24, čeka M05), TEN-Q01/Q02 i chooser UI |
 | M04 School/Subscription | `IMPLEMENT` (§2.1–2.8 urađeno) | Anchor: `organization`, `organization_school`, `school_locator`, `school_status_transition`, prošireni `school` (migracija `a4d76f2b91c0`, 30 testova). Ownership: `school_owner_nomination`, `school_primary_owner_term` sa composite tenant FK-ovima (`app/domains/school/ownership*.py`, migracija `b9e3c05a74d2`, 31 test). Entitlement: `school_product_entitlement` sa read-time pravilom efektivnosti (`app/domains/school/entitlements.py`, migracija `c1f4a86d39b7`, 23 testa). **Ostaje:** subscription usage (§2.9–2.10, blokirano — vidi F-15), komercijalni sloj (§2.12–2.20), SCH-01..06 / ORG-01..04 / OWN-01..04 / ENT-01..02 kao komande sa permisijama i step-up-om |
-| M05 RBAC | `ADAPT` | `app/security/permissions.py` — per-area granted-areas model, restrikcija može samo sužavati. Nema support/break-glass pristupa ni v5.7 permission registra |
+| M05 RBAC | `ADAPT` | `app/security/permissions.py` (169 linija) — per-area granted-areas model, restrikcija može samo sužavati. Nema `AuthorizationPolicyRevision`, `PermissionDefinition`, `RoleDefinition`/`RolePermissionBinding`, direct grantova, platform uloga, support ni break-glass pristupa. **Blokira:** TEN-Q01 (workspace opcije se izvode iz `RoleDefinition.workspace_key`), F-24 (izbor konteksta), delove M03/M07. **Prvi isečak:** registry kao referentni podatak, bez dodirivanja `RoleCode` — vidi F-29 |
 | M06 Ljudi i članstva | `ADAPT` (§2.1, §2.3–2.7 urađeno) | `Person` §2.1, `school_person_profile` §2.4 (migracija `d2a95e13c7f4`), `school_membership` §2.3 sa MEM-01..05 (`people/membership.py`, migracija `e6b1d47a2c98`), `participant_profile`/`staff_profile`/`person_merge_history_entry` §2.5–2.7 (`people/activity_profiles.py`, migracija `f3c92d81ab45`). 60 testova ukupno. **Ostaje:** §2.2 sensitive identifier (blokiran — vidi F-16), PER/MRG komande i HTTP površina za MEM komande |
 | M07 Roditelji/staratelji | `ADAPT` | `people.GuardianRelationship`, `GuardianOrganizationAccess`. **Payer relation ne postoji odvojeno od guardian-a** — M07/M12 zahtev |
 
@@ -364,6 +364,29 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
   - `workspace` je **obrisan** (migracija `e5f83a19d24b`; dokazano bez čitalaca, pa `DROP TABLE`, ne migracija podataka).
   - `student_login_authorization` je **tenant-scoped** (migracija `d4b83c17e5f9`): dodat `school_id NOT NULL` sa `ON DELETE CASCADE`, a globalni `UNIQUE(student_person_id)` zamenjen sa `UNIQUE(school_id, student_person_id)`. Dete ostaje globalno — §7.5 zabranjuje lažni `school_id` na globalnoj tabeli; tenant-scoped je **odluka**, ne osoba. Migracija **odbija da se izvrši ako tabela ima ijedan red**: globalni red ne kaže koja ga je škola donela, a §7.10 zabranjuje da se dodeli prvoj ili jedinoj školi. U ovom repou je tabela dokazano neispisana (nema servis, router, test ni web referencu, niti ijedan ulazni strani ključ), pa guard ne bi trebalo da opali — postoji jer „ne bi trebalo" nije „ne može", a deployment koji *ima* redove traži operatera, ne pogađanje. Downgrade isto odbija ako ijedno dete drži odluku u više od jedne škole, jer globalni ključ ne može da primi obe. 6 testova.
   - `guardian_relationship` i dalje čeka M07 presudu: repo **ima** tenant-scoped `guardian_school_access`, pa je podela („ko je čije dete" globalno + školski pristup) možda namerna, ali ugovor to ne kaže tako.
+
+### F-28 — `SETUP_ONLY` ima ispravan ugovor, ali nema površinu
+
+- **Ugovor:** M03 §6.2: `School.status=IN_PREPARATION` daje samo `SETUP_ONLY` kontekst ovlašćenom prvom vlasniku, i taj kontekst otvara „samo O01–O07 i eksplicitne M20/M04 setup komande".
+- **Repo dokaz:** posle TEN-Q02 (`app/application/tenant_context.py`) `school_mode` se računa ispravno i `allowed_start_route` za `SETUP_ONLY` imenuje setup površinu. Ta ruta **ne postoji** u `apps/web/src/App.tsx` — tamo su `/`, `/ljudi`, `/grupe`, `/raspored`, `/finansije`, `/komunikacija`, `/dokumenti`, `/dogadjaji`, `/roditelj/finansije`, `/obavestenja`, `/vise`, `/izvestaji` i ništa za onboarding.
+- **Posledica:** škola u pripremi se razrešava u rutu koju web app ne ume da prikaže. **Ovo nije regresija** — pre TEN-Q02 je isti akter dobijao *redovan* kontekst, što je bilo gore (§6.2 to izričito zabranjuje). Ali onboarding i dalje nema ekran.
+- **Zašto nije urađeno ovde:** setup površina je M20/M04 §14 posao, ne M03. Slati `SETUP_ONLY` aktera na redovan home bilo bi tačno ono što §6.2 zabranjuje, pa ugovor kaže istinu i kad UI zaostaje.
+- **Status:** `CHALLENGE_NOT_APPLIED` — zabeleženo kao poznat jaz sa imenovanim vlasnikom (M20/M04 §14).
+
+### F-29 — M05 kanonski role ključevi se ne poklapaju sa repo ulogama, i jedno preslikavanje **oduzima prava**
+
+- **Ugovor:** M05 §2.4 daje kanonske school role ključeve: `OWNER`, `MANAGER`, `LIMITED_ADMIN`, `INSTRUCTOR`, `SUBSTITUTE_INSTRUCTOR`, `GUARDIAN`, `PAYER`. Izričito kaže i da se legacy `TRAINER` deterministički migrira u `INSTRUCTOR`, a `SUBSTITUTE_TRAINER` u `SUBSTITUTE_INSTRUCTOR`, bez paralelnog aktivnog para.
+- **Repo dokaz (`app/domains/identity/enums.py:33`):** `RoleCode` ima `OWNER`, `MANAGER`, `ADMIN`, `TRAINER`, `PARENT`, `STUDENT`.
+- **Preslikavanje koje je jasno:**
+  - `OWNER` → `OWNER`, `MANAGER` → `MANAGER` — isto.
+  - `TRAINER` → `INSTRUCTOR` — ugovor to imenuje.
+  - `PARENT` → `GUARDIAN` — jedina uloga sa istim značenjem.
+- **Preslikavanje koje NIJE jasno, i zato nije primenjeno:**
+  - **`ADMIN` → `LIMITED_ADMIN` oduzima prava.** U repou `ROLE_DEFAULT_AREAS` daje `ADMIN` **ceo** `_STAFF_AREAS` skup — identično kao `OWNER` i `MANAGER` (`app/security/permissions.py:100`). M05 §2.4 opisuje `LIMITED_ADMIN` kao „Administrator **bez implicitnih poslovnih prava**; konkretna prava preko eksplicitnih grantova". Mehaničko preslikavanje bi svakom postojećem administratoru u produkciji oduzelo pristup ljudima, grupama, rasporedu, finansijama, događajima, komunikaciji i dokumentima — u jednom deploy-u, bez ijednog grant-a koji bi to nadoknadio.
+  - **`STUDENT` nema kanonski parnjak.** M05 ne poznaje učeničku ulogu. U repou `STUDENT` već ima prazan skup oblasti, pa ne nosi prava — ali i dalje postoji kao dodeljiva uloga i ima redove.
+  - `SUBSTITUTE_INSTRUCTOR` i `PAYER` nemaju repo parnjaka; oni su nov posao, ne migracija.
+- **Posledica:** M05 registry se može uvesti kao referentni podatak bez dodirivanja `RoleCode`, i to je ono što treba prvo. Sama migracija uloga je odvojena odluka sa produkcijskom posledicom, i traži ili (a) da `ADMIN` postane `MANAGER` umesto `LIMITED_ADMIN`, ili (b) da se svakom postojećem `ADMIN`-u u istoj migraciji izda eksplicitan grant set koji čuva današnji pristup, ili (c) svestan pristanak da administratori izgube prava. §7.10 zabranjuje da migracija sama pogađa u ovakvom slučaju.
+- **Status:** `CHALLENGE_NOT_APPLIED` — preslikavanje uloga nije primenjeno. Traži odluku vlasnika proizvoda (vidi §8), jer sve tri opcije menjaju nečiji pristup.
 
 ## 5. Šta je u ovom radu stvarno urađeno
 
