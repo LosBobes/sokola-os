@@ -43,7 +43,13 @@ from app.domains.tenancy.models import TenantContextUsage
 DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
 
-#: This repo's `RoleCode` against M05 §2.4's canonical role keys.
+#: This repo's `RoleCode` against M05 §2.4's canonical role keys, **for
+#: workspaces only**.
+#:
+#: Not reusable for permissions, and `effective_permissions` keeps its own map
+#: for exactly that reason: there, `MANAGER` and `LIMITED_ADMIN` are as far
+#: apart as two roles get, so borrowing this one would grant `ADMIN` a
+#: permission set on the strength of a mapping chosen for a different question.
 #:
 #: Only the *workspace* mapping, and only because that part is settled while
 #: the permission mapping is not (F-29). The ambiguity there is `ADMIN`: it
