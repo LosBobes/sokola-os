@@ -78,7 +78,7 @@ authorization domen.
 
 | Modul | Klasifikacija | Putanja / dokaz |
 |---|---|---|
-| M01 Identity | `ADAPT` | §3.1–3.2, §4.5, §4.7, §4.9, §12, §13 i AUTH-02/03/04/05/08/09/10/11 isporučeni (migracije `a7e4c2f91b08`, `b8d3f60a51c7`, `c4a71e8b35d2`). AUTH-09/10/11 su portovi bez rute dok ne postoji M05. Preostaje AUTH-06/07, §10 rate limiti i provider step-up — vidi F-21, F-22, F-23 |
+| M01 Identity | `ADAPT` | §3.1–3.2, §4.5, §4.7, §4.9, §10, §12, §13 i AUTH-01/02/03/04/05/08/09/10/11 isporučeni (migracije `a7e4c2f91b08`, `b8d3f60a51c7`, `c4a71e8b35d2`, `d7b25c48a139`). AUTH-09/10/11 su portovi bez rute dok ne postoji M05. Preostaje AUTH-06/07 i provider step-up — vidi F-21, F-22 |
 | M02 Pozivnice | `ADAPT` | `identity/invite_tokens.py`, `Invitation` model, `tests/test_invitations.py`. Invite-only postoji; M02 ugovor je znatno širi (55 KB master) |
 | M03 Multi-tenancy | `ADAPT` | `app/security/context.py`. Server-derived context postoji i testiran je; **nedostaju composite tenant FK/UNIQUE i RLS** (§7) |
 | M04 School/Subscription | `IMPLEMENT` (§2.1–2.8 urađeno) | Anchor: `organization`, `organization_school`, `school_locator`, `school_status_transition`, prošireni `school` (migracija `a4d76f2b91c0`, 30 testova). Ownership: `school_owner_nomination`, `school_primary_owner_term` sa composite tenant FK-ovima (`app/domains/school/ownership*.py`, migracija `b9e3c05a74d2`, 31 test). Entitlement: `school_product_entitlement` sa read-time pravilom efektivnosti (`app/domains/school/entitlements.py`, migracija `c1f4a86d39b7`, 23 testa). **Ostaje:** subscription usage (§2.9–2.10, blokirano — vidi F-15), komercijalni sloj (§2.12–2.20), SCH-01..06 / ORG-01..04 / OWN-01..04 / ENT-01..02 kao komande sa permisijama i step-up-om |
@@ -296,18 +296,19 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 ### F-22 — AUTH-05/06/07 traže „svežu ponovnu autentifikaciju", a nijedan adapter ne podržava step-up
 
 - **Ugovor:** §6 AUTH-05 traži „aktivnu sesiju i **svežu ponovnu autentifikaciju** kada je provider podržava"; AUTH-06 i AUTH-07 traže je bezuslovno. §10 dodaje da step-up aktivira „samo provider ili eksplicitno odobrena konfiguracija, nikad ne aplikacioni improvizovani tok".
-- **Repo dokaz:** Google adapter (`app/security/oidc.py`) ne šalje `prompt=login` ni `max_age`, i ne čita `auth_time` iz tokena; local-password adapter nema pojam step-up-a. `auth_session.auth_time` postoji i puni se, ali trenutno vremenom izdavanja sesije, ne trenutkom kada je provider stvarno autentifikovao osobu.
+- **Stanje:** `auth_time_of` (čitanje `auth_time` iz ID tokena) je isporučeno u callback hardening isečku, ali Google adapter još ne šalje `prompt=login` ni `max_age`, pa nema čime da natera ponovnu autentifikaciju. Local-password adapter nema pojam step-up-a.
 - **Zašto nije improvizovano:** §10 izričito zabranjuje aplikacioni improvizovani tok. Ponovno traženje lozinke u našoj formi nije provider step-up i dalo bi lažan osećaj da je AUTH-06/07 uslov ispunjen.
-- **Minimalni predlog:** Google adapter dobija `prompt=login` + `max_age` na step-up putanji i upisuje `auth_time` iz ID tokena; local-password adapter dobija eksplicitnu ponovnu proveru lozinke **označenu kao slabiju** u `assurance_context`, pa politika može da odbije step-up za osetljive komande.
-- **Status:** `CHALLENGE_NOT_APPLIED` — ide zajedno sa callback hardening isečkom (F-20), koji ionako dira isti adapter. AUTH-05 je isporučen sa aktivnom sesijom kao jedinim uslovom, i to je u PR-u eksplicitno rečeno.
+- **Minimalni predlog:** Google adapter dobija `prompt=login` + `max_age` na step-up putanji i upisuje `auth_time` iz ID tokena u `auth_session`; local-password adapter dobija eksplicitnu ponovnu proveru lozinke **označenu kao slabiju** u `assurance_context`, pa politika može da odbije step-up za osetljive komande.
+- **Status:** `CHALLENGE_NOT_APPLIED` — ide zajedno sa AUTH-06/07 (link/unlink), koji su jedini koji ga bezuslovno traže.
 
-
-### F-23 — §10 rate limiti još ne postoje
+### F-23 — §10 rate limiti (OTKLONJENO)
 
 - **Ugovor:** M01 §6 AUTH-01 traži 5 startova po IP za 10 min i 10 po browser/device signalu za 24 h; §10 dodaje 20 callback neuspeha po IP za 10 min. Limiti su **keyed hash** IP/device signala, kratko se čuvaju po M17 i ne koriste se za profilisanje. Prekoračenje je `RATE_LIMITED` bez detalja (M01-QA-013).
-- **Repo dokaz:** nema nijednog rate limitera; `RateLimitedError` sa `Retry-After` postoji u `app/common/errors.py` od ovog isečka, ali ga niko ne podiže.
-- **Zašto nije ovde:** potreban je brojački store sa TTL-om. Repo nema Redis, a tabela u Postgresu za brojanje po IP-u je izvodljiva ali je zaseban dizajn (retention po M17, keyed hash sa sopstvenim ključem, čišćenje). Nakalemiti ga na ovaj isečak značilo bi jedan PR koji istovremeno menja callback validaciju i uvodi novi platform mehanizam.
-- **Status:** `CHALLENGE_NOT_APPLIED` — sledeći M01 isečak, zajedno sa step-up-om (F-22), koji dira isti adapter.
+- **Rešenje (primenjeno, migracija `d7b25c48a139`):** `rate_limit_counter` je fixed-window brojač u Postgresu — repo nema Redis, a limit koji postoji vredi više od glatkijeg koji ne postoji. Granica prozora je poštena slabost i zapisana je u migraciji: burst tempiran preko dva susedna prozora dobija do dvostrukog budžeta u kratkom roku. To je prihvatljivo jer ovi limiti tupe automatizovani obim; ono što stoji između napadača i naloga su provere credential-a.
+- **Signal se ne čuva:** u red ide **keyed HMAC-SHA-256** adrese ili device id-a. Keyed, ne plain, jer se ceo IPv4 prostor heš-ira za nekoliko minuta — nekeyed digest adrese *jeste* adresa. Ključ se izvodi iz `session_secret` domenskom separacijom (`sokola/rate-limit/v1`), a ne kao nova deploy promenljiva: novi obavezni secret je novi način da deploy padne, a traženo svojstvo („ko ukrade ovu tabelu ne može da nabroji adrese") u potpunosti pokriva ključ koji je ionako obavezan u produkciji.
+- **Device signal:** `sokola_device`, HttpOnly kolačić sa slučajnom vrednošću koju mi izdajemo. §6 AUTH-01 traži „browser/device signal", a ovo je poštena verzija toga — nešto što smo izdali i možemo zaboraviti, umesto fingerprint-a sastavljenog od svojstava pregledača. §10 zabranjuje profilisanje, a vrednost bez značenja van brojača se za to ne može upotrebiti.
+- **Dva budžeta se ne dele:** iscrpljen per-IP budžet ne iscrpljuje per-device i obrnuto. Inače bi deljeni kancelarijski NAT zaključao celu zgradu čim jedan čovek promaši lozinku — zbog toga ugovor i imenuje dva signala.
+- **Status:** `OTKLONJENO` — 18 testova, uključujući M01-QA-013 doslovno (šesti start u 10 min) i proveru da odbijanje ne otkriva ni adresu ni preostali broj.
 
 ## 5. Šta je u ovom radu stvarno urađeno
 
