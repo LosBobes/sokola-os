@@ -190,3 +190,42 @@ class SessionTenantContext(Base, TimestampMixin):
 
 
 __all__ = ["SessionTenantContext", "TenantSecurityState"]
+
+class TenantContextUsage(Base, TimestampMixin):
+    """§12 and §5.4: what this account last did in each school.
+
+    `SessionTenantContext` cannot answer this. It holds at most one row per
+    *session* and a switch reuses that row rather than inserting, so the moment
+    someone moves from school A to school B, A's history is gone. But TEN-Q01
+    has to sort schools by "poslednje validno korišćenje opadajuće", and §5.4
+    asks each entry to carry a `last_used_workspace_key` hint — both of which
+    need memory that outlives a switch and a session.
+
+    So this is a small, purpose-limited note per (account, school): when they
+    were last there and which workspace they were looking at. §5.4 is explicit
+    that the workspace is "hint, bez statusa autoriteta", and the same goes for
+    this whole row: it orders a chooser and pre-selects a tab. Nothing reads it
+    to decide access, and it deliberately carries no version, no permission and
+    no membership — those all get re-proved by §8 on the next request whatever
+    this says.
+    """
+
+    __tablename__ = "tenant_context_usage"
+
+    #: Keyed by the pair, not a surrogate: there is exactly one answer to "when
+    #: was this account last in this school", and a surrogate key would allow
+    #: two.
+    user_account_id: Mapped[str] = mapped_column(
+        ForeignKey("user_account.id", ondelete="CASCADE"), primary_key=True
+    )
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), primary_key=True
+    )
+    last_used_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    #: The display focus they last chose here. A hint for the chooser, never a
+    #: claim about what they may do — §5.3 keeps `workspace_key` free of any FK
+    #: into M05 for exactly this reason, and the same restraint applies here.
+    last_workspace_key: Mapped[str] = mapped_column(String(64), nullable=False)
+

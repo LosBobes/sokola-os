@@ -45,7 +45,7 @@ from app.domains.tenancy.enums import (
     ContextInvalidationReason,
     TenantContextStatus,
 )
-from app.domains.tenancy.models import SessionTenantContext
+from app.domains.tenancy.models import SessionTenantContext, TenantContextUsage
 from app.platform import clock
 
 
@@ -120,6 +120,7 @@ def select_context(
             version=1,
         )
         db.add(context)
+        _record_usage(db, account=account, school=school, workspace_key=workspace_key, now=moment)
         db.flush()
         return context
 
@@ -135,8 +136,42 @@ def select_context(
     existing.last_validated_at = moment
     existing.context_version += 1
     existing.version += 1
+    _record_usage(db, account=account, school=school, workspace_key=workspace_key, now=moment)
     db.flush()
     return existing
+
+
+def _record_usage(
+    db: Session,
+    *,
+    account: UserAccount,
+    school: School,
+    workspace_key: str,
+    now: dt.datetime,
+) -> None:
+    """Remember that this account was here, for the chooser's benefit only.
+
+    Written on selection rather than on every request: §12 sorts by *last
+    valid use*, and a selection is exactly that moment — the point where §8
+    has just proved the choice is allowed. Updating it per request would turn
+    a display hint into a write on the hot path for no gain.
+
+    Deliberately after the context row, and in the same transaction: if the
+    selection fails, there is nothing to remember.
+    """
+    usage = db.get(TenantContextUsage, (account.id, school.id))
+    if usage is None:
+        db.add(
+            TenantContextUsage(
+                user_account_id=account.id,
+                school_id=school.id,
+                last_used_at=now,
+                last_workspace_key=workspace_key,
+            )
+        )
+        return
+    usage.last_used_at = now
+    usage.last_workspace_key = workspace_key
 
 
 def clear_context(
