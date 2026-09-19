@@ -2039,6 +2039,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tenant/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Active Context
+         * @description TEN-Q02. No body, no query, no school id — §12 takes the session from
+         *     the M01 credential alone, because a client that names its own tenant is
+         *     the thing M03 exists to prevent.
+         *
+         *     Every refusal here is the same neutral `TENANT_CONTEXT_REQUIRED`: no
+         *     session, no selection yet, or a selection that has gone stale all mean
+         *     "choose a school", and distinguishing them would tell an unauthenticated
+         *     caller which case they are in.
+         */
+        get: operations["getActiveTenantContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tenants/{slug}": {
         parameters: {
             query?: never;
@@ -2071,6 +2098,30 @@ export interface components {
         /** AcceptInvitationResponse */
         AcceptInvitationResponse: {
             context: components["schemas"]["ContextSummary"];
+        };
+        /**
+         * ActiveTenantContextResponse
+         * @description §12's TEN-Q02 result, and nothing beyond it.
+         *
+         *     No permission list: §12 forbids returning one as authority, and a list on
+         *     the wire becomes a cached authority the first time a client trusts it
+         *     instead of asking. What the person may do is decided per action, by M05.
+         */
+        ActiveTenantContextResponse: {
+            /** Allowed Start Route */
+            allowed_start_route: string;
+            /**
+             * Context Etag
+             * @description Opaque; compare for equality only.
+             */
+            context_etag: string;
+            /** Context Version */
+            context_version: number;
+            /** School Id */
+            school_id: string;
+            school_mode: components["schemas"]["SchoolMode"];
+            /** Workspace Key */
+            workspace_key: string;
         };
         /**
          * AddGroupMemberRequest
@@ -3928,6 +3979,18 @@ export interface components {
          * @enum {string}
          */
         SchoolKind: "PRIVATE_SCHOOL" | "SPORTS_CLUB_ACADEMY" | "DANCE_SCHOOL_STUDIO" | "MUSIC_SCHOOL" | "ART_DRAMA_SCHOOL" | "EDUCATION_LANGUAGE_CENTER" | "ACTIVITY_WORKSHOP_CENTER" | "OTHER";
+        /**
+         * SchoolMode
+         * @description §6.1 vs §6.2: what a context is allowed to be used *for*.
+         *
+         *     Not the school's status — the status is M04's and lives on `School`. This
+         *     is what the status plus the actor means for this one session: a school
+         *     that is `ACTIVE` gives `REGULAR` work, a school that is `IN_PREPARATION`
+         *     gives only setup, and `DEACTIVATED` gives no context at all (§6.3), so it
+         *     has no mode here.
+         * @enum {string}
+         */
+        SchoolMode: "REGULAR" | "SETUP_ONLY";
         /** SchoolResponse */
         SchoolResponse: {
             /** Id */
@@ -9090,6 +9153,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getActiveTenantContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveTenantContextResponse"];
                 };
             };
         };
