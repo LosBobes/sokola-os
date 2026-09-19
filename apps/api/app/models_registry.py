@@ -32,6 +32,7 @@ from app.domains.school import entitlement_models as _entitlement_models  # noqa
 from app.domains.school import models as _school_models  # noqa: F401
 from app.domains.school import ownership_models as _ownership_models  # noqa: F401
 from app.domains.structure import models as _structure_models  # noqa: F401
+from app.domains.tenancy import models as _tenancy_models  # noqa: F401
 from app.platform.audit import models as _audit_models  # noqa: F401
 from app.platform.idempotency import models as _idempotency_models  # noqa: F401
 from app.platform.inbox import models as _inbox_models  # noqa: F401

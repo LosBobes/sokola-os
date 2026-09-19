@@ -236,12 +236,3 @@ class PersonMergeRecord(Base, TimestampMixin):
     performed_by_person_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
-class Workspace(Base, TimestampMixin, RecordStatusMixin):
-    """Reserved commercial/ownership container. No subscriptions or entitlements
-    in P0, present so the model is future-shaped, not future-built."""
-
-    __tablename__ = "workspace"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("wsp"))
-    name: Mapped[str] = mapped_column(String(200), nullable=False)
-    owner_person_id: Mapped[str | None] = mapped_column(String(64), nullable=True)

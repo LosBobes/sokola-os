@@ -44,6 +44,8 @@ from app.domains.school.models import (
     SchoolLocator,
     SchoolStatusTransition,
 )
+from app.domains.tenancy import security as tenancy
+from app.domains.tenancy.enums import TenantInvalidationReason
 from app.platform import clock
 
 #: How many times a generated school code is retried before giving up. Eight
@@ -335,6 +337,10 @@ def record_creation(
     """Transition #1: the school begins to exist, with no predecessor status."""
     if _next_sequence_no(db, school.id) != 1:
         raise ConflictError("Škola već ima istoriju statusa.")
+    # M03 TEN-05: the security state is established with the school itself, in
+    # the same transaction. A school that existed for even one commit without
+    # one would be a school whose access version nothing could compare against.
+    tenancy.initialize(db, school.id)
     now = at or clock.now()
     row = SchoolStatusTransition(
         school_id=school.id,
@@ -350,6 +356,14 @@ def record_creation(
     db.add(row)
     db.flush()
     return row
+
+
+#: M03 §5.2: which M04 status changes are tenant-wide security events. Both
+#: directions are: a school coming back is as much a boundary as one going away.
+_INVALIDATING_STATUSES = {
+    SchoolStatus.DEACTIVATED: TenantInvalidationReason.SCHOOL_DEACTIVATED,
+    SchoolStatus.ACTIVE: TenantInvalidationReason.SCHOOL_REACTIVATED,
+}
 
 
 def transition_status(
@@ -409,6 +423,25 @@ def transition_status(
     elif to_status is SchoolStatus.DEACTIVATED:
         school.deactivated_at = now
     school.version += 1
+
+    # M03 §5.2 and §14: the tenant access version moves in the *same* business
+    # transaction as the status change. Reading `School.status` on every request
+    # is what makes a deactivation take effect; this is what additionally lets
+    # anything issued earlier — a cached context, a secondary projection, an
+    # open channel — be recognised as stale rather than merely be wrong.
+    #
+    # A reactivation bumps it too. Coming back is as much a security boundary as
+    # going away: contexts built while the school was deactivated were built
+    # under different rules and must not simply resume.
+    if to_status in _INVALIDATING_STATUSES:
+        tenancy.invalidate(
+            db,
+            school.id,
+            reason_code=_INVALIDATING_STATUSES[to_status],
+            correlation_id=correlation_id,
+            now=now,
+        )
+
     db.flush()
     return row
 
