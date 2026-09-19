@@ -163,6 +163,69 @@ class InvalidAccountTransitionError(ConflictError):
 
     code = "INVALID_ACCOUNT_TRANSITION"
 
+class ValidationFailedError(AppError):
+    """M07 §6 `M07_VALIDATION_FAILED`: a field, date or reason a handler
+    rejected, as opposed to one the request schema could not parse.
+
+    422 like FastAPI's own `RequestValidationError`, under a distinct code, so
+    a client can tell "this shape is wrong" from "this shape is fine and the
+    rule it breaks is a business one" — the second is actionable, the first is
+    a bug in the caller.
+    """
+
+    status_code = 422
+    code = "VALIDATION_FAILED"
+
+
+class FamilyArchiveBlockedError(ConflictError):
+    """M07 §3.13 / §6 `M07_FAMILY_ARCHIVE_BLOCKED`.
+
+    A family may only be archived once nothing rests on it: no active
+    membership, no open payer link, no outstanding M12 obligation. Refusing is
+    the whole point — archiving anyway would leave a financial arrangement
+    pointing at a grouping the school considers closed.
+    """
+
+    code = "FAMILY_ARCHIVE_BLOCKED"
+
+
+class RelationshipExistsError(ConflictError):
+    """M07 §6 `M07_RELATIONSHIP_EXISTS` / `M07_FAMILY_MEMBERSHIP_EXISTS`.
+
+    The open natural key is taken. Distinct from a stale version: nothing the
+    caller reloads will change it, because the conflict is with a row that is
+    supposed to be there.
+    """
+
+    code = "RELATIONSHIP_EXISTS"
+
+
+class InvalidRelationshipTransitionError(ConflictError):
+    """M07 §6 `M07_RELATIONSHIP_INVALID_TRANSITION`.
+
+    §5's tables make `ENDED`, `REJECTED`, `REVOKED` and `ARCHIVED` terminal;
+    coming back is a new row with a new id. A caller who tries anyway gets
+    this rather than a silent no-op, because a no-op here reads to the client
+    as "done" when nothing happened.
+    """
+
+    code = "RELATIONSHIP_INVALID_TRANSITION"
+
+
+class DependencyUnavailableError(AppError):
+    """M07 §6 `M07_DEPENDENCY_UNAVAILABLE`, and §6 says fail-closed.
+
+    Raised when an authoritative guard cannot be consulted — not when it
+    answers no. The distinction matters: "the finance module says there are no
+    open obligations" and "the finance module could not be reached" must not
+    produce the same outcome, and the second one is 503 rather than a
+    permissive guess.
+    """
+
+    status_code = 503
+    code = "DEPENDENCY_UNAVAILABLE"
+
+
 
 class TenantContextRequiredError(ConflictError):
     """M03 §13: a school must be chosen, or the previous choice was invalidated.

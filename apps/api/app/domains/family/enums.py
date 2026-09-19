@@ -165,3 +165,8 @@ class DesignationStatus(enum.StrEnum):
 #: STAFF membership and read as valid.
 GUARDIAN_MEMBERSHIP_TYPE = "GUARDIAN"
 CHILD_MEMBERSHIP_TYPE = "PARTICIPANT"
+
+#: §7.3's only FAM outbox event. The membership commands emit none: nothing
+#: downstream acts on a household composition change, and an event carrying
+#: who lives with whom, consumed by nobody, is a privacy cost with no buyer.
+FAMILY_ARCHIVED_EVENT = "m07.family.archived"
