@@ -41,6 +41,46 @@ class LinkStatus(enum.StrEnum):
     REVOKED = "REVOKED"
 
 
+class FamilyStatus(enum.StrEnum):
+    """§2.1, §5.1. `ARCHIVED` is terminal in H0 — a family that re-forms is a
+    new id, not a revived row.
+
+    That matters more here than it looks: a `Family` is a grouping a school
+    recorded at a moment, and §3.1 says nothing is derived from it. Reviving
+    one would silently reattach whatever the school archived it away from.
+    """
+
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"
+
+
+class MemberKind(enum.StrEnum):
+    """§2.2. What someone is *in this family grouping*, and nothing else.
+
+    The contract is explicit that this "nije role/permission". It does not
+    decide what anyone may see or do — M05 does that, and M07's guardian link
+    decides which adult may act for which child. An `ADULT` in a family holds
+    no right over a `DEPENDENT` in the same family by virtue of the grouping.
+    """
+
+    ADULT = "ADULT"
+    DEPENDENT = "DEPENDENT"
+
+
+class FamilyMembershipStatus(enum.StrEnum):
+    """§2.2, §5.2. `ENDED` is terminal; coming back is a new row.
+
+    Named in full rather than `MembershipStatus`, which M06 already uses for a
+    school membership. The two are genuinely different facts — one is whether
+    the school has this person on its books, the other whether the school
+    groups them into this household — and a file that imported both under one
+    name would make mixing them up the easy mistake.
+    """
+
+    ACTIVE = "ACTIVE"
+    ENDED = "ENDED"
+
+
 #: The membership type each side of a guardian link must hold (§2.3). Stored on
 #: the row and pinned by a CHECK so the composite foreign key can require it:
 #: without the type in the key, a guardian link could name the same person's
