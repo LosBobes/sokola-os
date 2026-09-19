@@ -440,6 +440,7 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Zašto nije urađeno ovde:** to je M07 isečak sa sopstvenom migracijom i sopstvenim testovima, a ne usputna izmena u repo-first prolazu. Migracija mora i da odluči šta sa postojećim globalnim redovima — §7.10 zabranjuje da ih sama pridruži prvoj ili jedinoj školi, pa i tu važi „prijavi, ne pogađaj".
 - **Koliko je to posla (prebrojano):** `GuardianRelationship` ima **42**, a `GuardianSchoolAccess` **65** referenci izvan svog model fajla — ukupno 107, raspoređenih po `identity/service.py`, `identity/repository.py`, `parent/router.py`, `communications/outbox.py` i `events/repository.py`. Zamena nije jedna migracija nego **postupna**: `GuardianChildLink` se uvodi pored postojećih redova, čitaoci se prebacuju domen po domen, i tek kad nijedan ne gleda stare tabele one se uklanjaju. Isti obrazac koji je M01 koristio za sesije, i iz istog razloga — 107 poziva prepisanih u jednom commit-u nije promena koju iko može da pregleda.
 - **Status:** `CHALLENGE_NOT_APPLIED`, ali **pitanje iz F-27 je razrešeno**: veza je tenant-scoped, podela nije namerna. F-27 time više ne čeka presudu, nego implementaciju.
+- **Ispravka (F-33, F-34):** brojka 107 i spisak domena iz prethodnog pasusa su pogrešni. Tačno prebrojavanje je u F-33, a F-34 povlači tvrdnju da svaki čitalac mora da odluči „koja škola" — to važi samo za globalni `guardian_relationship`, ne i za `guardian_school_access`.
 
 ### F-32 — M07 je uglavnom neizgrađen; postoje dva reda od sedam entiteta
 
@@ -447,6 +448,31 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Repo dokaz:** postoje `guardian_relationship` i `guardian_school_access` (oba u `domains/people/`), plus `domains/parent/router.py`. Nijedan `Family`, `PayerChildLink` ni `PrimaryGuardian*` ne postoji nigde u `app/`.
 - **Najoštriji jaz:** **payer ne postoji odvojeno od staratelja.** §2.5 `PayerChildLink` i §1.1 („više aktivnih payer veza koje aktivni M12 koristi za capability-gated model podeljene odgovornosti") traže finansijsku vezu koja **ne** daje guardian prava. M05 §3.2 tačka 9 to ponavlja: `PAYER` ima samo finance binding-e sa `subject_basis_kind=PAYER_CHILD_LINK`, i taj basis „nikad ne daje attendance/document/health/profile/guardian pravo". Danas u repou ne postoji način da se neko označi kao platilac a da ne bude staratelj.
 - **Status:** `CHALLENGE_NOT_APPLIED` — zabeleženo kao poznat obim: 2 od 7 entiteta, i to oba u obliku koji F-31 menja.
+
+
+### F-33 — ispravka: 85 referenci, ne 107, i spisak domena iz F-31 je bio nepotpun
+
+- **Kako je prebrojano:** `grep -rn "GuardianRelationship\|GuardianSchoolAccess" app/ --include=*.py`, pa grupisano po domenu.
+- **Stvarno stanje (2026-09-19, posle M07 šeme):** **85** linija sa referencom, raspoređeno: `people` **39**, `identity` 15, `parent` 6, `events` 6, `documents` 6, `billing` 6, `communications` 5, `family` 2.
+- **Šta je F-31 propustio:** `people` (ubedljivo najveći čitalac), `documents` i `billing` se u F-31 ne pominju uopšte. Propust `documents`-a je onaj koji nosi težinu — to je domen sa podacima o detetu, pa bi migracija koja ga previdi ostavila najosetljiviji čitalac na staroj tabeli.
+- **Od 85 referenci, samo 10 su stvarni upiti** (`select`/`join`/`where` izvan `models.py`/`enums.py`/`schemas.py`): `people/repository.py` 4, `identity/repository.py` 2, i po jedan u `people/service.py`, `documents/repository.py`, `communications/outbox.py`, `billing/repository.py`. Ostalo su import-i, anotacije i relationship deklaracije. Posao je znatno manji nego što „107 poziva" sugeriše — ali je raspoređen na više domena nego što je F-31 rekao.
+- **Status:** `INFO` — ispravka objavljene brojke i spiska. Ne menja presudu iz F-31, menja plan migracije.
+
+### F-34 — „koja škola?" je problem samo za `guardian_relationship`, ne za `guardian_school_access`
+
+- **Šta je F-31 tvrdio:** da migracija mora da odluči šta sa postojećim redovima jer stara tabela nema `school_id`, i da §7.10 zabranjuje pogađanje.
+- **Repo dokaz:** to važi za `guardian_relationship`. Ali **svi čitaoci koji stvarno rade autorizacione upite gledaju `guardian_school_access`**, koji `school_id` ima i filtrira po njemu u svakom `where`. Primeri: `billing/repository.py::is_guardian_of(db, school_id, guardian, child)`, `documents/repository.py::guardian_child_ids(db, school_id, guardian)`, `communications/outbox.py::_guardians_of(db, school_id, child_ids)`.
+- **Posledica:** preslikavanje `guardian_school_access` → `guardian_child_link` je **jednoznačno**; §7.10 ga ne blokira. Nejednoznačan je samo globalni `guardian_relationship`, a on nema nijednog autorizacionog čitaoca — koristi se za prikaz odnosa, ne za odluku o pristupu.
+- **Status:** `INFO` — povlači deo F-31 koji je migraciju prikazao težom nego što jeste.
+
+### F-35 — čitaoci se ne smeju prebaciti pre backfill-a; `guardian_child_link` je prazan
+
+- **Nalaz:** `guardian_child_link` nema nijedan red i ništa ga ne puni osim M07 komandi, koje niko još ne poziva. Prebacivanje bilo kog čitaoca na njega **danas** znači da `is_guardian_of` vraća `False` za svakog postojećeg staratelja — tiho uskraćivanje pristupa celoj populaciji roditelja, bez ijedne greške u logu.
+- **Zato redosled iz F-31 nije ispravan.** Prvo backfill, pa čitaoci. Suprotan redosled nije „postupna migracija" nego prekid usluge u ratama.
+- **Ugovor to predviđa:** §2.4 `verification_method` ima vrednost **`MIGRATION_VERIFIED`**, koja postoji upravo zato da se veza prenesena iz ranijeg stanja može zabeležiti kao takva, a ne kao provera koju je neko obavio. Backfill dakle nije zaobilaženje §3.5 (aktivacija + dokaz atomarno) nego njegov predviđeni oblik.
+- **Šta backfill mora da reši, a ugovor ne rešava:** `GuardianChildLink` traži `requested_by_account_id` i, za `ACTIVE`, `decision_by_account_id`. Za redove prenete iz `guardian_school_access` ne postoji nalog koji je odlučio — odluka je prethodila ovom modelu. To je **odluka za vlasnika proizvoda**: koji akter se upisuje (sistemski migracioni identitet vs. vlasnik škole), pošto §5.3 traži da odlučilac bude stvaran nalog. Ne izmišlja se ovde.
+- **Dodatno:** portovi iz §7.2 traže **ACTIVE** M06 članstvo sa obe strane (§12, M03 §6.1), što stara tabela nije proveravala. Svaki prebačeni čitalac zato može početi da odbija slučajeve koje je ranije propuštao — namerno, ali mora biti prijavljeno po domenu, ne otkriveno u produkciji.
+- **Status:** `CHALLENGE_NOT_APPLIED` — backfill je zaseban, operatorski vođen isečak; čeka odluku o akteru.
 
 ## 5. Šta je u ovom radu stvarno urađeno
 
