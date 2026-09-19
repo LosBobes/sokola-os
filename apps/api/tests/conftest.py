@@ -28,6 +28,7 @@ from collections.abc import Iterator  # noqa: E402
 
 import pytest  # noqa: E402
 from app.db import SessionLocal, engine  # noqa: E402
+from app.domains.authorization.registry import ensure_policy_revision  # noqa: E402
 from app.domains.identity.auth_providers import ensure_builtin_providers  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.models_registry import Base  # noqa: E402
@@ -53,6 +54,10 @@ def _clean() -> Iterator[None]:
     # else, and an `auth_identity` cannot exist without it, so put it back.
     with SessionLocal() as session:
         ensure_builtin_providers(session)
+        # The M05 policy registry is reference data too, published by its
+        # migration. TRUNCATE takes it with everything else, and an
+        # authorization decision cannot be made without it.
+        ensure_policy_revision(session)
         session.commit()
     yield
 

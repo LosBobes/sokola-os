@@ -83,9 +83,18 @@ def _domain(
 def test_only_one_revision_can_be_active(db: Session) -> None:
     """The invariant the whole registry rests on. Two ACTIVE revisions would
     mean two answers to "what may this role do", and whichever the query
-    happened to read would win."""
-    _revision(db, no=1, status=PolicyRevisionStatus.ACTIVE)
-    db.flush()
+    happened to read would win.
+
+    The seeded revision 1.3 is already the active one — so this adds a second
+    against a registry in its real shape, rather than one arranged for the
+    test.
+    """
+    assert db.execute(
+        text(
+            "SELECT count(*) FROM authorization_policy_revision"
+            " WHERE status = 'ACTIVE'"
+        )
+    ).scalar_one() == 1
 
     # The helper flushes, so the raise has to wrap the call itself — wrapping a
     # later `db.flush()` would be asserting against a statement that never runs.
@@ -97,13 +106,13 @@ def test_only_one_revision_can_be_active(db: Session) -> None:
 def test_many_revisions_may_be_draft_or_superseded(db: Session) -> None:
     """The index is partial on purpose: history is the point. A superseded
     revision is how "what did this role mean in March" stays answerable."""
-    _revision(db, no=1, status=PolicyRevisionStatus.ACTIVE)
     _revision(db, no=2, status=PolicyRevisionStatus.SUPERSEDED)
     _revision(db, no=3, status=PolicyRevisionStatus.SUPERSEDED)
     _revision(db, no=4, status=PolicyRevisionStatus.DRAFT)
     _revision(db, no=5, status=PolicyRevisionStatus.DRAFT)
     db.commit()
 
+    # Four added, plus the seeded active one.
     assert db.execute(
         text("SELECT count(*) FROM authorization_policy_revision")
     ).scalar_one() == 5
@@ -260,7 +269,7 @@ def test_the_domain_key_is_not_a_database_enum(db: Session) -> None:
     insertable as a row in a new revision — so this proves an unknown key is
     accepted by the *column*, while remaining deny at the policy level because
     its status is not ACTIVE."""
-    revision = _revision(db, no=1)
+    revision = _revision(db, no=2)
     _domain(
         db,
         revision,
@@ -269,11 +278,15 @@ def test_the_domain_key_is_not_a_database_enum(db: Session) -> None:
     )
     db.commit()
 
+    # Scoped to this revision: the seeded 1.3 already carries the same key, and
+    # an unscoped query would find both.
     status = db.execute(
         text(
             "SELECT status FROM authorization_domain_definition"
             " WHERE authorization_domain_key = 'EVENT_ORGANIZER_WORKSPACE'"
-        )
+            "   AND policy_revision_id = :rev"
+        ),
+        {"rev": revision.id},
     ).scalar_one()
     assert status == AuthorizationDomainStatus.RESERVED.value
 
