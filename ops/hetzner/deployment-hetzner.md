@@ -67,7 +67,7 @@ cp ops/hetzner/.env.prod.example ops/hetzner/.env
 nano ops/hetzner/.env
 ```
 
-Three secrets are mandatory, and the stack refuses to start without any of them,
+Five secrets are mandatory, and the stack refuses to start without any of them,
 by design (`compose.prod.yml` uses `${VAR:?...}`, and `app.main` rejects the
 insecure defaults whenever `SOKOLA_ENVIRONMENT` is production-like):
 
@@ -76,6 +76,16 @@ insecure defaults whenever `SOKOLA_ENVIRONMENT` is production-like):
 | `SOKOLA_DB_PASSWORD` | `openssl rand -hex 32` |
 | `SOKOLA_SESSION_SECRET` | `openssl rand -hex 32` |
 | `SOKOLA_PASSWORD_PEPPER` | `openssl rand -hex 32` |
+| `SOKOLA_CONTACT_ENCRYPTION_KEYS` | `echo "1:$(openssl rand -base64 32)"` |
+| `SOKOLA_CONTACT_FINGERPRINT_KEYS` | `echo "1:$(openssl rand -base64 32)"` |
+
+The two contact keyrings protect school business contacts: one encrypts them,
+the other derives the keyed fingerprint used to deduplicate them. They are
+separate so either can be rotated without the other. **Rotate by appending a
+version** (`1:<old>,2:<new>`), never by replacing one: the version that wrote a
+row is stored with it, and dropping that version makes the row unreadable. Keys
+are base64 of exactly 32 bytes; a malformed keyring stops the app at boot rather
+than at the first contact read.
 
 The pepper is folded into every password hash and is never stored in the
 database. **Rotating it invalidates every existing password**, so set it once

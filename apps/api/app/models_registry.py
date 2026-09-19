@@ -19,12 +19,15 @@ from app.domains.events import models as _events_models  # noqa: F401
 from app.domains.groups import models as _groups_models  # noqa: F401
 from app.domains.identity import models as _identity_models  # noqa: F401
 from app.domains.onboarding import models as _onboarding_models  # noqa: F401
+from app.domains.organization import models as _organization_models  # noqa: F401
 from app.domains.payments import models as _payments_models  # noqa: F401
 from app.domains.people import models as _people_models  # noqa: F401
 from app.domains.privacy import models as _privacy_models  # noqa: F401
 from app.domains.progress import models as _progress_models  # noqa: F401
 from app.domains.scheduling import models as _scheduling_models  # noqa: F401
+from app.domains.school import entitlement_models as _entitlement_models  # noqa: F401
 from app.domains.school import models as _school_models  # noqa: F401
+from app.domains.school import ownership_models as _ownership_models  # noqa: F401
 from app.domains.structure import models as _structure_models  # noqa: F401
 from app.platform.audit import models as _audit_models  # noqa: F401
 from app.platform.idempotency import models as _idempotency_models  # noqa: F401

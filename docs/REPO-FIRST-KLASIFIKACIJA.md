@@ -81,7 +81,7 @@ authorization domen.
 | M01 Identity | `ADAPT` | `app/domains/identity/`, `app/security/{auth,password,oidc}.py`. Email+password i Google OIDC rade; session revocation i M01 revocation-on-every-request nisu dokazani |
 | M02 Pozivnice | `ADAPT` | `identity/invite_tokens.py`, `Invitation` model, `tests/test_invitations.py`. Invite-only postoji; M02 ugovor je znatno širi (55 KB master) |
 | M03 Multi-tenancy | `ADAPT` | `app/security/context.py`. Server-derived context postoji i testiran je; **nedostaju composite tenant FK/UNIQUE i RLS** (§7) |
-| M04 School/Subscription | `IMPLEMENT` | `Organization` postoji kao tenant, ali nema subscription, entitlement, status ni agreement-shard modela |
+| M04 School/Subscription | `IMPLEMENT` (§2.1–2.8 urađeno) | Anchor: `organization`, `organization_school`, `school_locator`, `school_status_transition`, prošireni `school` (migracija `a4d76f2b91c0`, 30 testova). Ownership: `school_owner_nomination`, `school_primary_owner_term` sa composite tenant FK-ovima (`app/domains/school/ownership*.py`, migracija `b9e3c05a74d2`, 31 test). Entitlement: `school_product_entitlement` sa read-time pravilom efektivnosti (`app/domains/school/entitlements.py`, migracija `c1f4a86d39b7`, 23 testa). **Ostaje:** subscription usage (§2.9–2.10, blokirano — vidi F-15), komercijalni sloj (§2.12–2.20), SCH-01..06 / ORG-01..04 / OWN-01..04 / ENT-01..02 kao komande sa permisijama i step-up-om |
 | M05 RBAC | `ADAPT` | `app/security/permissions.py` — per-area granted-areas model, restrikcija može samo sužavati. Nema support/break-glass pristupa ni v5.7 permission registra |
 | M06 Ljudi i članstva | `PRESERVE`/`ADAPT` | `domains/people/`, `domains/organization/`, `tests/test_people_lifecycle.py` |
 | M07 Roditelji/staratelji | `ADAPT` | `people.GuardianRelationship`, `GuardianOrganizationAccess`. **Payer relation ne postoji odvojeno od guardian-a** — M07/M12 zahtev |
@@ -203,12 +203,46 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Primenjeno rešenje:** `app/platform/observability.py`. Opis greške se **gradi iz strukture**, ne čisti iz teksta: tip izuzetka + SQLSTATE + tabela/kolona/ograničenje. Za bazu je to i precizniji dijagnostički podatak. Slobodan tekst je samo fallback i prolazi kroz `redact` (uklanja `[SQL:]`, `[parameters:]` i `DETAIL:` blokove, maskira email i duge nizove cifara, skraćuje). Skrabovanje samo po obrascima se **ne** oslanja da prepozna ime — zato se primarni put uopšte ne oslanja na tekst.
 - **Status:** `APPLIED`. 7 testova, uključujući stvarni put pada worker-a sa imenom deteta, kontaktom i bankarskom referencom u redu.
 
-### F-11 — `npm run typecheck` ne radi u celom repou
+### F-11 — `npm run typecheck` ne radi u celom repou (POVUČENO — nalaz je bio pogrešan)
 
-- **Repo dokaz:** `apps/web/package.json` ima `typecheck: tsc -b --noEmit`, ali repo nema `src/vite-env.d.ts`, pa TypeScript ne učitava `vite/client` tipove i svaki `import "./nesto.css"` puca sa `TS2882`. **Provereno na čistom `origin/main` u zasebnom worktree-u** — dakle zatečeno, ne posledica ovih izmena.
-- **Posledica:** CI ne poziva `typecheck` (poziva `build`, koji prolazi jer `tsc -b` bez `--noEmit` emituje i razrešava drugačije), pa je ostalo neprimećeno. Ali root `verify` lanac koji sam dodao u F-02 poziva `typecheck:web`, pa je i on time polomljen.
-- **Minimalni predlog:** dodati `apps/web/src/vite-env.d.ts` sa `/// <reference types="vite/client" />`.
-- **Status:** `CHALLENGE_NOT_APPLIED` — ne širim PR o novcu time; ide uz sledeći harness PR.
+- **Šta je tvrđeno:** da `apps/web` nema `src/vite-env.d.ts`, pa svaki `import "./nesto.css"` puca sa `TS2882`, i da je time i root `verify` lanac polomljen.
+- **Šta je zapravo izmereno:** provera je pokrenuta u zasebnom worktree-u **u kojem `apps/web/node_modules` nije bio instaliran**. Greške koje sam video bile su `TS2307: Cannot find module 'react'`, `'react-router-dom'`, `react/jsx-runtime` — dakle nedostajuće zavisnosti, ne nedostajuća Vite deklaracija. Zaključak o `vite-env.d.ts` je izveden iz pogrešno pročitanog izlaza.
+- **Provereno na čistom `origin/main` sa instaliranim zavisnostima:** `npm run typecheck` (`tsc -b --noEmit`, TypeScript 5.9.3) prolazi, `tsc --noEmit -p tsconfig.json` prolazi, i root lanac (`verify:spec`, `typecheck:web`, `build:web`) prolazi. Pod `moduleResolution: bundler` TypeScript uopšte ne razrešava `.css` import kao modul — dodat probni `import "./nepostojece.css"` takođe prolazi — pa `vite-env.d.ts` ovde ne bi ispravio ništa.
+- **Šta stvarno stoji:** `src/vite-env.d.ts` zaista ne postoji, ali ništa u `src/` ne koristi `import.meta.env`, pa trenutno nema šta da tipizira. To je konvencija, ne kvar.
+- **Status:** `WITHDRAWN`. Nalaz je bio moja greška u merenju, a ne stanje repoa. Zapisujem ga umesto da ga tiho obrišem, jer je bio i u opisu PR-a #74.
+
+### F-12 — samouslužno kreiranje škole protivreči M04 §3.2.1
+
+- **Ugovor:** M04 §3.2.1: školu kreira **samo** actor sa `platform.schools.create` i svežom M01 step-up potvrdom. §9.10 traži da se javna self-registration putanja ukloni ako može napraviti nalog/pristup mimo M02.
+- **Repo dokaz:** `POST /schools` (`app/domains/school/router.py:28`) dozvoljava bilo kom autentifikovanom licu da osnuje školu i time sebi dodeli `OWNER` role. To je cela postojeća putanja registracije; M20 onboarding, `tests/test_onboarding.py` i Cypress E2E svi počinju od nje.
+- **Zašto nije primenjeno sada:** platform actor ne postoji dok ne postoje M05 (permission registry, support access) i M02 (owner nomination/invitation). Uklanjanje putanje sada ne bi je zamenilo ničim — obrisalo bi jedini način da škola nastane, i to u talasu čiji je ceo smisao da pripremi temelj za te module.
+- **Šta je ipak urađeno:** putanja sada proizvodi **potpun M04 anchor** (organization + veza, oba lokatora, status tranzicija #1) u istoj transakciji, pa škola nastala kroz nju zadovoljava §3.1.3 i §3.7.1. Organizacija je označena placeholder-om (`case_reference = SELF_PROVISIONED`) da bi je kasniji ORG-04 transfer zamenio stvarnim pravnim licem.
+- **Status:** `CHALLENGE_NOT_APPLIED` — svesno odloženo do M02/M05, uz zapisan trag u podacima koji kaže da organizacija nije dokazana.
+
+### F-13 — kontakt škole nema key management osim env promenljivih
+
+- **Ugovor:** M04 §2.0 traži `EncryptedContact` (AEAD sa key version i autentifikovanim context-om) i `Fingerprint256` (keyed HMAC-SHA-256 sa zasebnom verzijom ključa).
+- **Repo dokaz:** pre ovog rada repo nije imao nijedan oblik enkripcije podataka u mirovanju. Postojeći presedan za tajne je `app/config.py` (`session_secret`, `password_pepper`) — env promenljive, bez KMS-a.
+- **Šta je urađeno:** `app/platform/crypto.py` implementira oba tipa, sa dva **odvojena** keyring-a i rotacijom bez re-enkripcije (svaka sačuvana vrednost nosi verziju koja ju je napravila). Boot odbija neispravan keyring i objavljene dev ključeve van local/test.
+- **Šta ostaje otvoreno:** ključevi žive u okruženju. Kompromitovan host čita kontakte. Modul to kaže eksplicitno umesto da implicira jaču garanciju.
+- **Status:** `CHALLENGE_NOT_APPLIED` u delu key custody — arhitektonska odluka vlasnika proizvoda, spremna za zamenu KMS-om bez promene šeme.
+
+### F-14 — M04 referencira M06 `SchoolPersonProfile`, koji u repou ne postoji
+
+- **Ugovor:** M04 §2.6 traži composite FK `(school_id, target_school_person_profile_id, target_person_id)` → M06 `SchoolPersonProfile(school_id, id, person_id)`.
+- **Repo dokaz:** M06 još nije implementiran po v5.7 ugovoru. Postojeći ekvivalent je `SchoolMembership` — red koji globalnu `Person` čini vidljivom unutar jednog tenanta, što je tačno uloga koju §2.6 traži od profila.
+- **Odluka:** nominacija pokazuje na `SchoolMembership`, kroz composite FK istog oblika. Kolona se zove `target_membership_id`, ne `target_school_person_profile_id`, da ime ne bi tvrdilo da postoji entitet koji ne postoji.
+- **Šta ovo *ne* menja:** garancija je ista i nosi je baza — nominacija ne može pokazati na članstvo druge škole ili druge osobe. Kada M06 uvede `SchoolPersonProfile`, FK se premešta na njega; oblik ograničenja ostaje.
+- **Status:** `ADAPT`, zabeleženo da kasniji M06 korak zna gde da pogleda.
+
+### F-15 — subscription usage (§2.9–2.10) ne može se izračunati: nema istorije statusa upisa
+
+- **Ugovor:** M04 §3.9.4 traži broj distinct osoba čija **poslednja statusna tranzicija strogo pre preseka** glasi `ACTIVE`. §3.9.10 dodaje: kasni JOB koristi istoriju statusa, ne trenutne live kolone, a ako izvorna istorija nije potpuna — ne upisuje izmišljen broj, nego pada sa `SUBSCRIPTION_SOURCE_HISTORY_INCOMPLETE`.
+- **Repo dokaz:** `GroupMembership` (`app/domains/groups/models.py`) menja `status` **u mestu**. Postoje `joined_at` i `ended_at`, ali nema nijednog reda koji beleži *kada* je članstvo prešlo u `SUSPENDED` ili nazad. Za bilo koji prošli trenutak T repo ne može da odgovori „koji je bio status ovog upisa u T".
+- **Posledica:** snapshot za prošli mesec bio bi tačan samo za članstva koja su ceo mesec bila `ACTIVE` ili su se završila. Slučajevi koje §3.9.6 i §3.10.21 izričito pominju (suspenzija tačno na preseku, suspenzija usred meseca) davali bi pogrešan broj — a pogrešan broj koji izgleda uverljivo je gore od nedostajućeg.
+- **Zašto nije zaobiđeno:** računanje iz `status` + `ended_at` bilo bi upravo „guessed zero"/guessed count koji §3.9.10 i §3.11.12 zabranjuju.
+- **Minimalni predlog:** M09 dobija `group_membership_status_transition` append-only tabelu istog oblika kao `school_status_transition` (per-membership `sequence_no`, bez rupa). Tek onda §2.9–2.10 mogu da se implementiraju pošteno.
+- **Status:** `CHALLENGE_NOT_APPLIED` — §2.8 (entitlement) je isporučen jer ne zavisi od ovoga; §2.9–2.10 čekaju M09.
 
 ## 5. Šta je u ovom radu stvarno urađeno
 
@@ -228,14 +262,32 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 9. **Dead-letter dual control** (`app/platform/outbox/dead_letter.py`): zahtev/odobrenje/odbijanje sa invarijantom „druga osoba", replay vraća poruku u red sa resetovanim brojem pokušaja, discard je trajan, oba se upisuju u zapečaćeni audit lanac. Migracija `d5a92c74e8b1` sa parcijalnim unique indeksom (najviše jedan otvoren zahtev po poruci). 11 testova.
 10. F-02 (root harness), F-07 (E2E fiksni datum), F-08 (inbox) i F-10 (PII u logovima) otklonjeni.
 
+**Talas 2 — M04 school anchor**
+
+11. **Contact protection port** (`app/platform/crypto.py`): `EncryptedContact` kao AES-256-GCM sa autentifikovanim context-om koji se **ne čuva** (ciphertext prebačen u drugi red ne dešifruje se, umesto da se pročita kao kontakt tog reda), i `Fingerprint256` kao keyed HMAC-SHA-256 sa zasebnom verzijom ključa. Dva nezavisna keyring-a, rotacija dodavanjem verzije bez re-enkripcije. Boot guard odbija neispravan keyring i objavljene dev ključeve u staging/production. 21 test. Vidi F-13.
+12. **M04 §2.1–2.5 entiteti** (migracija `a4d76f2b91c0`):
+    - `organization` — globalni pravno-komercijalni nosilac, nije tenant i nije authorization domain (§3.1.2);
+    - `organization_school` — vremenski praćena veza, parcijalni unique `WHERE valid_to IS NULL`, transfer zatvara stari i otvara novi red **na isti trenutak**, pa istorija nema ni rupu ni preklapanje;
+    - `school_locator` — `SLUG` i `SCHOOL_CODE`, tačno jedan aktivan po vrsti po školi, unique samo među aktivnima (penzionisana vrednost je istorija, ne rezervacija); rotacija je atomska i stari red pokazuje na novi;
+    - `school_status_transition` — append-only autoritet, `UNIQUE(school_id, sequence_no)`, `from_status IS NULL` samo za #1;
+    - `school` proširen na §2.2 (`provisioning_reference`, `school_kind`, `status`, `currency`, `language_tag`, `country_code`, kontakt ciphertext/fingerprint/masked, `activated_at`/`deactivated_at`, `version`) sa svim §2.2 `CHECK` ugovorima u bazi.
+13. **Konsolidacija statusa:** `lifecycle_status` (IN_PREPARATION/ACTIVE) i `School.record_status` (korišćen kao prekidač deaktivacije) spojeni u jedan `status` po §5.2. Dva polja koja odgovaraju na isto pitanje su način na koji guard proveri pogrešno i deluje ispravno. Mapiranje je tačno §9.2 i ništa više; nepoznata vrednost prekida migraciju umesto da bude pogođena.
+14. **Brownfield:** svaka zatečena škola dobija provisioning referencu, organizaciju i vezu, oba lokatora i tranziciju #1, bez promene `School.id`. Organizacije su označene kao placeholder (`SELF_PROVISIONED`) jer platforma nema dokaz o pravnom licu i §9.5 zabranjuje da ga izmisli. Provereno na bazi sa pet namerno nezgodnih redova (dijakritika, prazan slug, ime bez ijednog alfanumeričkog znaka, arhivirana škola, škola sa onboarding istorijom) — i uzvodno i nizvodno.
+15. 30 novih testova za anchor, od kojih se sedam ne oslanja na servis nego direktno gađa bazu: to su garancije koje moraju važiti i kada ih neka buduća putanja zaobiđe.
+16. **M04 §2.6–2.7 — ownership** (migracija `b9e3c05a74d2`):
+    - `school_owner_nomination` — namera škole da imenovana osoba postane vlasnik, odvojena od poziva koji je nosi. Parcijalni unique dozvoljava najviše jednu `PENDING INITIAL_PRIMARY_OWNER` po školi; istekao poziv **ne** gasi nominaciju, jer „poziv je istekao" i „pogrešili smo osobu" nisu isti događaj — drugo je `CANCELLED`, sa zatvorenim razlogom.
+    - `school_primary_owner_term` — vremenski sled tačno jednog primarnog vlasnika, parcijalni unique `WHERE valid_to IS NULL`; prenos zatvara stari i otvara novi term na isti trenutak i **ne dira role set** (§3.4.8): stari vlasnik ostaje OWNER, jer tiho oduzimanje uloge pretvara prenos u zaključavanje.
+    - §3.4.5 kao dva pravila koja se slažu: dodatni vlasnik uvek sme da ode, uloga primarnog ne sme pre prenosa primarnosti — pa nijedan redosled uklanjanja ne dolazi do nule.
+17. **M04 §2.8 — product entitlement** (migracija `c1f4a86d39b7`): jedan red po grantu, parcijalni unique po `(school_id, capability_key) WHERE status='ACTIVE'`. Ključna stvar je da `ACTIVE` **nije dovoljan**: efektivnost se odlučuje na čitanju (§3.8.2–3.8.3) — prozor važenja sa strogim `now < valid_until`, status škole, i da li je organizacija koja je prodala i dalje aktuelna. Čitalac koji veruje koloni `status` daje školi mogućnost koju je prestala da plaća u ponoć, a red i sutra ujutru izgleda ispravno. Zamena granta **terminalizuje** prethodni umesto da ga prepiše, jer je „koja komercijalna referenca je važila kada" jedino pitanje zbog kojeg ova tabela postoji. Bez backfill-a: §2.8 kaže da `CORE_MVP` ne nastaje iz Organization veze, a §9.5 zabranjuje izmišljanje granta.
+18. **Composite tenant FK** (M03 §7, zatečeno kao nedostatak): `school_membership` dobija `UNIQUE(school_id, id, person_id)`, `role_assignment` dobija `UNIQUE(school_id, id, person_id, role_code)`. Nijedan ne dodaje garanciju jedinstvenosti — `id` je već PK — nego omogućavaju da strani ključ *imenuje tenanta* kao deo reference. Nominacija zato ne može pokazati na članstvo druge škole, a primary term ne može pokazati na MANAGER dodelu iste osobe. Oba su dokazana testom koji zaobilazi servis.
+
 ## 6. Šta NIJE urađeno
 
-- Nijedan v5.7 QA scenario nije implementiran. Zatečeni testovi pokrivaju zatečeni proizvod.
-- **Talas 1 je završen osim exact decimal porta**, koji se isporučuje kroz F-03 kao zaseban PR (odluka O-02).
+- Nijedan v5.7 QA scenario nije implementiran kao takav. Zatečeni testovi pokrivaju zatečeni proizvod; M04 anchor testovi gađaju invarijante iz ugovora, ali nisu numerisani QA scenariji iz `02-M04-QA-I-TRACEABILITY.md`.
+- **Nijedan modul nije `IMPLEMENTED`.** Talas 1 jeste završen, a od Talasa 2 postoji M04 §2.1–2.8. M04 sam po sebi nije gotov: §2.9–2.10 (usage snapshot i korekcije) su **blokirani** dok M09 ne dobije istoriju statusa upisa (F-15), a nedostaju i §2.12–2.20 (komercijalni sloj) i SCH-01..06 / ORG-01..04 / OWN-01..04 / ENT-01..02 kao stvarne komande sa permisijama i step-up-om. Ovde postoji **domen i njegove invarijante**, ne komandni sloj: ko sme šta da pozove i dalje čeka M05.
 - Dead-letter dual control nema HTTP vezivanje dok M05 support access ne postoji (F-09).
-- Talasi 2–5 nisu započeti. **Nijedan modul nije `IMPLEMENTED`.**
-- F-03 (novac) i F-04 (imenovanje) i dalje čekaju — vidi ispod.
-- Web `npm ci` nije uspeo u ovom okruženju (mrežna greška), pa web typecheck/build i Cypress **nisu izvršeni lokalno**; za njih je dokaz jedino CI.
+- Talasi 3–5 nisu započeti.
+- **Cypress se u ovom okruženju ne može pokrenuti** (binarni paket se ne preuzima), pa su korisničke putanje dokazivane pokretanjem stvarnog stack-a i pravim HTTP pozivima, odnosno Playwright-om uz predinstalirani Chromium. Web `typecheck` i `build` **se izvršavaju lokalno i prolaze** (raniji nalaz o suprotnom povučen — vidi F-11).
 
 ## 7. Predloženi sledeći korak
 
@@ -243,7 +295,10 @@ Redosled je potvrdio vlasnik proizvoda 2026-09-18:
 
 1. ~~**F-03** — novac na `NUMERIC(18,2)`~~ — urađeno.
 2. ~~**F-04** — preimenovanje `Organization` → `School`~~ — urađeno.
-3. Talas 2 (M04 → M06 → M01 → M03 → M05 → M07 → M02).
+3. ~~M04 anchor (§2.1–2.5) i contact protection port~~ — urađeno.
+4. ~~Owner nomination i primary term (§2.6–2.7)~~, ~~product entitlement (§2.8)~~ — urađeno. §2.9–2.10 su blokirani na M09 (F-15).
+5. Odluka za vlasnika proizvoda: ili **M09 istorija statusa upisa** (otključava §2.9–2.10 i M04 zaokružuje), ili **nastavak Talasa 2** po DCR redosledu (M06 → M01 → M03 → M05 → M07 → M02), koji ionako donosi M05 permission registry bez kojeg M04 komande ne mogu da postoje. Komercijalni sloj (§2.12–2.20) je najveći deo i ide posle njih.
+6. M02 i M05 su ujedno uslov da se F-09 i F-12 zatvore.
 
 ## 8. Odluke vlasnika proizvoda (2026-09-18)
 

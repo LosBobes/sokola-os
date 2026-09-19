@@ -3292,9 +3292,6 @@
             "title": "Can Activate",
             "type": "boolean"
           },
-          "lifecycle_status": {
-            "$ref": "#/components/schemas/SchoolLifecycleStatus"
-          },
           "remaining_steps": {
             "items": {
               "$ref": "#/components/schemas/OnboardingStep"
@@ -3306,6 +3303,9 @@
             "title": "School Id",
             "type": "string"
           },
+          "status": {
+            "$ref": "#/components/schemas/SchoolStatus"
+          },
           "steps": {
             "items": {
               "$ref": "#/components/schemas/OnboardingStepStatus"
@@ -3316,7 +3316,7 @@
         },
         "required": [
           "school_id",
-          "lifecycle_status",
+          "status",
           "steps",
           "remaining_steps",
           "can_activate",
@@ -5019,13 +5019,19 @@
         "title": "SaveAttendanceResponse",
         "type": "object"
       },
-      "SchoolLifecycleStatus": {
-        "description": "Where a school is in guided onboarding (PRD 02 \u00a724/\u00a725), independent of\n``record_status`` (which is the soft-delete/deactivation axis, \u00a731).\n\nA school created through ``POST /schools`` starts ``IN_PREPARATION``\n(\"u pripremi\"): the owner may set up structure and invite a co-owner, but\nnormal STAFF/PARENT/STUDENT invitations are blocked until ``ACTIVE`` (see\n``app.domains.identity.policy.ensure_invitation_allowed_during_onboarding``).\nLegacy/seed rows default to ``ACTIVE`` so behaviour outside the real\nsignup path is unchanged.",
+      "SchoolKind": {
+        "description": "\u00a72.2. What kind of organization the school is.\n\nDistinct from the older :class:`SchoolType`, which this repo uses for the\nsame idea with a coarser list; the two are reconciled in the M04 migration.",
         "enum": [
-          "IN_PREPARATION",
-          "ACTIVE"
+          "PRIVATE_SCHOOL",
+          "SPORTS_CLUB_ACADEMY",
+          "DANCE_SCHOOL_STUDIO",
+          "MUSIC_SCHOOL",
+          "ART_DRAMA_SCHOOL",
+          "EDUCATION_LANGUAGE_CENTER",
+          "ACTIVITY_WORKSHOP_CENTER",
+          "OTHER"
         ],
-        "title": "SchoolLifecycleStatus",
+        "title": "SchoolKind",
         "type": "string"
       },
       "SchoolResponse": {
@@ -5034,12 +5040,12 @@
             "title": "Id",
             "type": "string"
           },
-          "lifecycle_status": {
-            "$ref": "#/components/schemas/SchoolLifecycleStatus"
-          },
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "school_kind": {
+            "$ref": "#/components/schemas/SchoolKind"
           },
           "slug": {
             "anyOf": [
@@ -5051,6 +5057,9 @@
               }
             ],
             "title": "Slug"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SchoolStatus"
           },
           "timezone": {
             "title": "Timezone",
@@ -5066,10 +5075,21 @@
           "slug",
           "type",
           "timezone",
-          "lifecycle_status"
+          "school_kind",
+          "status"
         ],
         "title": "SchoolResponse",
         "type": "object"
+      },
+      "SchoolStatus": {
+        "description": "M04 \u00a72.2. The school's single lifecycle axis.\n\nThis replaces the pair this repo used to carry \u2014 ``lifecycle_status``\n(IN_PREPARATION/ACTIVE) alongside ``record_status`` (ACTIVE/ARCHIVED as the\ndeactivation switch). Two fields answering one question is how a guard ends\nup checking the wrong one and reading correct; \u00a75.2 defines a single\ntransition table, so there is a single column.\n\nThe authority is :class:`app.domains.school.models.SchoolStatusTransition`,\nwhich is append-only. This column is its current projection, maintained in\nthe same transaction as the transition that moved it.",
+        "enum": [
+          "IN_PREPARATION",
+          "ACTIVE",
+          "DEACTIVATED"
+        ],
+        "title": "SchoolStatus",
+        "type": "string"
       },
       "SchoolType": {
         "enum": [

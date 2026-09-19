@@ -22,6 +22,7 @@ from app.domains.identity.models import (
     RoleAssignment,
 )
 from app.domains.people.models import GuardianRelationship, GuardianSchoolAccess
+from app.domains.school.enums import SchoolStatus
 from app.domains.school.models import School, SchoolMembership
 
 
@@ -42,7 +43,7 @@ def list_active_contexts(db: Session, person_id: str) -> list[tuple[RoleAssignme
             RoleAssignment.person_id == person_id,
             RoleAssignment.status == RoleAssignmentStatus.ACTIVE,
             RoleAssignment.record_status == RecordStatus.ACTIVE,
-            School.record_status == RecordStatus.ACTIVE,
+            School.status != SchoolStatus.DEACTIVATED,
         )
         .order_by(School.name, RoleAssignment.role_code)
     )

@@ -14,6 +14,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["local", "test", "staging", "production"]
 
+# Fixed, published, and therefore worthless as secrets. They exist so a fresh
+# checkout runs without setup; ``_guard_contact_keys`` refuses them outside
+# local/test, and the word "insecure" in the material is what it looks for.
+_DEV_INSECURE_KEY = "ZGV2LWluc2VjdXJlLWNvbnRhY3Qta2V5LS1jaGFuZ2U="
+_DEV_INSECURE_FINGERPRINT_KEY = "ZGV2LWluc2VjdXJlLWZwLWtleS0tLS0tLS1jaGFuZ2U="
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -59,6 +65,17 @@ class Settings(BaseSettings):
     # Change it outside local, and note that changing it invalidates every
     # existing password hash (users must reset), so rotate deliberately.
     password_pepper: str = "dev-insecure-password-pepper-change-me"
+
+    # --- Contact protection (M04 §2.0). Two independent keyrings, each
+    # "<version>:<base64 32-byte key>" entries separated by commas; the highest
+    # version is the one new values are written under, older versions stay
+    # readable so a rotation needs no re-encryption. Encryption and fingerprint
+    # keys are separate on purpose: one protects confidentiality, the other makes
+    # dedupe possible, and they are rotated for different reasons. Both are
+    # dev-only defaults here and refused in staging/production (see app.main).
+    # See app.platform.crypto.generate_key to mint a real one. ---
+    contact_encryption_keys: str = "1:" + _DEV_INSECURE_KEY
+    contact_fingerprint_keys: str = "1:" + _DEV_INSECURE_FINGERPRINT_KEY
 
     @property
     def is_production_like(self) -> bool:

@@ -61,6 +61,11 @@ services:
       # existing password hash.
       SOKOLA_PASSWORD_AUTH_ENABLED: "${SOKOLA_PASSWORD_AUTH_ENABLED:-true}"
       SOKOLA_PASSWORD_PEPPER: "${SOKOLA_PASSWORD_PEPPER:?set SOKOLA_PASSWORD_PEPPER in .env, e.g. openssl rand -hex 32}"
+      # Contact protection (M04). Two separate keyrings so confidentiality and
+      # dedupe rotate independently; app.main refuses to start in production
+      # while either still holds its published dev default.
+      SOKOLA_CONTACT_ENCRYPTION_KEYS: "${SOKOLA_CONTACT_ENCRYPTION_KEYS:?set SOKOLA_CONTACT_ENCRYPTION_KEYS in .env, e.g. 1:<openssl rand -base64 32>}"
+      SOKOLA_CONTACT_FINGERPRINT_KEYS: "${SOKOLA_CONTACT_FINGERPRINT_KEYS:?set SOKOLA_CONTACT_FINGERPRINT_KEYS in .env, e.g. 1:<openssl rand -base64 32>}"
     command: >
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000"

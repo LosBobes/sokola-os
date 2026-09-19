@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.domains.identity.enums import RoleCode
-from app.domains.school.enums import SchoolLifecycleStatus
+from app.domains.school.enums import SchoolStatus
 from app.domains.school.models import School
 from app.security.auth import DEV_PERSON_HEADER
 from app.security.deps import CONTEXT_HEADER
@@ -51,11 +51,11 @@ def test_new_school_starts_in_preparation_with_only_profile_done(
     client: TestClient, db: Session
 ) -> None:
     headers, org = _bootstrap_owner(client, db)
-    assert org["lifecycle_status"] == "IN_PREPARATION"
+    assert org["status"] == "IN_PREPARATION"
 
     progress = client.get("/onboarding/progress", headers=headers).json()
     assert progress["school_id"] == org["id"]
-    assert progress["lifecycle_status"] == "IN_PREPARATION"
+    assert progress["status"] == "IN_PREPARATION"
     assert progress["activated_at"] is None
     assert progress["can_activate"] is False
 
@@ -179,7 +179,7 @@ def test_activation_lifts_the_invite_gate(client: TestClient, db: Session) -> No
 
     activated = client.post("/onboarding/activate", headers=headers)
     assert activated.status_code == 200, activated.text
-    assert activated.json()["lifecycle_status"] == "ACTIVE"
+    assert activated.json()["status"] == "ACTIVE"
 
     resp = client.post(
         "/invitations",
@@ -209,14 +209,14 @@ def test_activation_requires_a_location(client: TestClient, db: Session) -> None
     ok = client.post("/onboarding/activate", headers=headers)
     assert ok.status_code == 200, ok.text
     progress = ok.json()
-    assert progress["lifecycle_status"] == "ACTIVE"
+    assert progress["status"] == "ACTIVE"
     assert progress["activated_at"] is not None
     assert progress["can_activate"] is False
     assert _step(progress, "ACTIVATE")["completed"] is True
 
     org_row = db.get(School, org["id"])
     assert org_row is not None
-    assert org_row.lifecycle_status is SchoolLifecycleStatus.ACTIVE
+    assert org_row.status is SchoolStatus.ACTIVE
 
     # Already active, a second activation is refused.
     again = client.post("/onboarding/activate", headers=headers)
