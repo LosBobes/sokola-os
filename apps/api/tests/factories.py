@@ -15,6 +15,7 @@ from app.domains.organization.enums import OrganizationSchoolChangeReason
 from app.domains.organization.models import Organization
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
 from app.domains.people.models import GuardianRelationship, GuardianSchoolAccess
+from app.domains.people.profile_models import SchoolPersonProfile
 from app.domains.school import anchor
 from app.domains.school.enums import (
     LocatorKind,
@@ -25,6 +26,7 @@ from app.domains.school.enums import (
 from app.domains.school.models import School, SchoolMembership
 from app.security.auth import DEV_PERSON_HEADER
 from app.security.deps import CONTEXT_HEADER
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
@@ -110,8 +112,33 @@ def add_membership(
     if created_at is not None:
         membership.created_at = created_at
     db.add(membership)
+    ensure_person_profile(db, school=school, person=person)
     db.commit()
     return membership
+
+
+def ensure_person_profile(
+    db: Session, *, school: School, person: Person
+) -> SchoolPersonProfile:
+    """The M06 §2.4 row that makes a person visible inside one school.
+
+    One per (school, person) however many membership types they hold, so this
+    is idempotent: a person who is both a parent and a coach is still someone
+    the school knows once.
+    """
+    existing = db.execute(
+        select(SchoolPersonProfile).where(
+            SchoolPersonProfile.school_id == school.id,
+            SchoolPersonProfile.person_id == person.id,
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+
+    profile = SchoolPersonProfile(school_id=school.id, person_id=person.id)
+    db.add(profile)
+    db.flush()
+    return profile
 
 
 @dataclass

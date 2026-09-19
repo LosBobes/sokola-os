@@ -22,6 +22,7 @@ from app.domains.onboarding import models as _onboarding_models  # noqa: F401
 from app.domains.organization import models as _organization_models  # noqa: F401
 from app.domains.payments import models as _payments_models  # noqa: F401
 from app.domains.people import models as _people_models  # noqa: F401
+from app.domains.people import profile_models as _people_profile_models  # noqa: F401
 from app.domains.privacy import models as _privacy_models  # noqa: F401
 from app.domains.progress import models as _progress_models  # noqa: F401
 from app.domains.scheduling import models as _scheduling_models  # noqa: F401

@@ -105,41 +105,46 @@ def test_the_database_refuses_a_second_pending_initial_nomination(db: Session) -
     )
     db.commit()
 
-    membership_id = db.execute(
-        text("SELECT id FROM school_membership WHERE school_id = :s AND person_id = :p"),
+    profile_id = db.execute(
+        text("SELECT id FROM school_person_profile WHERE school_id = :s AND person_id = :p"),
         {"s": school.id, "p": other.id},
     ).scalar_one()
     with pytest.raises(IntegrityError):
         db.execute(
             text(
                 "INSERT INTO school_owner_nomination (id, school_id, target_person_id, "
-                "target_membership_id, kind, status, created_by_actor_ref, version, "
-                "created_at, updated_at) VALUES (:id, :s, :p, :m, 'INITIAL_PRIMARY_OWNER', "
-                "'PENDING', 'x', 1, now(), now())"
+                "target_school_person_profile_id, kind, status, created_by_actor_ref, "
+                "version, created_at, updated_at) VALUES (:id, :s, :p, :prof, "
+                "'INITIAL_PRIMARY_OWNER', 'PENDING', 'x', 1, now(), now())"
             ),
-            {"id": new_id("nom"), "s": school.id, "p": other.id, "m": membership_id},
+            {"id": new_id("nom"), "s": school.id, "p": other.id, "prof": profile_id},
         )
     db.rollback()
 
 
-def test_a_nomination_cannot_point_at_another_schools_membership(db: Session) -> None:
-    """The composite foreign key, not a filter someone has to remember to write."""
+def test_a_nomination_cannot_point_at_another_schools_profile(db: Session) -> None:
+    """The composite foreign key, not a filter someone has to remember to write.
+
+    It referenced `school_membership` before M06 landed and now references
+    `school_person_profile` (finding F-14); the shape is identical, so this
+    guarantee never lapsed.
+    """
     left, right = make_school(db, name="Leva"), make_school(db, name="Desna")
     person, _ = _member(db, right, given="Tuđa")
     db.commit()
 
-    foreign_membership = db.execute(
-        text("SELECT id FROM school_membership WHERE school_id = :s"), {"s": right.id}
+    foreign_profile = db.execute(
+        text("SELECT id FROM school_person_profile WHERE school_id = :s"), {"s": right.id}
     ).scalar_one()
     with pytest.raises(IntegrityError):
         db.execute(
             text(
                 "INSERT INTO school_owner_nomination (id, school_id, target_person_id, "
-                "target_membership_id, kind, status, created_by_actor_ref, version, "
-                "created_at, updated_at) VALUES (:id, :s, :p, :m, 'ADDITIONAL_OWNER', "
-                "'PENDING', 'x', 1, now(), now())"
+                "target_school_person_profile_id, kind, status, created_by_actor_ref, "
+                "version, created_at, updated_at) VALUES (:id, :s, :p, :prof, "
+                "'ADDITIONAL_OWNER', 'PENDING', 'x', 1, now(), now())"
             ),
-            {"id": new_id("nom"), "s": left.id, "p": person.id, "m": foreign_membership},
+            {"id": new_id("nom"), "s": left.id, "p": person.id, "prof": foreign_profile},
         )
     db.rollback()
 
