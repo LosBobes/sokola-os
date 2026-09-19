@@ -78,7 +78,7 @@ authorization domen.
 
 | Modul | Klasifikacija | Putanja / dokaz |
 |---|---|---|
-| M01 Identity | `ADAPT` | `app/domains/identity/`, `app/security/{auth,password,oidc}.py`. Email+password i Google OIDC rade; session revocation i M01 revocation-on-every-request nisu dokazani |
+| M01 Identity | `ADAPT` | §3.1–3.2 isporučeno: `user_account`, `auth_identity`, `auth_provider_registration`, `local_password_credential`, `authentication_event` (migracija `a7e4c2f91b08`, sa backfill-om i exception report-om). Session store (§3.2) i AUTH komande (§6) su sledeći isečci — vidi F-17, F-19, F-20 |
 | M02 Pozivnice | `ADAPT` | `identity/invite_tokens.py`, `Invitation` model, `tests/test_invitations.py`. Invite-only postoji; M02 ugovor je znatno širi (55 KB master) |
 | M03 Multi-tenancy | `ADAPT` | `app/security/context.py`. Server-derived context postoji i testiran je; **nedostaju composite tenant FK/UNIQUE i RLS** (§7) |
 | M04 School/Subscription | `IMPLEMENT` (§2.1–2.8 urađeno) | Anchor: `organization`, `organization_school`, `school_locator`, `school_status_transition`, prošireni `school` (migracija `a4d76f2b91c0`, 30 testova). Ownership: `school_owner_nomination`, `school_primary_owner_term` sa composite tenant FK-ovima (`app/domains/school/ownership*.py`, migracija `b9e3c05a74d2`, 31 test). Entitlement: `school_product_entitlement` sa read-time pravilom efektivnosti (`app/domains/school/entitlements.py`, migracija `c1f4a86d39b7`, 23 testa). **Ostaje:** subscription usage (§2.9–2.10, blokirano — vidi F-15), komercijalni sloj (§2.12–2.20), SCH-01..06 / ORG-01..04 / OWN-01..04 / ENT-01..02 kao komande sa permisijama i step-up-om |
@@ -251,6 +251,36 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Zašto nije zaobiđeno:** JMBG bez proverenog zakonitog osnova je tačno ono što §2.2 sprečava. Napraviti kolonu sa slobodnim `lawful_purpose_code` stringom značilo bi da polje *izgleda* kao da je prošlo policy proveru, a nije — gore nego da ne postoji.
 - **Minimalni predlog:** M17 dobija registar svrha (`purpose_code`, aktivan osnov, retention period) i read port kojim M06 proverava osnov u istoj transakciji. Tek onda §2.2.
 - **Status:** `CHALLENGE_NOT_APPLIED` — svesno odloženo do M17. Ovo je blokada koja štiti, ne propust.
+
+### F-17 — sesija je potpisani kolačić bez servera: opoziv pojedinačne sesije nije moguć
+
+- **Ugovor:** M01 §3.2 traži `Session` sa nepredvidivim `id`, `revoked_at`, `revoke_reason_code`, `idle_expires_at`, `absolute_expires_at` i `authorization_version_at_issue`. §4.7 traži da povećanje `authorization_version` **trenutno** poništi sve sesije naloga za svaki zahtev koji počne posle commit-a. §6 AUTH-04 opoziva **samo prezentovanu** sesiju, AUTH-05 sve.
+- **Repo dokaz:** `app/main.py` montira Starlette `SessionMiddleware` sa `secret_key=settings.session_secret`; `app/domains/auth/router.py::_establish_session` upisuje samo `person_id` i `csrf` u potpisani kolačić. Nema tabele sesija, nema poređenja `authorization_version`, nema `revoked_at`. `POST /auth/logout` radi `request.session.clear()` — briše kolačić u **tom** pretraživaču i ništa više.
+- **Posledica:** kolačić izdat na tuđem uređaju važi do isteka potpisa bez obzira na sve što se u međuvremenu dogodi nalogu. „Odjavi me svuda" se ne može implementirati; M01-QA-008/009/011/021 se ne mogu ni napisati.
+- **Šta je u ovom PR-u urađeno:** `authorization_version` sada **postoji** na `user_account`, a `app/security/auth.py::_account_revoked` je pooštren da odbije svaki nalog koji nije `ACTIVE` (ranije samo `DISABLED`), pa suspenzija odmah važi. To je najbolje što potpisani kolačić može: čita nalog na svakom zahtevu, ali ne razlikuje jednu sesiju od druge i nema sa čim da uporedi verziju.
+- **Status:** `CHALLENGE_NOT_APPLIED` do sledećeg M01 isečka — server-side `auth_session` tabela + `AUTH-03 ValidateSession` koji poredi `authorization_version_at_issue`. To je jedini ispravan nosilac §4.7 i zato ide kao zaseban, izolovan PR: menja autentifikaciju na **svakom** zahtevu.
+
+### F-18 — Google prijava je usvajala postojeći nalog po jednakom email-u (OTKLONJENO)
+
+- **Ugovor:** M01 §4.5: „Email podudaranje samo po sebi nikada ne linkuje nalog niti spaja osobe." §7 ponavlja: nema automatskog linkovanja preko jednakog email-a, telefona, imena, datuma rođenja, referral tokena ili invitation URL-a.
+- **Repo dokaz (pre ovog PR-a):** `app/security/oidc.py::jit_provision` je, kada `sub` nije poznat, zvao `find_person_by_email(db, email)` i — ako nađe osobu — **zakačio Google subject na taj nalog** i vratio tu osobu. Ko god može da natera providera da tvrdi tuđu adresu, dobio bi tuđi nalog.
+- **Rešenje (primenjeno):** `jit_provision` je sada idempotentan isključivo na `issuer + sub`. Nepoznat subject pravi novu osobu i novi nalog; ne traži nikoga po adresi. `find_person_by_email` je zamenjen sa `find_person_by_login_email`, koji gleda **samo** local-password identitete — tamo je adresa login handle tog providera, kao što je `sub` Google-ov, a ne most između providera.
+- **Cena, svesno prihvaćena:** ista osoba koja se ranije registrovala lozinkom, a sada se prijavi Google-om, dobija **drugu** `Person`. To je M06 merge slučaj (postoji `PersonMergeRecord` tok), ne nešto što auth sme da reši tiho. §4.4 je izričit: običan login ne kreira ni ne spaja osobe.
+- **Status:** `OTKLONJENO` — test `test_google_login_does_not_adopt_a_password_account_by_email` (M01-QA-012).
+
+### F-19 — `password_auth_enabled` je podrazumevano `True`, a §4.9 traži OFF
+
+- **Ugovor:** M01 §4.9: „Ne postoji local fallback login... ako za njega nema eksplicitnog adaptera, konfiguracije i testova. **Podrazumevano je OFF.**"
+- **Repo dokaz:** `app/config.py` → `password_auth_enabled: bool = True`. Adapter, konfiguracija i testovi **postoje** (`app/security/password_auth.py`, `SOKOLA_PASSWORD_AUTH_ENABLED`, `tests/test_password_auth.py`), pa sam metod nije sporan — sporan je default.
+- **Zašto nije promenjeno u ovom PR-u:** obrtanje defaulta na `False` zaključalo bi svaki deployment koji promenljivu ne postavlja eksplicitno — uključujući, po svemu sudeći, Hetzner instancu. To je operativna promena koja ide zajedno sa upisom `SOKOLA_PASSWORD_AUTH_ENABLED=true` u `ops/hetzner/.env` i `compose.prod.yml` (sa `:-true` fallback-om, nikad `:?`), i pripada isečku koji dira login putanju.
+- **Status:** `CHALLENGE_NOT_APPLIED` — zakazano za M01 login isečak, zajedno sa provider registry enforcement-om.
+
+### F-20 — provider registry postoji, ali callback ga još ne proverava
+
+- **Ugovor:** M01 §3.2 + §6 AUTH-02: callback `issuer` mora se **tačno** poklopiti sa aktivnom registracijom, a audience/redirect/algoritam moraju biti na allowlist-i; inače `PROVIDER_NOT_ALLOWED` (M01-QA-019).
+- **Stanje posle ovog PR-a:** `auth_provider_registration` postoji, popunjena je za oba adaptera, `auth_identity.provider_key` je strani ključ ka njoj (dakle identitet bez registrovanog providera je nemoguć), a `sync_provider_registry` na boot-u upisuje audience/redirect iz deploy konfiguracije. Ali `google_callback` u `app/domains/auth/router.py` i dalje veruje Authlib-ovoj validaciji i ne konsultuje registar.
+- **Zašto nije urađeno ovde:** provera callback-a je promena login putanje, a ovaj PR je namerno promena modela. Spajanje to dvoje značilo bi jedan PR koji istovremeno menja šemu autentifikacije i njeno ponašanje.
+- **Status:** `CHALLENGE_NOT_APPLIED` — sledi u M01 callback isečku, zajedno sa `AuthenticationEvent` upisom za neuspele pokušaje i rate limit-ima iz §10.
 
 ## 5. Šta je u ovom radu stvarno urađeno
 

@@ -1,32 +1,31 @@
-"""Shared, provider-agnostic identity lookup by email.
+"""Shared, provider-agnostic person lookup by sign-in address.
 
-Both Google and password registration must check this before creating a new
-Person, or the same human logging in via two different methods ends up as two
-duplicate accounts (see ``oidc.py::jit_provision``).
+Kept as a module of its own because who may call it matters. §4.5 forbids an
+email match from linking an account or merging two people, so this returns the
+person behind an address only for adapters that own that address — today, the
+local password adapter, whose login handle *is* the address.
 """
 
 from __future__ import annotations
 
-from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.domains.identity.enums import AuthIdentifierType
-from app.domains.identity.models import AuthAccount, AuthIdentifier, Person
+from app.domains.identity.accounts import (
+    find_local_password_identity,
+    normalize_email,
+)
+from app.domains.identity.auth_models import UserAccount
+from app.domains.identity.models import Person
+
+__all__ = ["find_person_by_login_email", "normalize_email"]
 
 
-def normalize_email(email: str) -> str:
-    return email.strip().lower()
-
-
-def find_person_by_email(db: Session, email: str) -> Person | None:
-    normalized = normalize_email(email)
-    stmt = (
-        select(Person)
-        .join(AuthAccount, AuthAccount.person_id == Person.id)
-        .join(AuthIdentifier, AuthIdentifier.auth_account_id == AuthAccount.id)
-        .where(
-            AuthIdentifier.type == AuthIdentifierType.EMAIL,
-            func.lower(AuthIdentifier.value) == normalized,
-        )
-    )
-    return db.execute(stmt).scalar_one_or_none()
+def find_person_by_login_email(db: Session, email: str) -> Person | None:
+    """The person who signs in locally with this address, whatever their account
+    status. Status is the caller's decision: a suspended account must produce
+    the same generic refusal as an unknown address (§11), not a different one."""
+    identity = find_local_password_identity(db, email)
+    if identity is None:
+        return None
+    account = db.get(UserAccount, identity.user_account_id)
+    return db.get(Person, account.person_id) if account is not None else None

@@ -7,6 +7,8 @@ Domains are wired here and nowhere else.
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +17,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app import __version__
 from app.common.errors import register_exception_handlers
 from app.config import Settings, get_settings
+from app.db import SessionLocal
 from app.domains.attendance.router import router as attendance_router
 from app.domains.auth.router import router as auth_router
 from app.domains.billing.router import router as billing_router
@@ -24,6 +27,7 @@ from app.domains.documents.router import router as documents_router
 from app.domains.events.router import router as events_router
 from app.domains.groups.router import router as groups_router
 from app.domains.health.router import router as health_router
+from app.domains.identity.auth_providers import sync_provider_registry
 from app.domains.identity.router import router as identity_router
 from app.domains.internal.router import router as internal_router
 from app.domains.onboarding.router import router as onboarding_router
@@ -58,6 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version=__version__,
         docs_url="/docs",
         openapi_url="/openapi.json",
+        lifespan=_lifespan,
     )
 
     # Middleware runs outermost-last-added. We want, request-inward:
@@ -109,6 +114,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(reports_router)
 
     return app
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Reconcile the M01 provider registry before the first request.
+
+    The registry decides which issuers may tell us who somebody is (M01 §3.2),
+    and its audience and redirect allowlists are deployment facts. Doing this at
+    boot rather than at first callback means a misconfigured deployment is
+    visible on start, not on someone's first sign-in attempt.
+    """
+    with SessionLocal() as db:
+        sync_provider_registry(db, get_settings())
+    yield
 
 
 def _guard_dev_auth(settings: Settings) -> None:

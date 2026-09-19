@@ -1,7 +1,8 @@
-"""Google OIDC: the Authlib client and just-in-time Person provisioning.
+"""Google OIDC: the Authlib client and the account/identity link.
 
-We store only identity links, the Google ``sub`` mapped to a Person via
-``AuthAccount`` / ``AuthIdentifier``. No password hashes or reset tokens ever.
+We store identity links only — the Google ``sub`` under
+``https://accounts.google.com``, on an :class:`AuthIdentity` owned by a
+:class:`UserAccount`. No password hashes, no provider tokens, no reset tokens.
 """
 
 from __future__ import annotations
@@ -9,17 +10,21 @@ from __future__ import annotations
 from typing import Any
 
 from authlib.integrations.starlette_client import OAuth
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.common.errors import ForbiddenError
 from app.config import get_settings
-from app.domains.identity.enums import (
-    AuthAccountStatus,
-    AuthIdentifierType,
-    PersonIdentityStatus,
+from app.domains.identity.accounts import (
+    create_account_with_identity,
+    find_identity,
+    normalize_email,
+    person_for_identity,
+    record_authentication,
 )
-from app.domains.identity.models import AuthAccount, AuthIdentifier, Person
-from app.security.identity_lookup import find_person_by_email, normalize_email
+from app.domains.identity.auth_enums import GOOGLE_ISSUER, GOOGLE_PROVIDER
+from app.domains.identity.auth_models import UserAccount
+from app.domains.identity.enums import PersonIdentityStatus
+from app.domains.identity.models import Person
 
 _oauth: OAuth | None = None
 
@@ -41,47 +46,34 @@ def get_oauth() -> OAuth:
     return _oauth
 
 
-def _find_by_subject(db: Session, subject: str) -> Person | None:
-    stmt = (
-        select(Person)
-        .join(AuthAccount, AuthAccount.person_id == Person.id)
-        .join(AuthIdentifier, AuthIdentifier.auth_account_id == AuthAccount.id)
-        .where(
-            AuthIdentifier.type == AuthIdentifierType.SUBJECT,
-            AuthIdentifier.value == subject,
-        )
-    )
-    return db.execute(stmt).scalar_one_or_none()
-
-
 def jit_provision(db: Session, claims: dict[str, Any]) -> Person:
-    """Return the Person for these verified ID-token claims, creating the
-    identity link on first login. Idempotent on the Google ``sub``, and, when
-    the same email already reached us via a different provider (e.g. an
-    existing email+password account), links this subject to that Person instead
-    of creating a duplicate."""
+    """Return the Person for these verified ID-token claims.
+
+    Idempotent on ``issuer + sub``, and *only* on that. An email that matches an
+    existing account does not link this subject to it: §4.5 is explicit that a
+    matching address links nothing on its own, because an address is something a
+    provider asserts and an attacker can often arrange to have asserted.
+    """
     subject = claims["sub"]
-    existing = _find_by_subject(db, subject)
-    if existing is not None:
-        return existing
+    identity = find_identity(db, GOOGLE_ISSUER, subject)
+    if identity is not None:
+        person = person_for_identity(db, identity)
+        if person is None:
+            # A subject we know, on an account that may no longer sign in. §11
+            # keeps `ACCOUNT_INACTIVE` free of the reason, so this says no more
+            # than an unknown subject would.
+            db.rollback()
+            raise ForbiddenError("Prijava trenutno nije moguća za ovaj nalog.")
+        account = db.get(UserAccount, identity.user_account_id)
+        assert account is not None
+        record_authentication(db, account, identity)
+        db.commit()
+        return person
 
     email = claims.get("email")
     given = (claims.get("given_name") or "").strip()
     family = (claims.get("family_name") or "").strip()
     display = (claims.get("name") or f"{given} {family}").strip() or email or "Korisnik"
-
-    by_email = find_person_by_email(db, email) if email else None
-    if by_email is not None:
-        account = db.execute(
-            select(AuthAccount).where(AuthAccount.person_id == by_email.id)
-        ).scalar_one()
-        db.add(
-            AuthIdentifier(
-                auth_account_id=account.id, type=AuthIdentifierType.SUBJECT, value=subject
-            )
-        )
-        db.commit()
-        return by_email
 
     person = Person(
         given_name=given or display,
@@ -92,32 +84,14 @@ def jit_provision(db: Session, claims: dict[str, Any]) -> Person:
     db.add(person)
     db.flush()
 
-    account = AuthAccount(
-        person_id=person.id, provider="google", status=AuthAccountStatus.ACTIVE
+    create_account_with_identity(
+        db,
+        person_id=person.id,
+        provider_key=GOOGLE_PROVIDER,
+        issuer=GOOGLE_ISSUER,
+        subject=subject,
+        login_email=normalize_email(email) if email else None,
+        email_verified=bool(claims.get("email_verified")),
     )
-    db.add(account)
-    db.flush()
-
-    db.add(
-        AuthIdentifier(
-            auth_account_id=account.id, type=AuthIdentifierType.SUBJECT, value=subject
-        )
-    )
-    if email and not _email_taken(db, email):
-        db.add(
-            AuthIdentifier(
-                auth_account_id=account.id,
-                type=AuthIdentifierType.EMAIL,
-                value=normalize_email(email),
-            )
-        )
     db.commit()
     return person
-
-
-def _email_taken(db: Session, email: str) -> bool:
-    stmt = select(AuthIdentifier.id).where(
-        AuthIdentifier.type == AuthIdentifierType.EMAIL,
-        AuthIdentifier.value == normalize_email(email),
-    )
-    return db.execute(stmt).scalar_one_or_none() is not None

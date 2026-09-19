@@ -51,17 +51,6 @@ class RoleAssignmentStatus(enum.StrEnum):
     REVOKED = "REVOKED"
 
 
-class AuthAccountStatus(enum.StrEnum):
-    ACTIVE = "ACTIVE"
-    DISABLED = "DISABLED"
-
-
-class AuthIdentifierType(enum.StrEnum):
-    SUBJECT = "SUBJECT"  # external OIDC subject, the authoritative link
-    EMAIL = "EMAIL"
-    PHONE = "PHONE"
-
-
 class InvitationType(enum.StrEnum):
     STAFF = "STAFF"
     PARENT = "PARENT"

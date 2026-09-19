@@ -23,6 +23,7 @@ from collections.abc import Iterator  # noqa: E402
 
 import pytest  # noqa: E402
 from app.db import SessionLocal, engine  # noqa: E402
+from app.domains.identity.auth_providers import ensure_builtin_providers  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.models_registry import Base  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -42,6 +43,12 @@ def _clean() -> Iterator[None]:
     if tables:
         with engine.begin() as conn:
             conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
+    # The M01 provider registry is reference data, seeded by its migration and
+    # by `sync_provider_registry` at boot. TRUNCATE takes it with everything
+    # else, and an `auth_identity` cannot exist without it, so put it back.
+    with SessionLocal() as session:
+        ensure_builtin_providers(session)
+        session.commit()
     yield
 
 

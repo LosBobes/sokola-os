@@ -22,8 +22,9 @@ from starlette.requests import Request
 from app.common.enums import RecordStatus
 from app.common.errors import UnauthorizedError
 from app.config import Settings
-from app.domains.identity.enums import AuthAccountStatus
-from app.domains.identity.models import AuthAccount, Person
+from app.domains.identity.auth_enums import UserAccountStatus
+from app.domains.identity.auth_models import UserAccount
+from app.domains.identity.models import Person
 
 DEV_PERSON_HEADER = "x-sokola-person-id"
 
@@ -77,9 +78,23 @@ def _is_active_person(db: Session, person_id: str) -> bool:
 
 
 def _account_revoked(db: Session, person_id: str) -> bool:
-    """True when the person's external auth account has been disabled. A person
-    with no ``AuthAccount`` (e.g. dev-only) is never considered revoked here."""
+    """True when the person's account may no longer sign in (M01 §3.1).
+
+    Only ``ACTIVE`` opens or renews a session, so a suspended account is refused
+    here too, not just a disabled one. A person with no ``UserAccount`` at all
+    (a dev-header principal, an imported adult who has never signed in) is not
+    "revoked" — there is nothing to revoke — and the session cookie is what
+    vouched for them.
+
+    This is the best revocation the signed-cookie session can do: it re-reads
+    the account on every request, but it cannot tell one of a person's sessions
+    from another and has no `authorization_version` to compare against. §3.2's
+    server-side session store, which can, is the next M01 slice.
+    """
     account = (
-        db.query(AuthAccount).filter(AuthAccount.person_id == person_id).one_or_none()
+        db.query(UserAccount)
+        .filter(UserAccount.person_id == person_id)
+        .order_by(UserAccount.created_at.desc())
+        .first()
     )
-    return account is not None and account.status is AuthAccountStatus.DISABLED
+    return account is not None and account.status is not UserAccountStatus.ACTIVE

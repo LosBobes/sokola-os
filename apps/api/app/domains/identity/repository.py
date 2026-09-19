@@ -7,16 +7,14 @@ from sqlalchemy.orm import Session
 
 from app.common.enums import RecordStatus
 from app.common.pagination import PageParams
+from app.domains.identity.accounts import login_emails_for_person
 from app.domains.identity.enums import (
-    AuthIdentifierType,
     InvitationStatus,
     RoleAssignmentStatus,
     RoleCode,
     RoleScopeType,
 )
 from app.domains.identity.models import (
-    AuthAccount,
-    AuthIdentifier,
     Invitation,
     Person,
     RoleAssignment,
@@ -118,14 +116,13 @@ def list_school_invitations(
 
 
 def list_principal_emails(db: Session, person_id: str) -> set[str]:
-    """Every email this person has ever authenticated with (lowercased). The
-    surface used to decide "wrong account" on invite acceptance (§23)."""
-    stmt = (
-        select(AuthIdentifier.value)
-        .join(AuthAccount, AuthAccount.id == AuthIdentifier.auth_account_id)
-        .where(AuthAccount.person_id == person_id, AuthIdentifier.type == AuthIdentifierType.EMAIL)
-    )
-    return {value.strip().lower() for value in db.execute(stmt).scalars().all()}
+    """Every address this person's linked identities sign in with (lowercased).
+
+    The surface that decides "wrong account" on invite acceptance (§23). It
+    refuses; it never admits — see M01 §4.5 and
+    :func:`app.domains.identity.accounts.login_emails_for_person`.
+    """
+    return login_emails_for_person(db, person_id)
 
 
 # ---------------------------------------------------------------------------

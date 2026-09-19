@@ -21,8 +21,6 @@ from app.common.base import Base, RecordStatusMixin, TimestampMixin
 from app.common.columns import enum_type
 from app.common.ids import new_id
 from app.domains.identity.enums import (
-    AuthAccountStatus,
-    AuthIdentifierType,
     InvitationStatus,
     InvitationType,
     PersonDedupeStatus,
@@ -41,7 +39,8 @@ class Person(Base, TimestampMixin, RecordStatusMixin):
     M06 §2.1. Carries no password, provider subject, role, ``school_id`` or auth
     status: M01 owns the link between an account and a person, and this table is
     not it. The contact columns here are *contact*, never a login or link key —
-    :class:`AuthIdentifier` is what a sign-in resolves through, and the two are
+    :class:`~app.domains.identity.auth_models.AuthIdentity` is what a sign-in
+    resolves through, and the two are
     deliberately different columns holding differently-protected values.
     """
 
@@ -101,46 +100,6 @@ class Person(Base, TimestampMixin, RecordStatusMixin):
     )
     merged_into_person_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
-
-
-class AuthAccount(Base, TimestampMixin):
-    """A Person's credentials and their link to any identity provider. The only
-    auth authority: both sign-in methods (password and Google) resolve to
-    exactly one of these rows per person."""
-
-    __tablename__ = "auth_account"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("aac"))
-    person_id: Mapped[str] = mapped_column(
-        ForeignKey("person.id", ondelete="CASCADE"), nullable=False, unique=True
-    )
-    provider: Mapped[str] = mapped_column(String(64), nullable=False, default="oidc")
-    status: Mapped[AuthAccountStatus] = mapped_column(
-        enum_type(AuthAccountStatus), nullable=False, default=AuthAccountStatus.ACTIVE
-    )
-    # Local email+password credential (scrypt hash, see app.security.password).
-    # NULL for accounts that authenticate only via Google, the two are not
-    # mutually exclusive: an account can carry a password AND a linked OIDC
-    # subject for the same person.
-    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
-
-
-class AuthIdentifier(Base, TimestampMixin):
-    """A resolvable external identifier (OIDC subject / email / phone) for lookup.
-    Identifiers are lookup keys only, any password hash lives on the
-    :class:`AuthAccount`, never here."""
-
-    __tablename__ = "auth_identifier"
-    __table_args__ = (UniqueConstraint("type", "value", name="uq_auth_identifier"),)
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("aid"))
-    auth_account_id: Mapped[str] = mapped_column(
-        ForeignKey("auth_account.id", ondelete="CASCADE"), nullable=False
-    )
-    type: Mapped[AuthIdentifierType] = mapped_column(
-        enum_type(AuthIdentifierType), nullable=False
-    )
-    value: Mapped[str] = mapped_column(String(320), nullable=False)
 
 
 class RoleAssignment(Base, TimestampMixin, RecordStatusMixin):

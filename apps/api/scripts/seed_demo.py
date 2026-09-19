@@ -16,8 +16,12 @@ import sys
 
 from app.config import get_settings
 from app.db import SessionLocal
-from app.domains.identity.enums import AuthAccountStatus, AuthIdentifierType
-from app.domains.identity.models import AuthAccount, AuthIdentifier
+from app.domains.identity.accounts import create_account_with_identity
+from app.domains.identity.auth_enums import (
+    LOCAL_PASSWORD_ISSUER,
+    LOCAL_PASSWORD_PROVIDER,
+)
+from app.domains.identity.auth_models import LocalPasswordCredential
 from app.main import create_app
 from app.security.identity_lookup import normalize_email
 from app.security.password import hash_password
@@ -68,19 +72,17 @@ def link_login_identity(person_id: str, email: str, password: str) -> None:
     builds data, this is what lets each seeded user actually sign in
     afterward."""
     with SessionLocal() as db:
-        account = AuthAccount(
+        _, identity = create_account_with_identity(
+            db,
             person_id=person_id,
-            provider="password",
-            status=AuthAccountStatus.ACTIVE,
-            password_hash=hash_password(password),
+            provider_key=LOCAL_PASSWORD_PROVIDER,
+            issuer=LOCAL_PASSWORD_ISSUER,
+            subject=f"local:seed-{person_id}",
+            login_email=normalize_email(email),
         )
-        db.add(account)
-        db.flush()
         db.add(
-            AuthIdentifier(
-                auth_account_id=account.id,
-                type=AuthIdentifierType.EMAIL,
-                value=normalize_email(email),
+            LocalPasswordCredential(
+                auth_identity_id=identity.id, password_hash=hash_password(password)
             )
         )
         db.commit()

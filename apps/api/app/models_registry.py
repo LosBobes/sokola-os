@@ -17,6 +17,7 @@ from app.domains.data_import import models as _data_import_models  # noqa: F401
 from app.domains.documents import models as _documents_models  # noqa: F401
 from app.domains.events import models as _events_models  # noqa: F401
 from app.domains.groups import models as _groups_models  # noqa: F401
+from app.domains.identity import auth_models as _identity_auth_models  # noqa: F401
 from app.domains.identity import models as _identity_models  # noqa: F401
 from app.domains.onboarding import models as _onboarding_models  # noqa: F401
 from app.domains.organization import models as _organization_models  # noqa: F401
