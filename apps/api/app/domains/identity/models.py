@@ -156,13 +156,35 @@ class RoleAssignment(Base, TimestampMixin, RecordStatusMixin):
 
 class StudentLoginAuthorization(Base, TimestampMixin):
     """Separates a child's identity from permission to log in. A Person can exist
-    (and be scheduled/billed) long before, or without, being allowed to sign in."""
+    (and be scheduled/billed) long before, or without, being allowed to sign in.
+
+    **One decision per school, not one per child** (M03 §4.4–4.5, F-27). The
+    row used to be globally unique on ``student_person_id``, which meant the
+    first school to decide decided for every other school the child attends —
+    school A could enable a login that school B never agreed to, or withhold
+    one school B wanted to grant. "May this child sign in *here*" is one
+    school's call about its own participant, so the tenant is part of the key.
+
+    ``Person`` itself stays global (§7.5: a global table gets no false
+    ``school_id``); it is this authorization, not the person, that is
+    tenant-scoped.
+    """
 
     __tablename__ = "student_login_authorization"
+    __table_args__ = (
+        UniqueConstraint(
+            "school_id",
+            "student_person_id",
+            name="uq_student_login_authorization_school_person",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("sla"))
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
+    )
     student_person_id: Mapped[str] = mapped_column(
-        ForeignKey("person.id", ondelete="CASCADE"), nullable=False, unique=True
+        ForeignKey("person.id", ondelete="CASCADE"), nullable=False
     )
     login_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     authorized_by_person_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
