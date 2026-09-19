@@ -81,6 +81,33 @@ class FamilyMembershipStatus(enum.StrEnum):
     ENDED = "ENDED"
 
 
+class PayerBasisKind(enum.StrEnum):
+    """§2.5. On what grounds this adult is paying for this child.
+
+    Not a permission and not a relationship: §3.7 is emphatic that a payer link
+    "ne daje pristup rasporedu, prisustvu, dokumentima, zdravlju, komunikaciji
+    ili profilu deteta". The basis says why the school accepted the financial
+    link, and §3.1's edge-case table uses it to separate the ordinary case —
+    an adult in the child's family — from a sponsor the school verified
+    separately, which is the one route by which someone outside the family may
+    pay at all.
+    """
+
+    #: An adult who is in the same family grouping as the child.
+    FAMILY_ADULT = "FAMILY_ADULT"
+    #: §3.1: the explicit, separately verified sponsor process — the only way a
+    #: payer in family A may pay for a child in family B.
+    SPONSOR_VERIFIED = "SPONSOR_VERIFIED"
+    OTHER_VERIFIED = "OTHER_VERIFIED"
+
+
+#: The membership types a payer may hold (§2.5). Unlike the guardian link's
+#: single pinned value this is a pair, because a payer need not be a guardian
+#: at all — that is the whole point of the entity — and a school records a
+#: non-guardian payer as a `CONTACT`.
+PAYER_MEMBERSHIP_TYPES = ("CONTACT", "GUARDIAN")
+
+
 #: The membership type each side of a guardian link must hold (§2.3). Stored on
 #: the row and pinned by a CHECK so the composite foreign key can require it:
 #: without the type in the key, a guardian link could name the same person's
