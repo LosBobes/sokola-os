@@ -502,6 +502,30 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Zašto je ovo jedan nalaz, a ne tri:** sve tri rupe imaju isti koren — M03-ove write operacije su napisane kao funkcije koje pozivalac orkestrira, a §12 ih opisuje kao komande sa kovertom (request ID, receipt, audit, event). Popravka je ista koverta na sva tri mesta.
 - **Status:** `NALAZ` — četiri M03 QA scenarija (008, 010, 011, 051) blokirana su na njega.
 
+### F-39 — `require_capability` je napisan, ispravan, i **niko ga ne poziva**
+
+- **Nalaz:** `app/domains/school/entitlements.py` implementira ceo §3.8: `is_effective` proverava status, prozor važenja, status škole i da je izvorna organizacija još uvek nosilac; `require_capability` diže `ENTITLEMENT_NOT_EFFECTIVE`. Pretraga celog `app/` nalazi **tačno jedan** poziv `has_capability` — onaj unutar `require_capability` — i **nijedan** poziv `require_capability`.
+- **Posledica:** entitlement se računa tačno i ne konsultuje se nigde. Škola bez `CORE_MVP` granta dolazi do svake funkcije koju taj grant imenuje. Komercijalni sloj postoji kao podatak, ne kao kontrola.
+- **Zašto to nije „samo nedostaje wiring":** §2.8 traži da se **nijedan sloj ne preskače** — permission *i* entitlement *i* flag. Danas se preskače ceo jedan sloj, a kod koji bi ga sprovodio je već napisan i testiran. To je jedna linija na svakoj granici komande, ne nova funkcionalnost.
+- **Blokira:** M04-QA-051, M04-QA-066, M04-QA-067, M04-QA-071.
+- **Status:** `NALAZ`.
+
+### F-40 — M04 domenska logika je jaka, a command envelope ne postoji
+
+- **Merenje, ne utisak:** `entitlements.py`, `ownership.py` i `anchor.py` zajedno sadrže **0** poziva `record_audit` i **0** poziva `enqueue`. Nijedna od tih funkcija ne prima request ID i nijedna ne vraća receipt.
+- **Šta jeste tu:** pravila su pažljivo napisana — zaštita poslednjeg vlasnika, prenos primarnog termina bez rupe i preklapanja, zamena granta pod parcijalnim unique indeksom, gapless organization link, `valid_until` koji se čita u trenutku a ne čeka job.
+- **Šta nije:** dokaz. §8.1 za svaku komandu traži audit red, outbox događaj, idempotentan retry i receipt. Zato scenario za scenariom prolazi na mehanizmu i pada na klauzuli o dokazu.
+- **Poseban slučaj:** `transfer_primary_ownership` nema `expected_version`, pa se dva poziva ne mogu ni poslati sa istom očekivanom verzijom — `PRIMARY_OWNER_TRANSFER_CONFLICT` nema površinu (M04-QA-047). Serijalizacija postoji, preko `SELECT ... FOR UPDATE`; optimistička kontrola ne.
+- **Zašto je to jedan nalaz, a ne četrdeset:** popravka je ista koverta na svakom od tih mesta. Zbog toga QA fajl razdvaja razlog `no command envelope` od `feature absent` — prvo je omotač oko koda koji već radi, drugo je modul koji treba napisati.
+- **Status:** `NALAZ`.
+
+### F-41 — deaktivaciju škole u repou radi **vlasnik**, a ugovor kaže da je platform-only
+
+- **Nalaz:** `POST /schools/current/deactivate` je zaštićen `RolesContext`-om, a `reactivate_school` proverava aktivnu OWNER ulogu nad imenovanom školom. §3.5–3.6 kaže da aktivaciju može samo primary owner, a de/reaktivaciju **samo platform**, i da manager dobija 403.
+- **Posledica:** M04-QA-054 ne može da prođe ne zato što nedostaje provera, nego zato što repo sprovodi drugo pravilo. Test koji bi to „prošao" morao bi da tvrdi ponašanje koje kod nema.
+- **Nije očigledno pogrešno:** u repou ne postoji platform akter (isto kao F-37 okruženje i M03-QA-024), pa bi platform-only deaktivacija danas značila da je niko ne može izvršiti. Ovo je zato prijava razlike, ne ispravka.
+- **Status:** `CHALLENGE_NOT_APPLIED` — čeka odluku o platform akteru zajedno sa F-29/F-30.
+
 ## 5. Šta je u ovom radu stvarno urađeno
 
 **Talas 0 — baseline i klasifikacija**
