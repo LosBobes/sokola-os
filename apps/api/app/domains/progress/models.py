@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, Index, String, Text
+from sqlalchemy import ForeignKey, ForeignKeyConstraint, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.base import Base, TimestampMixin
@@ -24,6 +24,20 @@ class ProgressNote(Base, TimestampMixin):
     __table_args__ = (
         Index("ix_progress_note_school_person", "school_id", "person_id"),
         Index("ix_progress_note_group", "group_id"),
+        # A note is anchored to one of the school's own groups, and to one of
+        # its own sessions when it came from taking attendance. §7.3.
+        ForeignKeyConstraint(
+            ["school_id", "group_id"],
+            ["group.school_id", "group.id"],
+            name="fk_progress_note_group_tenant",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["school_id", "session_id"],
+            ["session.school_id", "session.id"],
+            name="fk_progress_note_session_tenant",
+            ondelete="SET NULL (session_id)",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("prg"))
@@ -33,14 +47,10 @@ class ProgressNote(Base, TimestampMixin):
     person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False
     )
-    group_id: Mapped[str] = mapped_column(
-        ForeignKey("group.id", ondelete="CASCADE"), nullable=False
-    )
+    group_id: Mapped[str] = mapped_column(String(64), nullable=False)
     author_person_id: Mapped[str] = mapped_column(
         ForeignKey("person.id", ondelete="CASCADE"), nullable=False
     )
-    session_id: Mapped[str | None] = mapped_column(
-        ForeignKey("session.id", ondelete="SET NULL"), nullable=True
-    )
+    session_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     note: Mapped[str] = mapped_column(Text, nullable=False)
     level: Mapped[ProgressLevel | None] = mapped_column(enum_type(ProgressLevel), nullable=True)

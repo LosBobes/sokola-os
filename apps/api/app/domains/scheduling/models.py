@@ -10,6 +10,7 @@ from sqlalchemy import (
     Integer,
     String,
     Time,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -30,6 +31,12 @@ class SessionSeries(Base, TimestampMixin, RecordStatusMixin):
 
     __tablename__ = "session_series"
     __table_args__ = (
+        # M03 §7.2: the composite target another tenant table's foreign key
+        # names. It adds no uniqueness — `id` is already the primary key — but
+        # it lets a child's reference carry the tenant *as part of the
+        # reference*, which is what makes a cross-tenant link impossible rather
+        # than merely incorrect.
+        UniqueConstraint("school_id", "id", name="uq_session_series_tenant"),
         # M03 §7.3: a session cannot be scheduled into another
         # school's location, enforced by the database rather than by
         # remembering to check.
@@ -39,15 +46,20 @@ class SessionSeries(Base, TimestampMixin, RecordStatusMixin):
             name="fk_session_series_location_tenant",
             ondelete="SET NULL (location_id)",
         ),
+        # A series cannot recur for another school's group.
+        ForeignKeyConstraint(
+            ["school_id", "group_id"],
+            ["group.school_id", "group.id"],
+            name="fk_session_series_group_tenant",
+            ondelete="CASCADE",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("ses"))
     school_id: Mapped[str] = mapped_column(
         ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
-    group_id: Mapped[str] = mapped_column(
-        ForeignKey("group.id", ondelete="CASCADE"), nullable=False
-    )
+    group_id: Mapped[str] = mapped_column(String(64), nullable=False)
     # The person who leads this series. Nullable so a series can outlive a trainer
     # (SET NULL) and so it can be created before a trainer is assigned.
     trainer_person_id: Mapped[str | None] = mapped_column(
@@ -77,6 +89,12 @@ class Session(Base, TimestampMixin, RecordStatusMixin):
 
     __tablename__ = "session"
     __table_args__ = (
+        # M03 §7.2: the composite target another tenant table's foreign key
+        # names. It adds no uniqueness — `id` is already the primary key — but
+        # it lets a child's reference carry the tenant *as part of the
+        # reference*, which is what makes a cross-tenant link impossible rather
+        # than merely incorrect.
+        UniqueConstraint("school_id", "id", name="uq_session_tenant"),
         # M03 §7.3: a session cannot be scheduled into another
         # school's location, enforced by the database rather than by
         # remembering to check.
@@ -86,18 +104,28 @@ class Session(Base, TimestampMixin, RecordStatusMixin):
             name="fk_session_location_tenant",
             ondelete="SET NULL (location_id)",
         ),
+        # A session belongs to one of its own school's groups, and is generated
+        # from one of its own school's series.
+        ForeignKeyConstraint(
+            ["school_id", "group_id"],
+            ["group.school_id", "group.id"],
+            name="fk_session_group_tenant",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["school_id", "series_id"],
+            ["session_series.school_id", "session_series.id"],
+            name="fk_session_series_tenant",
+            ondelete="SET NULL (series_id)",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("ssn"))
     school_id: Mapped[str] = mapped_column(
         ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
-    group_id: Mapped[str] = mapped_column(
-        ForeignKey("group.id", ondelete="CASCADE"), nullable=False
-    )
-    series_id: Mapped[str | None] = mapped_column(
-        ForeignKey("session_series.id", ondelete="SET NULL"), nullable=True
-    )
+    group_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    series_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     trainer_person_id: Mapped[str | None] = mapped_column(
         ForeignKey("person.id", ondelete="SET NULL"), nullable=True
     )
