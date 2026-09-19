@@ -14,6 +14,11 @@ os.environ.setdefault(
     "SOKOLA_DATABASE_URL", "postgresql+psycopg://sokola:sokola@localhost:55432/sokola_test"
 )
 os.environ.setdefault("SOKOLA_ALLOW_INSECURE_DEV_AUTH", "true")
+# M01 §4.9: the local password adapter is off unless a deployment says yes.
+# The test suite is such a deployment — it exercises the adapter — so it says so
+# out loud rather than relying on a default, which is the same reason
+# `compose.prod.yml` passes an explicit value.
+os.environ.setdefault("SOKOLA_PASSWORD_AUTH_ENABLED", "true")
 # Tests must not silently inherit real Google credentials from a developer's
 # local .env, pin these off so google_enabled is deterministic.
 os.environ.setdefault("SOKOLA_GOOGLE_CLIENT_ID", "")

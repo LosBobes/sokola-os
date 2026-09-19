@@ -65,9 +65,16 @@ class Settings(BaseSettings):
     # Where the browser lands after a successful login.
     web_post_login_url: str = "http://localhost:5173/"
 
-    # --- Email + password login. On by default: a user can register and sign
-    # in with just an email and password, no external provider or email link. ---
-    password_auth_enabled: bool = True
+    # --- Email + password login (M01 §4.9). Off by default, and the default is
+    # the point: "Ne postoji local fallback login... ako za njega nema
+    # eksplicitnog adaptera, konfiguracije i testova. Podrazumevano je OFF."
+    # All three exist here (`app/security/password_auth.py`,
+    # `SOKOLA_PASSWORD_AUTH_ENABLED`, `tests/test_password_auth.py`), so the
+    # method is permitted — but a deployment that never said yes has not said
+    # yes, and a sign-in method that appears because nobody turned it off is the
+    # shape of every accidental auth surface. `compose.prod.yml` passes an
+    # explicit `true`, so this changes no running deployment.
+    password_auth_enabled: bool = False
     # Server-side pepper folded into every password hash (see
     # app.security.password). Held only in the environment, never in the DB.
     # Change it outside local, and note that changing it invalidates every
