@@ -164,6 +164,59 @@ class InvalidAccountTransitionError(ConflictError):
     code = "INVALID_ACCOUNT_TRANSITION"
 
 
+class TenantContextRequiredError(ConflictError):
+    """M03 §13: a school must be chosen, or the previous choice was invalidated.
+
+    409 rather than 403 because nothing is forbidden — the request simply has
+    no school to act in yet. §13 adds "bez razloga/tuđih podataka": it does not
+    say which school went away or why.
+    """
+
+    code = "TENANT_CONTEXT_REQUIRED"
+
+
+class TenantContextStaleError(ConflictError):
+    """M03 §13: the context's version snapshot no longer matches its authority.
+
+    The client refreshes the chooser and picks again. Distinct from
+    `TENANT_CONTEXT_NOT_AVAILABLE`, which means the choice itself is gone
+    rather than merely old.
+    """
+
+    code = "TENANT_CONTEXT_STALE"
+
+
+class TenantContextNotAvailableError(ForbiddenError):
+    """M03 §13: a context that used to be allowed is not any more.
+
+    §13: "redovni payload nije vraćen" — the refusal carries no tenant data and
+    no reason, because "your membership was revoked" and "the school was
+    deactivated" are both things the person may learn elsewhere and neither is
+    safe to infer from an error.
+    """
+
+    code = "TENANT_CONTEXT_NOT_AVAILABLE"
+
+
+class TenantSwitchConflictError(ConflictError):
+    """M03 §13: two tabs switched at once; the winner's context stands.
+
+    §14 requires exactly one to succeed. The loser is told rather than silently
+    overwritten, because the alternative is a person acting in a school they
+    can see they did not choose.
+    """
+
+    code = "TENANT_SWITCH_CONFLICT"
+
+
+class TenantResourceNotFoundError(NotFoundError):
+    """M03 §13: the resource is absent from the active tenant, or belongs to
+    another one — and §8 requires those to be indistinguishable from outside,
+    since telling them apart is how a guessed id confirms a school's contents."""
+
+    code = "TENANT_RESOURCE_NOT_FOUND_SAFE"
+
+
 class RateLimitedError(AppError):
     """M01 §11: generic "please wait", with no confirmation of what exists."""
 
