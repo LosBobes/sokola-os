@@ -74,3 +74,25 @@ class InvitationStatus(enum.StrEnum):
     EXPIRED = "EXPIRED"
     REVOKED = "REVOKED"
     REISSUED = "REISSUED"
+
+
+class PersonDedupeStatus(enum.StrEnum):
+    """M06 §2.1, §5.2. Whether this Person might be someone the system already knows.
+
+    Deliberately advisory, not an action. §3.4 is emphatic that a matching email
+    or phone *never* auto-links an account or merges two people: two real people
+    genuinely do share a family address, and a system that merges them has
+    destroyed a person's records to save an operator one click.
+
+    ``MERGED`` is terminal, and the only status that fills
+    ``merged_into_person_id``.
+    """
+
+    #: No candidate found.
+    CLEAR = "CLEAR"
+    #: A candidate matched on a blind index. A flag for a human, nothing more.
+    POTENTIAL_DUPLICATE = "POTENTIAL_DUPLICATE"
+    #: A human looked and said these are different people. Sticky, so the same
+    #: pair is not re-raised every time either record is touched.
+    REVIEWED_DISTINCT = "REVIEWED_DISTINCT"
+    MERGED = "MERGED"

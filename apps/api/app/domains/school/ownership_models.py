@@ -56,17 +56,17 @@ class SchoolOwnerNomination(Base, TimestampMixin):
 
     __tablename__ = "school_owner_nomination"
     __table_args__ = (
-        # The membership must belong to this school *and* to this person. A
-        # plain FK to school_membership.id would let a nomination point at
-        # another tenant's membership row and still look consistent.
+        # The profile must belong to this school *and* to this person. A plain
+        # FK to its id would let a nomination point at another tenant's row and
+        # still look consistent.
         ForeignKeyConstraint(
-            ["school_id", "target_membership_id", "target_person_id"],
+            ["school_id", "target_school_person_profile_id", "target_person_id"],
             [
-                "school_membership.school_id",
-                "school_membership.id",
-                "school_membership.person_id",
+                "school_person_profile.school_id",
+                "school_person_profile.id",
+                "school_person_profile.person_id",
             ],
-            name="fk_owner_nomination_membership",
+            name="fk_owner_nomination_profile",
             ondelete="CASCADE",
         ),
         # At most one pending initial nomination per school. Partial, because a
@@ -104,9 +104,11 @@ class SchoolOwnerNomination(Base, TimestampMixin):
         ForeignKey("school.id", ondelete="CASCADE"), nullable=False
     )
     target_person_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    #: This repo's stand-in for M06's ``SchoolPersonProfile``: the row that makes
-    #: a global Person visible inside one tenant. See finding F-14.
-    target_membership_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    #: M06 §2.4. The row that makes a global Person visible inside this tenant,
+    #: which is what M04 §2.6 requires this to reference. It pointed at
+    #: ``school_membership`` while M06 had not landed yet (finding F-14, now
+    #: closed); the constraint shape did not change when it moved.
+    target_school_person_profile_id: Mapped[str] = mapped_column(String(64), nullable=False)
     kind: Mapped[OwnerNominationKind] = mapped_column(
         enum_type(OwnerNominationKind), nullable=False
     )

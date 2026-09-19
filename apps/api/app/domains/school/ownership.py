@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 from app.common.errors import ConflictError, NotFoundError
 from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
 from app.domains.identity.models import RoleAssignment
-from app.domains.school.models import SchoolMembership
+from app.domains.people.profile_models import SchoolPersonProfile
 from app.domains.school.ownership_enums import (
     OwnerNominationCancelReason,
     OwnerNominationKind,
@@ -122,16 +122,16 @@ def nominate_owner(
     """Record the intent. The M02 invitation that carries it is a separate step."""
     _lock_school(db, school_id)
 
-    membership = db.execute(
-        select(SchoolMembership).where(
-            SchoolMembership.school_id == school_id,
-            SchoolMembership.person_id == person_id,
+    profile = db.execute(
+        select(SchoolPersonProfile).where(
+            SchoolPersonProfile.school_id == school_id,
+            SchoolPersonProfile.person_id == person_id,
         )
     ).scalar_one_or_none()
-    if membership is None:
+    if profile is None:
         # Safe-not-found: the caller learns nothing about whether the person
-        # exists somewhere else, only that they are not in this school.
-        raise NotFoundError("Osoba nije član ove škole.")
+        # exists somewhere else, only that this school does not know them.
+        raise NotFoundError("Osoba nije poznata ovoj školi.")
 
     if kind is OwnerNominationKind.INITIAL_PRIMARY_OWNER:
         if current_primary_term(db, school_id) is not None:
@@ -146,7 +146,7 @@ def nominate_owner(
     nomination = SchoolOwnerNomination(
         school_id=school_id,
         target_person_id=person_id,
-        target_membership_id=membership.id,
+        target_school_person_profile_id=profile.id,
         kind=kind,
         created_by_actor_ref=actor_ref,
     )

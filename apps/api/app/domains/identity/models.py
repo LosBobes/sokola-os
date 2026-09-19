@@ -2,7 +2,18 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +25,7 @@ from app.domains.identity.enums import (
     AuthIdentifierType,
     InvitationStatus,
     InvitationType,
+    PersonDedupeStatus,
     PersonIdentityStatus,
     PersonMergeStatus,
     RoleAssignmentStatus,
@@ -24,17 +36,71 @@ from app.domains.identity.enums import (
 
 class Person(Base, TimestampMixin, RecordStatusMixin):
     """A global human identity. Existing globally does NOT make a person visible
-    to any school; visibility comes only through an org-scoped relationship."""
+    to any school; visibility comes only through an org-scoped relationship.
+
+    M06 §2.1. Carries no password, provider subject, role, ``school_id`` or auth
+    status: M01 owns the link between an account and a person, and this table is
+    not it. The contact columns here are *contact*, never a login or link key —
+    :class:`AuthIdentifier` is what a sign-in resolves through, and the two are
+    deliberately different columns holding differently-protected values.
+    """
 
     __tablename__ = "person"
+    __table_args__ = (
+        # §2.1: the ciphertext and its blind index travel together. One without
+        # the other is either a contact nobody can deduplicate or an index
+        # pointing at nothing, and both are silent failures.
+        CheckConstraint(
+            "(email_ciphertext IS NULL) = (email_blind_index IS NULL)",
+            name="ck_person_email_pair",
+        ),
+        CheckConstraint(
+            "(phone_ciphertext IS NULL) = (phone_blind_index IS NULL)",
+            name="ck_person_phone_pair",
+        ),
+        # §2.1: filled only when MERGED, and never pointing at itself.
+        CheckConstraint(
+            "(dedupe_status = 'MERGED') = (merged_into_person_id IS NOT NULL)",
+            name="ck_person_merged_into",
+        ),
+        CheckConstraint(
+            "merged_into_person_id IS NULL OR merged_into_person_id <> id",
+            name="ck_person_merged_not_self",
+        ),
+        CheckConstraint("version >= 1", name="ck_person_version"),
+        # Candidate lookup, never a uniqueness claim: §3.4 says two real people
+        # may share a contact, so this index must not be unique.
+        Index("ix_person_email_blind_index", "email_blind_index"),
+        Index("ix_person_phone_blind_index", "phone_blind_index"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("per"))
     given_name: Mapped[str] = mapped_column(String(120), nullable=False)
     family_name: Mapped[str] = mapped_column(String(120), nullable=False)
     display_name: Mapped[str] = mapped_column(String(240), nullable=False)
+    #: §2.1: unknown is allowed, and for the age guard it means "age is not
+    #: proven" — which §3.1 turns into NOT_ELIGIBLE rather than into a guess.
+    birth_date: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
     identity_status: Mapped[PersonIdentityStatus] = mapped_column(
         enum_type(PersonIdentityStatus), nullable=False, default=PersonIdentityStatus.PROVISIONAL
     )
+
+    # --- Contact (§2.1). Encrypted at the field, indexed by blind index. See
+    # app.platform.crypto: the ciphertext carries its own key version, and the
+    # blind index is keyed by a *separate* key so the index cannot be reversed
+    # by anyone who only has the encryption key. ---
+    email_ciphertext: Mapped[str | None] = mapped_column(Text, nullable=True)
+    email_blind_index: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    email_blind_index_key_version: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    phone_ciphertext: Mapped[str | None] = mapped_column(Text, nullable=True)
+    phone_blind_index: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    phone_blind_index_key_version: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+    dedupe_status: Mapped[PersonDedupeStatus] = mapped_column(
+        enum_type(PersonDedupeStatus), nullable=False, default=PersonDedupeStatus.CLEAR
+    )
+    merged_into_person_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
 
 
 class AuthAccount(Base, TimestampMixin):
