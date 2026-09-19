@@ -21,12 +21,13 @@ from app.common.errors import (
     RelationshipExistsError,
     ValidationFailedError,
 )
+from app.domains.family.commands_support import check_version, record
 from app.domains.family.enums import (
     PRIMARY_GUARDIAN_CHANGED_EVENT,
     DesignationStatus,
     LinkStatus,
 )
-from app.domains.family.guardian_commands import check_version, record, require_link
+from app.domains.family.guardian_commands import require_link
 from app.domains.family.models import PrimaryGuardianContactDesignation
 from app.platform import clock
 from app.platform.idempotency import service as idempotency

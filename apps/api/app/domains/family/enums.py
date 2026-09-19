@@ -179,3 +179,10 @@ FAMILY_ARCHIVED_EVENT = "m07.family.archived"
 GUARDIAN_LINK_ACTIVATED_EVENT = "m07.guardian_link.activated"
 GUARDIAN_LINK_REVOKED_EVENT = "m07.guardian_link.revoked"
 PRIMARY_GUARDIAN_CHANGED_EVENT = "m07.primary_guardian.changed"
+
+#: §7.3's payer-link events. `basis_kind` is deliberately absent from their
+#: payloads: "this adult pays for this child because they are family" is a
+#: statement about the relationship, and §4 keeps those out of events.
+PAYER_LINK_ACTIVATED_EVENT = "m07.payer_link.activated"
+PAYER_LINK_REVOKED_EVENT = "m07.payer_link.revoked"
+PRIMARY_PAYER_CHANGED_EVENT = "m07.primary_payer.changed"

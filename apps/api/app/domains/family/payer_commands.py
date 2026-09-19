@@ -1,34 +1,26 @@
-"""M07 §7.1: `GRD-01`..`GRD-04` — verifying and withdrawing guardianship.
+"""M07 §7.1: `PAY-01`..`PAY-04` — who pays, and on what grounds.
 
-Four of the GRD group's six commands. `GRD-05` and `GRD-06`, which decide who
-the school calls first, live in `primary_contact_commands` — a different
-question (who *is* a guardian versus which guardian comes first) and, once the
-architecture gate's size ratchet started covering command modules, a different
-file whether or not one wanted it.
+The same §7 contract as the other two groups. What differs is the rule in
+§2.5 and §3.1 that has no counterpart in the guardian group: a payer must have
+a **basis**.
 
-These four commands They carry the same §7 contract the
-FAM group does (stable `request_id`, `expected_version`, one transaction, no
-commit inside), so only what is different is explained here.
+An adult in the child's own family is the ordinary case. A payer in family A
+paying for a child in family B is refused with
+`M07_PAYER_BASIS_INVALID` — unless the school ran the separate sponsor process
+and recorded `SPONSOR_VERIFIED`, which is the one route by which someone
+outside the household may pay at all. Checking that reads two
+`family_membership` rows, so it is a service rule and could not be a
+constraint.
 
-Named `guardian_commands` rather than folded into `service.py` because the two
-groups together would pass the architecture gate's size ratchet — and this
-change widens that ratchet to cover any behaviour module rather than only
-files literally called `service.py`, so the split buys separation without
-buying an exemption.
+What this module must never do is imply access. §3.7 says a payer link grants
+"samo M12 finansijskim operacijama koje izričito prihvataju `PAYER_CHILD_LINK`
+basis", and M05 §3.2 point 9 that a `PAYER` basis "nikad ne daje
+attendance/document/health/profile/guardian pravo". Nothing here reads or
+returns anything about the child beyond the id the link already names.
 
-Three rules live here that no constraint could hold:
-
-* **§5.3 / §3.6, the distinct approver.** The account that approves cannot be
-  the account that asked, and cannot belong to the person whose link is being
-  decided. A database cannot know which human an account belongs to; this can,
-  because M01 gives an account its person.
-* **§3.5, atomic activation.** A link becomes ACTIVE and its single immutable
-  verification record appears in the same transaction. Either both or neither,
-  or there is an active guardianship nobody can account for.
-* **§3.10, revocation closes designations.** Revoking a link and closing every
-  primacy resting on it is one transaction. A primary contact pointing at a
-  revoked link is worse than none: §3.1 allows zero primary contacts and calls
-  a stale one the thing that must never happen.
+`PAY-05` and `PAY-06` are in `primary_payer_commands`, for the same reason the
+guardian group is split: a different question, and a size ratchet that now
+covers every behaviour module.
 """
 
 from __future__ import annotations
@@ -51,17 +43,21 @@ from app.domains.family.commands_support import (
     refuse_self_decision,
 )
 from app.domains.family.enums import (
-    GUARDIAN_LINK_ACTIVATED_EVENT,
-    GUARDIAN_LINK_REVOKED_EVENT,
+    PAYER_LINK_ACTIVATED_EVENT,
+    PAYER_LINK_REVOKED_EVENT,
     DesignationStatus,
+    FamilyMembershipStatus,
+    FamilyStatus,
     LinkKind,
     LinkStatus,
-    RelationshipKind,
+    PayerBasisKind,
     VerificationMethod,
 )
 from app.domains.family.models import (
-    GuardianChildLink,
-    PrimaryGuardianContactDesignation,
+    Family,
+    FamilyMembership,
+    PayerChildLink,
+    PrimaryPayerDesignation,
     RelationshipVerificationRecord,
 )
 from app.domains.school.enums import MembershipStatus, MembershipType
@@ -71,105 +67,165 @@ from app.platform.idempotency import service as idempotency
 from app.platform.outbox.service import enqueue
 
 _OPEN = (LinkStatus.PENDING_VERIFICATION, LinkStatus.ACTIVE)
+#: §2.5: a payer holds one of these, not a single pinned type. A payer need not
+#: be a guardian — that is the entity's reason for existing — and a school
+#: records a non-guardian payer as a `CONTACT`.
+_PAYER_TYPES = (MembershipType.CONTACT, MembershipType.GUARDIAN)
 
 
-def require_link(
+def require_payer_link(
     db: Session, school_id: str, link_id: str, *, for_update: bool = False
-) -> GuardianChildLink:
-    stmt = select(GuardianChildLink).where(
-        GuardianChildLink.school_id == school_id, GuardianChildLink.id == link_id
+) -> PayerChildLink:
+    stmt = select(PayerChildLink).where(
+        PayerChildLink.school_id == school_id, PayerChildLink.id == link_id
     )
     if for_update:
         stmt = stmt.with_for_update()
     link = db.execute(stmt).scalar_one_or_none()
     if link is None:
-        # §4: unknown, cross-tenant and not-allowed-to-know give one answer.
         raise NotFoundError("Veza nije pronađena.")
     return link
 
 
 def _open_membership(
-    db: Session, school_id: str, person_id: str, membership_type: MembershipType
+    db: Session,
+    school_id: str,
+    person_id: str,
+    membership_types: tuple[MembershipType, ...],
 ) -> SchoolMembership:
     membership = db.execute(
         select(SchoolMembership).where(
             SchoolMembership.school_id == school_id,
             SchoolMembership.person_id == person_id,
-            SchoolMembership.membership_type == membership_type,
+            SchoolMembership.membership_type.in_(membership_types),
             SchoolMembership.status != MembershipStatus.TERMINATED,
         )
     ).scalars().first()
     if membership is None:
-        # §6 `M07_MEMBERSHIP_TYPE_MISMATCH`, phrased so it says nothing about
-        # which of the two people is the problem.
         raise ValidationFailedError(
             "Osoba nema otvoreno članstvo odgovarajućeg tipa u ovoj školi."
         )
     return membership
 
 
-def request_guardian_child_link(
+def _refuse_invalid_basis(
     db: Session,
     *,
     school_id: str,
-    guardian_person_id: str,
+    family_id: str,
+    payer_person_id: str,
     child_person_id: str,
-    relationship_kind: RelationshipKind,
+    basis_kind: PayerBasisKind,
+) -> None:
+    """§2.5, §3.1: "Payer je u Family A, dete samo u Family B" → 422.
+
+    `SPONSOR_VERIFIED` is the deliberate exception and the only one. §3.1 calls
+    it an "eksplicitno verifikovan sponsor proces", so a caller that wants to
+    record a payer from outside the household has to say so in the row rather
+    than have it inferred — which is what keeps the ordinary case honest.
+    """
+    family = db.execute(
+        select(Family).where(Family.school_id == school_id, Family.id == family_id)
+    ).scalar_one_or_none()
+    if family is None:
+        raise NotFoundError("Porodica nije pronađena.")
+    if family.status is not FamilyStatus.ACTIVE:
+        raise InvalidRelationshipTransitionError(
+            "Platilačka veza se ne vezuje za arhiviranu porodičnu grupu."
+        )
+
+    if basis_kind is PayerBasisKind.SPONSOR_VERIFIED:
+        return
+
+    members = set(
+        db.execute(
+            select(FamilyMembership.person_id).where(
+                FamilyMembership.school_id == school_id,
+                FamilyMembership.family_id == family_id,
+                FamilyMembership.status == FamilyMembershipStatus.ACTIVE,
+                FamilyMembership.person_id.in_((payer_person_id, child_person_id)),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if {payer_person_id, child_person_id} - members:
+        raise ValidationFailedError(
+            "Osnov za platioca nije potvrđen: obe osobe moraju biti aktivni "
+            "članovi porodične grupe, osim kod verifikovanog sponzorstva."
+        )
+
+
+def request_payer_child_link(
+    db: Session,
+    *,
+    school_id: str,
+    payer_person_id: str,
+    child_person_id: str,
+    family_id: str,
+    basis_kind: PayerBasisKind,
     actor_account_id: str,
     request_id: str,
     actor_person_id: str | None = None,
-) -> GuardianChildLink:
-    """`GRD-01 RequestGuardianChildLink`. §5.3: valid M06 types, no open duplicate.
+) -> PayerChildLink:
+    """`PAY-01`. §5.3: valid M06 types, no open duplicate, and a basis.
 
-    Always lands in `PENDING_VERIFICATION`. §1.2 forbids a parent activating
-    another guardian themselves, and the way that is guaranteed is that no path
-    creates an ACTIVE link — activation is `GRD-02` and needs a second account.
+    Note what is *not* refused: the payer and the child being the same person.
+    §2.3 forbids that for a guardian link and §2.5 says nothing of the kind,
+    which reads as deliberate — an adult who trains at the school and pays
+    their own fees holds both a `PARTICIPANT` and a `CONTACT` membership. The
+    asymmetry is recorded rather than decided.
     """
-    if guardian_person_id == child_person_id:
-        raise ValidationFailedError("Staratelj i dete ne mogu biti ista osoba.")
-
     guard = idempotency.begin(
         db,
         school_id,
-        "m07.guardian_link.request",
+        "m07.payer_link.request",
         request_id,
         {
-            "guardian_person_id": guardian_person_id,
+            "payer_person_id": payer_person_id,
             "child_person_id": child_person_id,
-            "relationship_kind": relationship_kind.value,
+            "family_id": family_id,
+            "basis_kind": basis_kind.value,
             "actor_account_id": actor_account_id,
         },
     )
     if guard.replay is not None:
-        return require_link(db, school_id, guard.replay["body"]["id"])
+        return require_payer_link(db, school_id, guard.replay["body"]["id"])
 
-    guardian_membership = _open_membership(
-        db, school_id, guardian_person_id, MembershipType.GUARDIAN
-    )
+    payer_membership = _open_membership(db, school_id, payer_person_id, _PAYER_TYPES)
     child_membership = _open_membership(
-        db, school_id, child_person_id, MembershipType.PARTICIPANT
+        db, school_id, child_person_id, (MembershipType.PARTICIPANT,)
+    )
+    _refuse_invalid_basis(
+        db,
+        school_id=school_id,
+        family_id=family_id,
+        payer_person_id=payer_person_id,
+        child_person_id=child_person_id,
+        basis_kind=basis_kind,
     )
 
     open_link = db.execute(
-        select(GuardianChildLink).where(
-            GuardianChildLink.school_id == school_id,
-            GuardianChildLink.guardian_person_id == guardian_person_id,
-            GuardianChildLink.child_person_id == child_person_id,
-            GuardianChildLink.status.in_(_OPEN),
+        select(PayerChildLink).where(
+            PayerChildLink.school_id == school_id,
+            PayerChildLink.payer_person_id == payer_person_id,
+            PayerChildLink.child_person_id == child_person_id,
+            PayerChildLink.status.in_(_OPEN),
         )
     ).scalar_one_or_none()
     if open_link is not None:
         raise RelationshipExistsError("Otvorena veza za ovaj par već postoji.")
 
-    link = GuardianChildLink(
+    link = PayerChildLink(
         school_id=school_id,
-        guardian_person_id=guardian_person_id,
+        payer_person_id=payer_person_id,
         child_person_id=child_person_id,
-        guardian_school_membership_id=guardian_membership.id,
+        payer_school_membership_id=payer_membership.id,
         child_school_membership_id=child_membership.id,
-        guardian_membership_type=MembershipType.GUARDIAN.value,
+        payer_membership_type=payer_membership.membership_type.value,
         child_membership_type=MembershipType.PARTICIPANT.value,
-        relationship_kind=relationship_kind,
+        family_id=family_id,
+        basis_kind=basis_kind,
         status=LinkStatus.PENDING_VERIFICATION,
         requested_by_account_id=actor_account_id,
         requested_at=clock.now(),
@@ -181,18 +237,18 @@ def request_guardian_child_link(
     record(
         db,
         school_id=school_id,
-        entity_type="guardian_child_link",
-        action="m07.guardian_link.request",
+        entity_type="payer_child_link",
+        action="m07.payer_link.request",
         entity_id=link.id,
-        summary="Zatražena je starateljska veza.",
+        summary="Zatražena je platilačka veza.",
         actor_person_id=actor_person_id,
-        context={"relationship_kind": relationship_kind.value},
+        context={"basis_kind": basis_kind.value},
     )
     idempotency.complete(db, guard, status=201, body={"id": link.id})
     return link
 
 
-def verify_and_activate_guardian_link(
+def verify_and_activate_payer_link(
     db: Session,
     *,
     school_id: str,
@@ -205,17 +261,12 @@ def verify_and_activate_guardian_link(
     evidence_reference_digest: str | None = None,
     actor_person_id: str | None = None,
     correlation_id: str | None = None,
-) -> GuardianChildLink:
-    """`GRD-02`. §3.5: ACTIVE and its one immutable proof, atomically.
-
-    Both rows or neither. A link that went ACTIVE without its record would be
-    an active guardianship nobody can account for afterwards, and a record
-    without the activation would claim a check that granted nothing.
-    """
+) -> PayerChildLink:
+    """`PAY-02`. §3.5: ACTIVE and its one immutable proof, atomically."""
     guard = idempotency.begin(
         db,
         school_id,
-        "m07.guardian_link.activate",
+        "m07.payer_link.activate",
         request_id,
         {
             "link_id": link_id,
@@ -227,9 +278,9 @@ def verify_and_activate_guardian_link(
         },
     )
     if guard.replay is not None:
-        return require_link(db, school_id, link_id)
+        return require_payer_link(db, school_id, link_id)
 
-    link = require_link(db, school_id, link_id, for_update=True)
+    link = require_payer_link(db, school_id, link_id, for_update=True)
     if link.status is not LinkStatus.PENDING_VERIFICATION:
         raise InvalidRelationshipTransitionError(
             "Aktivira se samo veza koja čeka proveru."
@@ -239,7 +290,7 @@ def verify_and_activate_guardian_link(
         db,
         requested_by_account_id=link.requested_by_account_id,
         decider_account_id=actor_account_id,
-        party_person_ids=(link.guardian_person_id, link.child_person_id),
+        party_person_ids=(link.payer_person_id, link.child_person_id),
     )
 
     moment = clock.now()
@@ -251,8 +302,8 @@ def verify_and_activate_guardian_link(
     db.add(
         RelationshipVerificationRecord(
             school_id=school_id,
-            link_kind=LinkKind.GUARDIAN_CHILD,
-            guardian_child_link_id=link.id,
+            link_kind=LinkKind.PAYER_CHILD,
+            payer_child_link_id=link.id,
             verification_method=verification_method,
             evidence_reference_digest=evidence_reference_digest,
             verified_by_account_id=actor_account_id,
@@ -265,12 +316,11 @@ def verify_and_activate_guardian_link(
     record(
         db,
         school_id=school_id,
-        entity_type="guardian_child_link",
-        action="m07.guardian_link.activate",
+        entity_type="payer_child_link",
+        action="m07.payer_link.activate",
         entity_id=link.id,
-        summary="Starateljska veza je potvrđena i aktivirana.",
+        summary="Platilačka veza je potvrđena i aktivirana.",
         actor_person_id=actor_person_id,
-        # §4: a method code and a policy version, never the evidence itself.
         context={
             "verification_method": verification_method.value,
             "policy_version": policy_version,
@@ -278,7 +328,7 @@ def verify_and_activate_guardian_link(
     )
     _emit(
         db,
-        event_type=GUARDIAN_LINK_ACTIVATED_EVENT,
+        event_type=PAYER_LINK_ACTIVATED_EVENT,
         school_id=school_id,
         link=link,
         correlation_id=correlation_id,
@@ -287,7 +337,7 @@ def verify_and_activate_guardian_link(
     return link
 
 
-def reject_guardian_link(
+def reject_payer_link(
     db: Session,
     *,
     school_id: str,
@@ -297,21 +347,16 @@ def reject_guardian_link(
     actor_account_id: str,
     request_id: str,
     actor_person_id: str | None = None,
-) -> GuardianChildLink:
-    """`GRD-03`. §5.3: reason required, and the same distinct-approver rule.
-
-    No outbox event: §7.3 lists `GuardianLinkActivated|Revoked` and not a
-    rejection. Nothing downstream ever acted on this link, so there is nothing
-    to tell anyone to stop doing — and an event announcing that a named adult
-    was refused guardianship of a named child is a disclosure with no consumer.
-    """
+) -> PayerChildLink:
+    """`PAY-03`. No event, for the reason `GRD-03` gives: nothing downstream
+    ever acted on a pending link."""
     if not reason_code.strip():
         raise ValidationFailedError("Razlog odbijanja je obavezan.")
 
     guard = idempotency.begin(
         db,
         school_id,
-        "m07.guardian_link.reject",
+        "m07.payer_link.reject",
         request_id,
         {
             "link_id": link_id,
@@ -321,9 +366,9 @@ def reject_guardian_link(
         },
     )
     if guard.replay is not None:
-        return require_link(db, school_id, link_id)
+        return require_payer_link(db, school_id, link_id)
 
-    link = require_link(db, school_id, link_id, for_update=True)
+    link = require_payer_link(db, school_id, link_id, for_update=True)
     if link.status is not LinkStatus.PENDING_VERIFICATION:
         raise InvalidRelationshipTransitionError(
             "Odbija se samo veza koja čeka proveru."
@@ -333,7 +378,7 @@ def reject_guardian_link(
         db,
         requested_by_account_id=link.requested_by_account_id,
         decider_account_id=actor_account_id,
-        party_person_ids=(link.guardian_person_id, link.child_person_id),
+        party_person_ids=(link.payer_person_id, link.child_person_id),
     )
 
     link.status = LinkStatus.REJECTED
@@ -346,10 +391,10 @@ def reject_guardian_link(
     record(
         db,
         school_id=school_id,
-        entity_type="guardian_child_link",
-        action="m07.guardian_link.reject",
+        entity_type="payer_child_link",
+        action="m07.payer_link.reject",
         entity_id=link.id,
-        summary="Starateljska veza je odbijena.",
+        summary="Platilačka veza je odbijena.",
         actor_person_id=actor_person_id,
         context={"reason_code": reason_code},
     )
@@ -357,7 +402,7 @@ def reject_guardian_link(
     return link
 
 
-def revoke_guardian_link(
+def revoke_payer_link(
     db: Session,
     *,
     school_id: str,
@@ -368,24 +413,14 @@ def revoke_guardian_link(
     request_id: str,
     actor_person_id: str | None = None,
     correlation_id: str | None = None,
-) -> GuardianChildLink:
-    """`GRD-04`. §3.10: the link and every designation on it, one transaction.
+) -> PayerChildLink:
+    """`PAY-04`. §3.10: the link and every primary-payer designation on it, in
+    one transaction.
 
-    A primary contact still pointing at a revoked link is the precise thing
-    §3.1 forbids — it allows a child to have *no* primary contact and says the
-    one state that must never occur is a stale one. So the designations close
-    here rather than in a consumer that might lag.
-
-    §3.12 is the reason this does not wait for anything: a request arriving
-    after this commit must not pass on a cached answer. The link's `version`
-    is §2.3's "authorization version", and it moves in this transaction; the
-    outbox event carries the new value so projections can catch up, but the
-    refusal does not depend on the event being delivered.
-
-    Deliberately *not* a tenant-wide invalidation. M03's
-    `tenancy.security.invalidate` bumps the school's access version and logs
-    out everyone in it; using it because one family's arrangement changed
-    would be an outage dressed as a security measure.
+    Revoking here removes a *billing* relationship and nothing else — §3.7
+    already kept it from carrying anything else. The other ACTIVE payer links
+    for the same child are untouched, which §2.5 requires: several payers per
+    child are allowed and M12 decides how an obligation is split.
     """
     if not reason_code.strip():
         raise ValidationFailedError("Razlog opoziva je obavezan.")
@@ -393,7 +428,7 @@ def revoke_guardian_link(
     guard = idempotency.begin(
         db,
         school_id,
-        "m07.guardian_link.revoke",
+        "m07.payer_link.revoke",
         request_id,
         {
             "link_id": link_id,
@@ -403,9 +438,9 @@ def revoke_guardian_link(
         },
     )
     if guard.replay is not None:
-        return require_link(db, school_id, link_id)
+        return require_payer_link(db, school_id, link_id)
 
-    link = require_link(db, school_id, link_id, for_update=True)
+    link = require_payer_link(db, school_id, link_id, for_update=True)
     if link.status not in _OPEN:
         raise InvalidRelationshipTransitionError("Veza je već u konačnom stanju.")
     check_version(link.version, expected_version)
@@ -417,7 +452,7 @@ def revoke_guardian_link(
     link.decision_reason_code = reason_code
     link.version += 1
 
-    closed = close_designations_for(
+    closed = close_payer_designations_for(
         db,
         school_id=school_id,
         link_id=link.id,
@@ -429,16 +464,16 @@ def revoke_guardian_link(
     record(
         db,
         school_id=school_id,
-        entity_type="guardian_child_link",
-        action="m07.guardian_link.revoke",
+        entity_type="payer_child_link",
+        action="m07.payer_link.revoke",
         entity_id=link.id,
-        summary="Starateljska veza je opozvana.",
+        summary="Platilačka veza je opozvana.",
         actor_person_id=actor_person_id,
         context={"reason_code": reason_code, "closed_designations": closed},
     )
     _emit(
         db,
-        event_type=GUARDIAN_LINK_REVOKED_EVENT,
+        event_type=PAYER_LINK_REVOKED_EVENT,
         school_id=school_id,
         link=link,
         correlation_id=correlation_id,
@@ -448,7 +483,7 @@ def revoke_guardian_link(
     return link
 
 
-def close_designations_for(
+def close_payer_designations_for(
     db: Session,
     *,
     school_id: str,
@@ -458,11 +493,11 @@ def close_designations_for(
 ) -> int:
     rows = (
         db.execute(
-            select(PrimaryGuardianContactDesignation)
+            select(PrimaryPayerDesignation)
             .where(
-                PrimaryGuardianContactDesignation.school_id == school_id,
-                PrimaryGuardianContactDesignation.guardian_child_link_id == link_id,
-                PrimaryGuardianContactDesignation.status == DesignationStatus.ACTIVE,
+                PrimaryPayerDesignation.school_id == school_id,
+                PrimaryPayerDesignation.payer_child_link_id == link_id,
+                PrimaryPayerDesignation.status == DesignationStatus.ACTIVE,
             )
             .with_for_update()
         )
@@ -482,19 +517,20 @@ def _emit(
     *,
     event_type: str,
     school_id: str,
-    link: GuardianChildLink,
+    link: PayerChildLink,
     correlation_id: str | None,
     extra: dict[str, Any] | None = None,
 ) -> None:
-    """§7.3: opaque IDs, status, version, reason code. Nothing else.
+    """§7.3: opaque IDs, status, version, reason code.
 
-    In particular no names and no `relationship_kind` — "X is the legal
-    guardian of Y" is exactly the sentence §4 keeps out of events.
+    `basis_kind` stays out. "This adult pays for this child because they are
+    family" is a statement about the relationship, and §4 keeps those out of
+    events — the same reason the guardian events carry no `relationship_kind`.
     """
     payload: dict[str, Any] = {
         "school_id": school_id,
-        "guardian_child_link_id": link.id,
-        "guardian_person_id": link.guardian_person_id,
+        "payer_child_link_id": link.id,
+        "payer_person_id": link.payer_person_id,
         "child_person_id": link.child_person_id,
         "status": link.status.value,
         "version": link.version,
@@ -508,12 +544,10 @@ def _emit(
 
 
 __all__ = [
-    "check_version",
-    "close_designations_for",
-    "record",
-    "reject_guardian_link",
-    "request_guardian_child_link",
-    "require_link",
-    "revoke_guardian_link",
-    "verify_and_activate_guardian_link",
+    "close_payer_designations_for",
+    "reject_payer_link",
+    "request_payer_child_link",
+    "require_payer_link",
+    "revoke_payer_link",
+    "verify_and_activate_payer_link",
 ]
