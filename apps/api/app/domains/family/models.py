@@ -1,4 +1,4 @@
-"""M07 §2.1-2.3: families, who is in them, and who may act for a child.
+"""M07 §2.1-2.3, §2.5: families, guardianship, and who pays.
 
 The three tables here are three *separate facts*, which §3.1 states outright:
 a family grouping, someone's place in it, and a verified guardian relationship
@@ -43,6 +43,7 @@ from app.domains.family.enums import (
     FamilyStatus,
     LinkStatus,
     MemberKind,
+    PayerBasisKind,
     RelationshipKind,
 )
 from app.platform import clock
@@ -354,4 +355,164 @@ class FamilyMembership(Base, TimestampMixin):
     )
     effective_until: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
     end_reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
+
+
+class PayerChildLink(Base, TimestampMixin):
+    """§2.5. Someone who pays for a child — and who, by paying, learns nothing.
+
+    This is the table whose *absence* was the sharpest gap in the repo (F-32).
+    Until now the only way to mark an adult as paying for a child was to make
+    them that child's guardian, which handed them the child's attendance,
+    documents, health records and profile as a side effect of a billing
+    arrangement. §3.7 forbids exactly that: a payer link gives access to
+    "samo M12 finansijskim operacijama koje izričito prihvataju
+    `PAYER_CHILD_LINK` basis", and M05 §3.2 point 9 says a `PAYER` subject
+    basis "nikad ne daje attendance/document/health/profile/guardian pravo".
+
+    Nothing here enforces that, because nothing *can* at this level — a table
+    cannot stop a reader joining to it. What the schema does is make the
+    financial link expressible on its own, so the readers that must not see
+    child data have a basis to resolve that is not guardianship. The guard
+    lives in M05, and M07 §7.2's `PayerSubjectBasisPort` is required to return
+    `FINANCE_ONLY` and no guardian implication.
+
+    Two shapes differ from `GuardianChildLink`, both deliberately:
+
+    * the payer's membership type is a **pair** — `CONTACT` or `GUARDIAN` —
+      where the guardian link pins a single value. A payer need not be a
+      guardian, and a school records a non-guardian payer as a `CONTACT`.
+    * there is **no distinct-people CHECK**. §2.3 says of the guardian link
+      "ne sme biti isti ID" and §2.5 says nothing of the kind, which reads as
+      intentional rather than as an omission: an adult who trains at the school
+      and pays their own fees holds a `PARTICIPANT` membership and a `CONTACT`
+      one, and both sides of this row would be satisfied. Inventing the
+      constraint would refuse a case the contract leaves open.
+    """
+
+    __tablename__ = "payer_child_link"
+    __table_args__ = (
+        UniqueConstraint("school_id", "id", name="uq_payer_child_link_tenant"),
+        # §2.5's partial unique, same reasoning as the guardian link's: §5.3
+        # makes a fresh check a new row, so refused and revoked rows are the
+        # history. §2.5 adds that several *different* ACTIVE payers for one
+        # child are allowed — M12 decides how an obligation is split — which is
+        # why the key names the payer rather than the child alone.
+        Index(
+            "uq_payer_child_link_open",
+            "school_id",
+            "payer_person_id",
+            "child_person_id",
+            unique=True,
+            postgresql_where=text("status IN ('PENDING_VERIFICATION', 'ACTIVE')"),
+        ),
+        ForeignKeyConstraint(
+            ["school_id", "family_id"],
+            ["family.school_id", "family.id"],
+            name="fk_payer_child_link_family",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["school_id", "payer_school_membership_id", "payer_membership_type"],
+            [
+                "school_membership.school_id",
+                "school_membership.id",
+                "school_membership.membership_type",
+            ],
+            name="fk_payer_child_link_payer_membership",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["school_id", "child_school_membership_id", "child_membership_type"],
+            [
+                "school_membership.school_id",
+                "school_membership.id",
+                "school_membership.membership_type",
+            ],
+            name="fk_payer_child_link_child_membership",
+            ondelete="RESTRICT",
+        ),
+        # The payer's type is constrained to §2.5's pair rather than pinned to
+        # one value. Together with the foreign key above this says: the type
+        # recorded here is the membership's real type, *and* it is one a payer
+        # is allowed to hold. Either half alone would let a STAFF membership
+        # through.
+        CheckConstraint(
+            "payer_membership_type IN ('CONTACT', 'GUARDIAN')",
+            name="ck_payer_child_link_payer_type",
+        ),
+        CheckConstraint(
+            "child_membership_type = 'PARTICIPANT'",
+            name="ck_payer_child_link_child_type",
+        ),
+        CheckConstraint(
+            "(status = 'ACTIVE') = (activated_at IS NOT NULL)",
+            name="ck_payer_child_link_activated_at",
+        ),
+        CheckConstraint(
+            "(status = 'REJECTED') = (rejected_at IS NOT NULL)",
+            name="ck_payer_child_link_rejected_at",
+        ),
+        CheckConstraint(
+            "(status = 'REVOKED') = (revoked_at IS NOT NULL)",
+            name="ck_payer_child_link_revoked_at",
+        ),
+        CheckConstraint(
+            "(status = 'PENDING_VERIFICATION') = (decision_by_account_id IS NULL)",
+            name="ck_payer_child_link_decider",
+        ),
+        CheckConstraint(
+            "(status IN ('REJECTED', 'REVOKED')) = (decision_reason_code IS NOT NULL)",
+            name="ck_payer_child_link_decision_reason",
+        ),
+        CheckConstraint("version >= 1", name="ck_payer_child_link_version"),
+        Index("ix_payer_child_link_child", "school_id", "child_person_id", "status"),
+        Index("ix_payer_child_link_payer", "school_id", "payer_person_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("pcl"))
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("school.id", ondelete="CASCADE"), nullable=False
+    )
+    payer_person_id: Mapped[str] = mapped_column(
+        ForeignKey("person.id", ondelete="CASCADE"), nullable=False
+    )
+    child_person_id: Mapped[str] = mapped_column(
+        ForeignKey("person.id", ondelete="CASCADE"), nullable=False
+    )
+    payer_school_membership_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    child_school_membership_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    payer_membership_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    child_membership_type: Mapped[str] = mapped_column(
+        String(40), nullable=False, default="PARTICIPANT"
+    )
+    #: §2.5 makes this mandatory. Which family, and whether both people are
+    #: ACTIVE in it, is a service rule — §3.1 refuses a payer in family A for a
+    #: child in family B with `M07_PAYER_BASIS_INVALID` unless the sponsor
+    #: process verified it — and checking that needs two `FamilyMembership`
+    #: rows, which a CHECK cannot read. `RESTRICT` rather than `CASCADE`:
+    #: §3.13 makes an open link a *blocker* on archiving a family, so the
+    #: database must not quietly remove the evidence that the blocker exists.
+    family_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    basis_kind: Mapped[PayerBasisKind] = mapped_column(
+        enum_type(PayerBasisKind), nullable=False
+    )
+    status: Mapped[LinkStatus] = mapped_column(
+        enum_type(LinkStatus), nullable=False, default=LinkStatus.PENDING_VERIFICATION
+    )
+    requested_by_account_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    requested_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    activated_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    rejected_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    revoked_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    decision_by_account_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    decision_reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
