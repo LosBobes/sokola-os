@@ -35,7 +35,7 @@ from app.domains.identity.schemas import (
 )
 from app.domains.people.enums import GuardianAccessStatus, GuardianRelationshipType
 from app.domains.people.models import GuardianRelationship, GuardianSchoolAccess
-from app.domains.school.enums import MembershipStatus, MembershipType
+from app.domains.school.enums import MembershipStatus, MembershipType, SchoolStatus
 from app.domains.school.models import School, SchoolMembership
 from app.platform import clock
 from app.platform.audit.service import record_audit
@@ -376,6 +376,25 @@ def accept_invitation(
         raise ConflictError("Pozivnica je zamenjena novom, koristite najnoviju.")
     if invitation.status is not InvitationStatus.PENDING:
         raise ConflictError("Pozivnica nije na čekanju.")
+
+    # M02 §11.4: the school is re-read here, not trusted from the moment the
+    # invitation was issued. A school deactivated in between must stop the
+    # acceptance *before* anything is written.
+    #
+    # Without this the refusal still arrived, one request later: the tenant
+    # guard rejects a deactivated school on the next call, so no access
+    # resulted. What did result was a membership and a role assignment inside
+    # a school that is off — rows nobody expects, which a later reactivation,
+    # export or report reads back as real. Failing closed here is the
+    # difference between "no access" and "no trace".
+    #
+    # Deliberately the same `ConflictError` shape as revoked and expired
+    # rather than a code of its own: acceptance refusals being distinguishable
+    # from one another is already a recorded finding, and this must not add to
+    # it.
+    target_school = db.get(School, invitation.school_id)
+    if target_school is None or target_school.status is SchoolStatus.DEACTIVATED:
+        raise ConflictError("Škola trenutno nije dostupna.")
 
     # Wrong-account rejection (§23/M2): the accepting principal's verified
     # login emails must include the one this invitation was sent to.
