@@ -373,32 +373,16 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Zašto nije urađeno ovde:** setup površina je M20/M04 §14 posao, ne M03. Slati `SETUP_ONLY` aktera na redovan home bilo bi tačno ono što §6.2 zabranjuje, pa ugovor kaže istinu i kad UI zaostaje.
 - **Status:** `CHALLENGE_NOT_APPLIED` — zabeleženo kao poznat jaz sa imenovanim vlasnikom (M20/M04 §14).
 
-### F-29 — M05 kanonski role ključevi se ne poklapaju sa repo ulogama, i jedno preslikavanje **oduzima prava**
+### F-29 — `ADMIN` se preslikava na M05 `MANAGER` (ODLUČENO)
 
-- **Ugovor:** M05 §2.4 daje kanonske school role ključeve: `OWNER`, `MANAGER`, `LIMITED_ADMIN`, `INSTRUCTOR`, `SUBSTITUTE_INSTRUCTOR`, `GUARDIAN`, `PAYER`. Izričito kaže i da se legacy `TRAINER` deterministički migrira u `INSTRUCTOR`, a `SUBSTITUTE_TRAINER` u `SUBSTITUTE_INSTRUCTOR`, bez paralelnog aktivnog para.
-- **Repo dokaz (`app/domains/identity/enums.py:33`):** `RoleCode` ima `OWNER`, `MANAGER`, `ADMIN`, `TRAINER`, `PARENT`, `STUDENT`.
-- **Preslikavanje koje je jasno:**
-  - `OWNER` → `OWNER`, `MANAGER` → `MANAGER` — isto.
-  - `TRAINER` → `INSTRUCTOR` — ugovor to imenuje.
-  - `PARENT` → `GUARDIAN` — jedina uloga sa istim značenjem.
-- **Preslikavanje koje NIJE jasno, i zato nije primenjeno:**
-  - **`ADMIN` → `LIMITED_ADMIN` oduzima prava.** U repou `ROLE_DEFAULT_AREAS` daje `ADMIN` **ceo** `_STAFF_AREAS` skup — identično kao `OWNER` i `MANAGER` (`app/security/permissions.py:100`). M05 §2.4 opisuje `LIMITED_ADMIN` kao „Administrator **bez implicitnih poslovnih prava**; konkretna prava preko eksplicitnih grantova". Mehaničko preslikavanje bi svakom postojećem administratoru u produkciji oduzelo pristup ljudima, grupama, rasporedu, finansijama, događajima, komunikaciji i dokumentima — u jednom deploy-u, bez ijednog grant-a koji bi to nadoknadio.
-  - **`STUDENT` nema kanonski parnjak.** M05 ne poznaje učeničku ulogu. U repou `STUDENT` već ima prazan skup oblasti, pa ne nosi prava — ali i dalje postoji kao dodeljiva uloga i ima redove.
-  - `SUBSTITUTE_INSTRUCTOR` i `PAYER` nemaju repo parnjaka; oni su nov posao, ne migracija.
-- **Posledica:** M05 registry se može uvesti kao referentni podatak bez dodirivanja `RoleCode`, i to je ono što treba prvo. Sama migracija uloga je odvojena odluka sa produkcijskom posledicom, i traži ili (a) da `ADMIN` postane `MANAGER` umesto `LIMITED_ADMIN`, ili (b) da se svakom postojećem `ADMIN`-u u istoj migraciji izda eksplicitan grant set koji čuva današnji pristup, ili (c) svestan pristanak da administratori izgube prava. §7.10 zabranjuje da migracija sama pogađa u ovakvom slučaju.
-- **Šta F-29 *ne* blokira (provereno nad zasejanom revizijom 1.3):** workspace izbor. §2.4 mapira `OWNER`, `MANAGER` **i** `LIMITED_ADMIN` na isti `ADMIN` workspace — pa kako god se `ADMIN` razreši, njegov workspace je `ADMIN` u oba slučaja. Preslikavanje repo uloge → workspace je zato potpuno određeno za pet od šest uloga:
-
-  | repo uloga | workspace | osnov |
-  |---|---|---|
-  | `OWNER` | `ADMIN` | isti ključ |
-  | `MANAGER` | `ADMIN` | isti ključ |
-  | `ADMIN` | `ADMIN` | **obe kandidat-opcije (MANAGER, LIMITED_ADMIN) daju isti workspace** |
-  | `TRAINER` | `INSTRUCTOR` | §2.4 imenuje migraciju |
-  | `PARENT` | `GUARDIAN` | jedina uloga istog značenja |
-  | `STUDENT` | — | nema kanonskog parnjaka; ionako danas nosi prazan skup oblasti |
-
-  **Posledica: TEN-Q01 nije blokiran.** Blokirani su efektivni permission-i, ne izbor škole i workspace-a.
-- **Status:** `CHALLENGE_NOT_APPLIED` — preslikavanje uloga nije primenjeno. Traži odluku vlasnika proizvoda (vidi §8), jer sve tri opcije menjaju nečiji pristup.
+- **Odluka vlasnika proizvoda:** `RoleCode.ADMIN` → M05 `MANAGER`, za permission-e. Workspace preslikavanje je i pre ovoga bilo `MANAGER` i ostaje nepromenjeno.
+- **Dokaz na kome odluka stoji, izmeren a ne pretpostavljen:** `app/security/permissions.py` daje `OWNER`, `MANAGER` i `ADMIN` **identičan** `_STAFF_AREAS` skup. Pod živim guardom ta tri se danas ne razlikuju. Dakle preslikavanje na `MANAGER` ne menja pristup nikome.
+- **Šta bi `LIMITED_ADMIN` uradio:** u reviziji 1.3 `LIMITED_ADMIN` nosi **nula** permission-a, a `MANAGER` sedam. Preslikavanje na `LIMITED_ADMIN` bi, u trenutku kad se resolver uključi, oduzelo prava svakom postojećem administratoru — tiho, bez ijedne greške. Sužavanje pojedinog administratora na `LIMITED_ADMIN` je kasnije per-person dodela, što je i mesto gde odluka o nečijim ovlašćenjima pripada.
+- **Dve mape ostaju dve mape.** Što se danas poklapaju nije razlog da se spoje: workspace odgovor je **prinudan** (§2.4 stavlja `OWNER`, `MANAGER` i `LIMITED_ADMIN` u isti `ADMIN` workspace, pa izbor ne može da znači ništa), a permission odgovor je procena. Kad neko sutra suzi `ADMIN` na `LIMITED_ADMIN`, workspace se ne sme pomeriti s njim.
+- **Testovi koji ovo drže:** `test_admin_resolves_to_manager_and_keeps_todays_access` tvrdi **jednakost** sa `MANAGER`-ovim živim skupom, ne broj sedam — pa i dalje znači „isto kao MANAGER" kad se MANAGER-u nešto doda. `test_the_live_guard_already_treats_admin_and_manager_alike` tvrdi sam dokaz: ako neko suzi `ADMIN` u `ROLE_DEFAULT_AREAS` a ne vrati se na ovu odluku, obrazloženje prestaje da važi i test pada.
+- **`STUDENT` i dalje diže grešku.** M05 nema studentsku ulogu; nema na šta da se preslika, a prazan skup bi bio pogađanje sa bezbednim licem.
+- **Ne otključava M05.** M05 QA i dalje čeka F-30; ovo je jedna od dve potrebne odluke.
+- **Status:** `ODLUČENO I PRIMENJENO`.
 
 ### F-30 — M05 registry revizije 1.3 nije u §3.3; 39 redova nosi nedefinisanu grupu uloga
 

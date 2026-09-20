@@ -31,13 +31,13 @@ from app.domains.identity.models import RoleAssignment
 
 
 class RoleMappingUnavailableError(AppError):
-    """This repo's role has no settled M05 counterpart, so no permission set
-    can be computed for it (F-29).
+    """This repo's role has no M05 counterpart, so no permission set can be
+    computed for it. `STUDENT` is the remaining case (F-29 settled `ADMIN`).
 
     Loud rather than empty on purpose. Returning "no permissions" would look
     like a correct fail-closed answer while actually meaning "nobody has
-    decided yet" — and the first caller to wire this up would silently strip
-    every administrator, which is exactly the outcome F-29 exists to prevent.
+    decided yet" — and a caller wiring this up would act on the difference
+    without ever being told there was one.
     """
 
     status_code = 500
@@ -46,18 +46,30 @@ class RoleMappingUnavailableError(AppError):
 
 #: This repo's `RoleCode` against M05 §2.4's canonical keys, **for permissions**.
 #:
-#: Not the same question as the workspace map in `available_contexts`, and not
-#: safe to share with it. There, `ADMIN` is unambiguous because §2.4 puts
-#: `MANAGER` and `LIMITED_ADMIN` in the same `ADMIN` workspace. Here they are
-#: as different as two roles get: `MANAGER` holds seven permissions in revision
-#: 1.3 and `LIMITED_ADMIN` holds none. Reusing the workspace map would grant
-#: `ADMIN` seven permissions on the strength of a mapping chosen for an
-#: entirely different reason.
+#: Not the same question as the workspace map in `available_contexts`, and
+#: still not safe to share with it even though both now send `ADMIN` to
+#: `MANAGER`. There the answer is forced — §2.4 puts `MANAGER` and
+#: `LIMITED_ADMIN` in the same `ADMIN` workspace, so the choice cannot matter.
+#: Here it is a judgement, made on the evidence below, and the day someone
+#: narrows `ADMIN` to `LIMITED_ADMIN` for permissions the workspace answer
+#: must not move with it. Two maps, two reasons.
 #:
-#: So `ADMIN` and `STUDENT` are absent, and asking for them raises.
+#: `ADMIN` resolves to `MANAGER` (F-29, decided). The deciding evidence is
+#: that `security/permissions.py` already gives `OWNER`, `MANAGER` and `ADMIN`
+#: the identical `_STAFF_AREAS` set, so the two are indistinguishable today.
+#: `MANAGER` preserves that exactly; `LIMITED_ADMIN` holds **no** permissions
+#: in revision 1.3 and would have stripped every existing administrator the
+#: moment this resolver was wired up. Narrowing an individual administrator to
+#: `LIMITED_ADMIN` later is a per-person assignment, which is where a decision
+#: about one person's authority belongs — not a silent consequence of a map.
+#:
+#: `STUDENT` is still absent and still raises: M05 has no student role, so
+#: there is nothing to resolve to, and inventing one would be the guess F-29
+#: existed to avoid.
 _CANONICAL_ROLE_KEY: dict[RoleCode, str] = {
     RoleCode.OWNER: "OWNER",
     RoleCode.MANAGER: "MANAGER",
+    RoleCode.ADMIN: "MANAGER",
     RoleCode.TRAINER: "INSTRUCTOR",
     RoleCode.PARENT: "GUARDIAN",
 }
@@ -66,9 +78,9 @@ _CANONICAL_ROLE_KEY: dict[RoleCode, str] = {
 def canonical_role_key(role_code: RoleCode) -> str:
     """The M05 role key this repo's role becomes, or a refusal.
 
-    `ADMIN` is F-29: mapping it to `MANAGER` preserves today's access while
-    losing the distinction M05 draws, and mapping it to `LIMITED_ADMIN` strips
-    every existing administrator. `STUDENT` has no counterpart at all.
+    `ADMIN` resolves to `MANAGER` (F-29, decided): it preserves today's access
+    exactly, at the cost of not yet drawing M05's MANAGER/LIMITED_ADMIN line.
+    `STUDENT` has no counterpart at all and still raises.
     """
     key = _CANONICAL_ROLE_KEY.get(role_code)
     if key is None:

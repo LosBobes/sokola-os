@@ -122,27 +122,69 @@ def test_a_revoked_assignment_grants_nothing(db: Session) -> None:
 
 
 # ---------------------------------------------------------------------------
-# F-29 — the unmapped roles refuse loudly
+# F-29 — ADMIN is decided; STUDENT still refuses loudly
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("role", [RoleCode.ADMIN, RoleCode.STUDENT])
-def test_an_unmapped_role_raises_rather_than_returning_nothing(
-    db: Session, role: RoleCode
+def test_a_role_with_no_counterpart_raises_rather_than_returning_nothing(
+    db: Session,
 ) -> None:
-    """The whole point of F-29 being open.
+    """`STUDENT` is the one left, and the refusal still matters.
 
     Returning an empty set would read as a correct fail-closed answer while
-    actually meaning "nobody has decided yet" — and the first caller to wire
-    this up would silently strip every administrator, which is the outcome the
-    finding exists to prevent.
+    actually meaning "nobody has decided yet". M05 has no student role at all,
+    so there is nothing to resolve to and an empty set would be a guess
+    wearing a safe-looking face.
     """
     with pytest.raises(RoleMappingUnavailableError):
-        canonical_role_key(role)
+        canonical_role_key(RoleCode.STUDENT)
 
-    person, school = _with_roles(db, role)
+    person, school = _with_roles(db, RoleCode.STUDENT)
     with pytest.raises(RoleMappingUnavailableError):
         effective_permissions(db, person_id=person.id, school_id=school.id)
+
+
+def test_admin_resolves_to_manager_and_keeps_todays_access(db: Session) -> None:
+    """F-29, decided: `ADMIN` → `MANAGER`.
+
+    The assertion that carries the decision is the *equivalence*, not the
+    number. `security/permissions.py` gives `OWNER`, `MANAGER` and `ADMIN` the
+    identical `_STAFF_AREAS` set today, so the two roles are indistinguishable
+    under the live guard. Mapping to `MANAGER` keeps them indistinguishable
+    once this resolver is wired; mapping to `LIMITED_ADMIN` — which holds no
+    permissions in revision 1.3 — would have stripped every administrator at
+    that moment.
+
+    Asserted against MANAGER's live set rather than a hard-coded count, so the
+    day someone adds a permission to MANAGER this keeps meaning "the same as
+    MANAGER" instead of quietly becoming "seven".
+    """
+    assert canonical_role_key(RoleCode.ADMIN) == "MANAGER"
+
+    admin_person, admin_school = _with_roles(db, RoleCode.ADMIN)
+    manager_person, manager_school = _with_roles(db, RoleCode.MANAGER)
+
+    admin_perms = effective_permissions(
+        db, person_id=admin_person.id, school_id=admin_school.id
+    )
+    manager_perms = effective_permissions(
+        db, person_id=manager_person.id, school_id=manager_school.id
+    )
+    assert admin_perms == manager_perms
+    assert admin_perms, "revision 1.3 must bind MANAGER, or this proves nothing"
+
+
+def test_the_live_guard_already_treats_admin_and_manager_alike() -> None:
+    """The evidence F-29 was decided on, asserted so it cannot drift.
+
+    If someone narrows `ADMIN` in `ROLE_DEFAULT_AREAS` without revisiting the
+    canonical map, the justification above stops being true and this fails —
+    which is the point. The decision rests on the two being equivalent today;
+    it does not survive that ceasing to be so silently.
+    """
+    from app.security.permissions import ROLE_DEFAULT_AREAS
+
+    assert ROLE_DEFAULT_AREAS[RoleCode.ADMIN] == ROLE_DEFAULT_AREAS[RoleCode.MANAGER]
 
 
 @pytest.mark.parametrize(
@@ -150,6 +192,7 @@ def test_an_unmapped_role_raises_rather_than_returning_nothing(
     [
         (RoleCode.OWNER, "OWNER"),
         (RoleCode.MANAGER, "MANAGER"),
+        (RoleCode.ADMIN, "MANAGER"),
         (RoleCode.TRAINER, "INSTRUCTOR"),
         (RoleCode.PARENT, "GUARDIAN"),
     ],
@@ -161,19 +204,24 @@ def test_the_settled_mappings(role: RoleCode, expected: str) -> None:
 
 
 def test_the_permission_map_is_not_the_workspace_map() -> None:
-    """These two must stay separate.
+    """Still two maps, even though both now send ADMIN to MANAGER.
 
-    `available_contexts` maps ADMIN → MANAGER safely, because §2.4 puts
-    MANAGER and LIMITED_ADMIN in the same workspace. For permissions they are
-    as different as two roles get — MANAGER holds seven in this revision,
-    LIMITED_ADMIN none. Sharing the map would grant ADMIN a permission set on
-    the strength of a mapping chosen for a different question entirely.
+    Agreeing today is not the same as being one thing. The workspace answer is
+    *forced* — §2.4 puts MANAGER and LIMITED_ADMIN in the same ADMIN
+    workspace, so the choice cannot matter there. The permission answer is a
+    judgement (F-29). The day someone narrows ADMIN to LIMITED_ADMIN for
+    permissions, the workspace answer must not move with it, and it will not,
+    because these are two dictionaries with two reasons.
     """
     from app.application.available_contexts import _WORKSPACE_ROLE_KEY
     from app.application.effective_permissions import _CANONICAL_ROLE_KEY
 
+    assert _WORKSPACE_ROLE_KEY is not _CANONICAL_ROLE_KEY
     assert RoleCode.ADMIN in _WORKSPACE_ROLE_KEY
-    assert RoleCode.ADMIN not in _CANONICAL_ROLE_KEY
+    assert RoleCode.ADMIN in _CANONICAL_ROLE_KEY
+    # STUDENT is in neither: no workspace, no role to resolve to.
+    assert RoleCode.STUDENT not in _WORKSPACE_ROLE_KEY
+    assert RoleCode.STUDENT not in _CANONICAL_ROLE_KEY
 
 
 # ---------------------------------------------------------------------------
