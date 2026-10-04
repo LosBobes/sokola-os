@@ -542,12 +542,14 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Zašto nije ispravljeno ovde:** ispravka menja HTTP status code-ove postojećeg javnog endpoint-a (404/409 → jedinstveni 410), pa dira klijent i OpenAPI ugovor. To je odluka, ne omaška.
 - **Status:** `CHALLENGE_NOT_APPLIED`.
 
-### F-44 — prihvatanje pozivnice ne čita status škole
+### F-44 — prihvatanje pozivnice nije čitalo status škole (OTKLONJENO)
 
-- **Nalaz:** `accept_invitation` proverava status pozivnice, rok i poklapanje adrese, ali **ne** čita `School.status`. Škola deaktivirana između izdavanja i prihvatanja ne zaustavlja prihvatanje: nastaju membership i role assignment u školi koja je ugašena.
-- **Zašto to nije odmah vidljivo kao rupa:** sledeći request te osobe biće odbijen, jer `_resolve_tenant` odbija DEACTIVATED školu (M04-QA-057 to dokazuje). Dakle nema pristupa — ali ima **upisa** u ugašenu školu, što M02-QA-057 traži da bude fail-closed, i što ostavlja redove koje niko ne očekuje.
-- **Popravka je mala** (jedna provera statusa u finalnom guardu), ali menja ponašanje komande i ide uz odluku o F-41.
-- **Status:** `NALAZ`.
+- **Nalaz:** `accept_invitation` je proveravao status pozivnice, rok i poklapanje adrese, ali **nije** čitao `School.status`. Škola deaktivirana između izdavanja i prihvatanja nije zaustavljala prihvatanje: nastajali su membership i role assignment u školi koja je ugašena.
+- **Zašto to nije izgledalo kao rupa:** sledeći request te osobe bio bi odbijen, jer `_resolve_tenant` odbija DEACTIVATED školu (M04-QA-057 to dokazuje). Dakle pristupa nije bilo — ali je bilo **upisa**. Razlika je između „nema pristupa" i „nema traga": redovi koje niko ne očekuje su ono što kasnija reaktivacija, export ili izveštaj pročitaju kao stvarne.
+- **Otklonjeno.** Jedna provera u finalnom guardu, pre ijednog upisa. Škola se **ponovo čita** u trenutku prihvatanja, a ne uzima iz trenutka izdavanja — to je ceo smisao §11.4.
+- **Oblik odbijanja:** isti `ConflictError` kao opozvana i istekla pozivnica, namerno bez sopstvenog koda. F-43 je već prijava da su odbijanja pri prihvatanju međusobno razlučiva; ova izmena tome ne doprinosi.
+- **Posledica za QA mapu:** M02-QA-057 je prešao iz `BLOCKED` u implementiran. Test je probijen obrnuto — pre ispravke vraća 200 i kreira role assignment u školi „Ugašena škola"; posle ispravke vraća 409 i ne ostavlja nijedan red.
+- **Status:** `OTKLONJENO`.
 
 ## 5. Šta je u ovom radu stvarno urađeno
 
