@@ -17,11 +17,13 @@ import pathlib
 
 import pytest
 from app.application.effective_permissions import (
+    PermissionsUnavailableError,
     RoleMappingUnavailableError,
     canonical_role_key,
     effective_permissions,
     permissions_for_role_keys,
 )
+from app.domains.authorization.bindings import PolicyUnavailableError
 from app.domains.identity.enums import RoleCode
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -232,13 +234,36 @@ def test_the_permission_map_is_not_the_workspace_map() -> None:
 def test_no_active_revision_is_a_refusal_not_an_empty_set(db: Session) -> None:
     """§3.1: an unavailable policy store is a deny. An empty set would be
     indistinguishable from "this person may do nothing", and the two need
-    very different handling."""
+    very different handling.
+
+    The refusal names which condition it was. "No ACTIVE revision" is an
+    outage — somebody must publish one — and that is not the same failure as
+    a role whose M05 mapping nobody has decided, which no amount of operating
+    the system will fix. This test previously accepted the mapping error here,
+    which passed while describing the wrong cause.
+    """
     person, school = _with_roles(db, RoleCode.OWNER)
     db.execute(text("UPDATE authorization_policy_revision SET status = 'SUPERSEDED'"))
     db.commit()
 
-    with pytest.raises(RoleMappingUnavailableError):
+    with pytest.raises(PolicyUnavailableError) as raised:
         effective_permissions(db, person_id=person.id, school_id=school.id)
+    assert raised.value.code == "AUTHORIZATION_POLICY_UNAVAILABLE"
+
+
+def test_both_refusals_are_one_catchable_kind() -> None:
+    """A guard must be able to fail closed without enumerating conditions.
+
+    The two refusals carry different codes on purpose, but a caller that
+    caught one and missed the other would treat the first as a deny and let
+    the second escape as a bare 500 — the same request answered two ways
+    depending on which gap it hit. The shared base is what stops that from
+    resting on the caller's diligence.
+    """
+    assert issubclass(PolicyUnavailableError, PermissionsUnavailableError)
+    assert issubclass(RoleMappingUnavailableError, PermissionsUnavailableError)
+    assert PolicyUnavailableError.code != RoleMappingUnavailableError.code
+    assert PermissionsUnavailableError.status_code == 500
 
 
 def test_the_live_guard_is_untouched() -> None:

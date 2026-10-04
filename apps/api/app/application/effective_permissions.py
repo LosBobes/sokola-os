@@ -20,17 +20,16 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.common.errors import AppError
-from app.domains.authorization.enums import DOMAIN_SCHOOL, PolicyRevisionStatus
-from app.domains.authorization.models import (
-    AuthorizationPolicyRevision,
-    RolePermissionBinding,
+from app.domains.authorization.bindings import (
+    PermissionsUnavailableError,
+    active_revision_id,
+    permissions_for_role_keys,
 )
 from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
 from app.domains.identity.models import RoleAssignment
 
 
-class RoleMappingUnavailableError(AppError):
+class RoleMappingUnavailableError(PermissionsUnavailableError):
     """This repo's role has no M05 counterpart, so no permission set can be
     computed for it. `STUDENT` is the remaining case (F-29 settled `ADMIN`).
 
@@ -40,7 +39,6 @@ class RoleMappingUnavailableError(AppError):
     without ever being told there was one.
     """
 
-    status_code = 500
     code = "ROLE_MAPPING_UNAVAILABLE"
 
 
@@ -90,46 +88,6 @@ def canonical_role_key(role_code: RoleCode) -> str:
     return key
 
 
-def active_revision_id(db: Session) -> str:
-    """The one ACTIVE policy revision, or fail closed.
-
-    §3.1: an unavailable policy store is a deny. Returning an empty permission
-    set instead would be indistinguishable from "this person may do nothing",
-    and the two need very different handling.
-    """
-    revision_id = db.execute(
-        select(AuthorizationPolicyRevision.id).where(
-            AuthorizationPolicyRevision.status == PolicyRevisionStatus.ACTIVE
-        )
-    ).scalar_one_or_none()
-    if revision_id is None:
-        raise RoleMappingUnavailableError("Autorizaciona politika nije dostupna.")
-    return revision_id
-
-
-def permissions_for_role_keys(
-    db: Session, *, role_keys: frozenset[str], domain: str = DOMAIN_SCHOOL
-) -> frozenset[str]:
-    """§3.1 step 5: the union of the bindings these roles hold.
-
-    A union, never an intersection and never a rank lookup. §3.2 point 1 says
-    effective permissions are the union of all of a person's active roles, and
-    point 2 adds that administrative rank inherits nothing — so holding a
-    senior role does not imply a junior one's permissions, and the only way to
-    hold a permission is for some role to be bound to it.
-    """
-    if not role_keys:
-        return frozenset()
-    rows = db.execute(
-        select(RolePermissionBinding.permission_key).where(
-            RolePermissionBinding.policy_revision_id == active_revision_id(db),
-            RolePermissionBinding.authorization_domain_key == domain,
-            RolePermissionBinding.role_key.in_(role_keys),
-        )
-    ).scalars()
-    return frozenset(rows)
-
-
 def effective_permissions(
     db: Session, *, person_id: str, school_id: str
 ) -> frozenset[str]:
@@ -149,3 +107,16 @@ def effective_permissions(
     ).scalars()
     keys = frozenset(canonical_role_key(code) for code in set(role_codes))
     return permissions_for_role_keys(db, role_keys=keys)
+
+
+#: Re-exported so callers keep one import path for "what may this role do".
+#: The implementations moved into the authorization domain, where the tables
+#: they read live; see `app/domains/authorization/bindings.py`.
+__all__ = [
+    "PermissionsUnavailableError",
+    "RoleMappingUnavailableError",
+    "active_revision_id",
+    "canonical_role_key",
+    "effective_permissions",
+    "permissions_for_role_keys",
+]
