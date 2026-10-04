@@ -61,6 +61,61 @@ OPEN_ROLE_ASSIGNMENT_STATUSES = (
 )
 
 
+# ---------------------------------------------------------------------------
+# M05 §2.10 — the closed reason registries for role transitions
+#
+# Each list is verbatim from the contract's table, which is the point: a reason
+# that can be anything is a reason that cannot be aggregated, filtered or
+# audited, and `RoleTransitionRequest.reason` was `str | None` with a length
+# limit and nothing else (F-49). Measured before this change: suspending with
+# `NIJE_IZ_VOKABULARA_XYZ` returned 200.
+#
+# Reactivation has its own vocabulary even though this repo reaches it through
+# `POST /roles` rather than a distinct command — the codes are what §2.10 lists
+# for "School role reactivate", and reusing the suspend list would let a role
+# come back for a reason that only makes sense for taking it away.
+# ---------------------------------------------------------------------------
+
+
+class RoleSuspendReason(enum.StrEnum):
+    SECURITY_REVIEW = "SECURITY_REVIEW"
+    TEMPORARY_LEAVE = "TEMPORARY_LEAVE"
+    ACCESS_PAUSE = "ACCESS_PAUSE"
+    MEMBERSHIP_SUSPENDED = "MEMBERSHIP_SUSPENDED"
+
+
+class RoleReactivateReason(enum.StrEnum):
+    SECURITY_CLEARED = "SECURITY_CLEARED"
+    RETURNED_TO_DUTY = "RETURNED_TO_DUTY"
+    ACCESS_RESTORED = "ACCESS_RESTORED"
+
+
+class RoleRevokeReason(enum.StrEnum):
+    MEMBERSHIP_ENDED = "MEMBERSHIP_ENDED"
+    RESPONSIBILITY_ENDED = "RESPONSIBILITY_ENDED"
+    ROLE_REPLACED = "ROLE_REPLACED"
+    SECURITY_REVOKE = "SECURITY_REVOKE"
+    OWNER_TRANSFER = "OWNER_TRANSFER"
+
+
+#: The codes §2.10 marks with `*`: a free-text note is mandatory alongside them.
+#:
+#: They are the ones where the code alone does not say enough for whoever reads
+#: the trail later — "security review" and "access pause" describe a decision
+#: someone took for a reason, and without the note the record says a decision
+#: happened and not why. The unmarked codes are self-explanatory by
+#: construction: `MEMBERSHIP_ENDED` means the membership ended.
+REASON_NOTE_REQUIRED: frozenset[str] = frozenset(
+    {
+        RoleSuspendReason.SECURITY_REVIEW.value,
+        RoleSuspendReason.ACCESS_PAUSE.value,
+        RoleReactivateReason.SECURITY_CLEARED.value,
+        RoleReactivateReason.ACCESS_RESTORED.value,
+        RoleRevokeReason.SECURITY_REVOKE.value,
+    }
+)
+
+
 class InvitationType(enum.StrEnum):
     STAFF = "STAFF"
     PARENT = "PARENT"

@@ -4884,6 +4884,30 @@
         "title": "RevokeInvitationRequest",
         "type": "object"
       },
+      "RevokeRoleRequest": {
+        "properties": {
+          "reason_code": {
+            "$ref": "#/components/schemas/RoleRevokeReason"
+          },
+          "reason_note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Note"
+          }
+        },
+        "required": [
+          "reason_code"
+        ],
+        "title": "RevokeRoleRequest",
+        "type": "object"
+      },
       "RoleAssignmentResponse": {
         "properties": {
           "display_name": {
@@ -4972,6 +4996,17 @@
         "title": "RoleCode",
         "type": "string"
       },
+      "RoleRevokeReason": {
+        "enum": [
+          "MEMBERSHIP_ENDED",
+          "RESPONSIBILITY_ENDED",
+          "ROLE_REPLACED",
+          "SECURITY_REVOKE",
+          "OWNER_TRANSFER"
+        ],
+        "title": "RoleRevokeReason",
+        "type": "string"
+      },
       "RoleScopeType": {
         "enum": [
           "SCHOOL",
@@ -4981,23 +5016,15 @@
         "title": "RoleScopeType",
         "type": "string"
       },
-      "RoleTransitionRequest": {
-        "properties": {
-          "reason": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason"
-          }
-        },
-        "title": "RoleTransitionRequest",
-        "type": "object"
+      "RoleSuspendReason": {
+        "enum": [
+          "SECURITY_REVIEW",
+          "TEMPORARY_LEAVE",
+          "ACCESS_PAUSE",
+          "MEMBERSHIP_SUSPENDED"
+        ],
+        "title": "RoleSuspendReason",
+        "type": "string"
       },
       "RoomResponse": {
         "properties": {
@@ -5877,6 +5904,30 @@
           "reason"
         ],
         "title": "SkippedOccurrence",
+        "type": "object"
+      },
+      "SuspendRoleRequest": {
+        "properties": {
+          "reason_code": {
+            "$ref": "#/components/schemas/RoleSuspendReason"
+          },
+          "reason_note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Note"
+          }
+        },
+        "required": [
+          "reason_code"
+        ],
+        "title": "SuspendRoleRequest",
         "type": "object"
       },
       "TenantPublic": {
@@ -12107,7 +12158,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RoleTransitionRequest"
+                "$ref": "#/components/schemas/RevokeRoleRequest"
               }
             }
           },
@@ -12162,7 +12213,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RoleTransitionRequest"
+                "$ref": "#/components/schemas/SuspendRoleRequest"
               }
             }
           },

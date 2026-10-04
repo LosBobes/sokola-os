@@ -572,8 +572,11 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 
 - **Nalaz:** `RoleTransitionRequest.reason` je `str | None` sa `max_length=500` i bez vokabulara.
 - **Izmereno:** suspenzija sa `reason="NIJE_IZ_VOKABULARA_XYZ"` vraća **200**. Ugovor (M05-QA-023) zahteva 422 `RBAC_REASON_INVALID` i nepromenjeno stanje.
-- **Posledica:** razlog ne može da se agregira, filtrira ni proveri. Audit trag sadrži ono što je klijent poslao, uključujući i prazno.
-- **Status:** `CHALLENGE_NOT_APPLIED`.
+- **Posledica:** razlog ne može da se agregira, filtrira ni proveri. Audit trag je sadržao ono što je klijent poslao — slobodan tekst je bio **interpolisan u summary**, dakle isti oblik problema kao F-42, u drugoj koloni.
+- **Primenjeno:** tri zatvorena vokabulara iz §2.10 (`RoleSuspendReason`, `RoleReactivateReason`, `RoleRevokeReason`), `reason_code` je obavezan, a `reason_note` obavezan samo za kodove koje ugovor označava sa `*`. Nepoznat kod je 422 bez ikakve promene stanja. Migracija `d4a7b2e01c69` dodaje §2.5 trojke (`suspended_by/at/reason_code`, `revoked_by/at/reason_code` + note) sa CHECK-ovima „sve ili ništa", pa polu-upisana trojka ne može da postoji. Audit summary nosi **kod**, ne belešku.
+- **Jedan CHECK je `NOT VALID`:** `ck_role_assignment_revoked_stamp` (REVOKED red nosi svoj pečat) ne može da se primeni retroaktivno — red opozvan pre ove migracije nema ni actora ni razlog nigde zapisan, a izmišljanje atribucije u kolone koje audit čita je gore od priznatog praznog mesta. Postgres ga proverava na svakom upisu od sada; stari redovi se ne revalidiraju.
+- **Breaking change:** `reason` (slobodan tekst) je zamenjen sa `reason_code` + `reason_note`. Web klijent ne poziva ove rute (provereno), pa je uticaj ograničen na testove i eventualne eksterne API klijente.
+- **Status:** `OTKLONJENO`; M05-QA-023 se sada izvršava.
 
 ### F-50 — okončanje članstva ne opoziva uloge, a dodela je vezana za (osoba, škola) a ne za epizodu članstva
 
@@ -582,7 +585,8 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Latentno, ne aktivno:** nijedna proizvodna putanja danas ne pravi tu drugu epizodu — `POST /people` vraća 409 na duplikat, a `membership/resume` odbija okončano članstvo („Okončano članstvo se ne može nastaviti"). Ranjivost je u tome što bezbednost zavisi od toga da takva putanja nikada ne nastane.
 - **Zašto ugovor traži drugačije:** M05-QA-029 zahteva da svi otvoreni role/grant zapisi te epizode budu atomarno `REVOKED` i da **nova epizoda ne oživljava** — upravo zato da ponovni prijem osobe ne vrati prava koja je imala.
 - **Primenjeno:** `_revoke_roles_of_ended_membership` u `people/service.py` zatvara sve otvorene dodele u **istoj transakciji** sa okončanjem članstva, uz po jedan audit zapis za svaku. Takođe `count_active_owners` sada broji **različite osobe**, ne redove — guard pita da li bi škola ostala bez vlasnika, a to je pitanje o ljudima.
-- **Status:** `OTKLONJENO`; M05-QA-029 se sada izvršava i proverava oba dela, uključujući da nova epizoda ne vraća staru ulogu.
+- **Preostala razlika od ugovora, namerno:** §2.5 definiše unique ključ kao `(school_id, school_membership_id, role_key)` — vezan za **članstvo**, ne za osobu. Taj ključ bi novu epizodu *strukturno* onemogućio da nasledi staru ulogu. `RoleAssignment` u ovom repou nema `school_membership_id`, a dodavanje te kolone nosi i kompozitni FK koji §2.5 takođe propisuje, što je više nego što ovaj inkrement treba da nosi. Trenutno rešenje daje isto vidljivo ponašanje uz slabiju garanciju: putanja koja bi napravila epizodu bez prolaska kroz `end_membership` bila bi uhvaćena ugovornim ključem, a ne ovim kaskadnim opozivom.
+- **Status:** `OTKLONJENO` za posmatrano ponašanje; M05-QA-029 se izvršava i proverava oba dela, uključujući da nova epizoda ne vraća staru ulogu. Ključ po članstvu ostaje otvoren.
 
 ### F-51 — `uq_role_assignment` nije važio u uobičajenom slučaju; dva ACTIVE reda po osobi su bila dozvoljena
 
@@ -595,8 +599,10 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 
 ### F-52 — test šema se gradi na dva načina; lokalno `create_all` izostavlja sve što postoji samo u migraciji
 
-- **Nalaz:** `tests/conftest.py` gradi test bazu sa `Base.metadata.create_all(engine)` i ništa više. To pravi tabele, indekse i constraint-e iz modela, ali **ne** objekte koji postoje samo u migraciji — trigere, funkcije, rule-ove, RLS politike.
-- **Konkretan primer:** `audit_log_append_only_guard`, triger iz migracije `b7e2a4c91f08`, je jedina stvar koja sprečava `UPDATE`/`DELETE` nad audit logom. Posle ručnog `DROP DATABASE sokola_test` + `CREATE DATABASE`, šest testova u `test_audit_seal.py` pada sa `DID NOT RAISE` — ne zato što je zaštita pokvarena, nego zato što je u toj bazi nikad nije ni bilo.
+- **Nalaz:** `tests/conftest.py` gradi test bazu sa `Base.metadata.create_all(engine)` i ništa više. `create_all` pravi **samo tabele koje ne postoje**. Posledica je dvostruka i druga polovina je gora:
+  1. objekti koji postoje isključivo u migraciji — trigeri, funkcije, rule-ovi, RLS politike — nikada se ne kreiraju;
+  2. **nijedna promena postojeće tabele se ne primenjuje.** Nova kolona, nov constraint, nov indeks na tabeli koja već postoji u test bazi — `create_all` ih preskače bez reči. Developer koji posle promene šeme pokrene `pytest` testira staru šemu.
+- **Dva konkretna primera, oba iz istog dana:** (1) `audit_log_append_only_guard`, triger iz migracije `b7e2a4c91f08`, je jedina stvar koja sprečava `UPDATE`/`DELETE` nad audit logom; posle ručnog `DROP DATABASE sokola_test` + `CREATE DATABASE`, šest testova u `test_audit_seal.py` pada sa `DID NOT RAISE` — ne zato što je zaštita pokvarena, nego zato što je u toj bazi nikad nije ni bilo. (2) Posle migracije `d4a7b2e01c69`, koja dodaje kolone postojećoj tabeli `role_assignment`, osam testova pada sa `UndefinedColumn` jer `create_all` ne menja postojeću tabelu.
 - **Zašto CI ovo ne vidi:** u CI-ju `SOKOLA_DATABASE_URL` pokazuje na bazu `sokola` (ne `sokola_test`), a korak `alembic upgrade head` se izvršava **pre** `pytest`-a. CI, dakle, testira **migriranu** šemu. `os.environ.setdefault` u conftest-u ne menja već postavljenu promenljivu, pa se dve putanje nikad ne sretnu.
 - **Posledica:** test baza nije reproducibilna iz conftest-a. Svako ko je prvi put napravi — nov developer, ili bilo kakva rekreacija — dobija tiho slabiju šemu od one koju CI proverava, i testovi koji dokazuju DB-level zaštite padaju iz pogrešnog razloga. Pada **bučno**, što je bolji ishod od tihog prolaza, ali trošak je ciklus dijagnostike po rekreaciji.
 - **Preporuka (nije primenjeno):** da `conftest` gradi šemu kroz `alembic upgrade head` umesto `create_all`, ili da ostane `create_all` ali da CI i lokalno koriste istu bazu i isti put. Prva opcija je ispravnija jer testira ono što se zaista deploy-uje; druga je manja promena. Ovo je odluka o test infrastrukturi, pa je zapisana a ne odlučena.

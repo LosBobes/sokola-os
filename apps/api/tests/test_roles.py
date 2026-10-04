@@ -177,7 +177,9 @@ def test_suspend_and_revoke_assignment(client: TestClient, db: Session) -> None:
     trainer = add_actor(db, school=staff.school, role=RoleCode.TRAINER, given="T")
 
     suspended = client.post(
-        f"/roles/{trainer.assignment.id}/suspend", headers=staff.headers, json={}
+        f"/roles/{trainer.assignment.id}/suspend",
+        headers=staff.headers,
+        json={"reason_code": "TEMPORARY_LEAVE"},
     )
     assert suspended.status_code == 200
     assert suspended.json()["status"] == "SUSPENDED"
@@ -185,7 +187,9 @@ def test_suspend_and_revoke_assignment(client: TestClient, db: Session) -> None:
     # Suspending again is refused (not active).
     assert (
         client.post(
-            f"/roles/{trainer.assignment.id}/suspend", headers=staff.headers, json={}
+            f"/roles/{trainer.assignment.id}/suspend",
+            headers=staff.headers,
+            json={"reason_code": "TEMPORARY_LEAVE"},
         ).status_code
         == 409
     )
@@ -193,14 +197,16 @@ def test_suspend_and_revoke_assignment(client: TestClient, db: Session) -> None:
     revoked = client.post(
         f"/roles/{trainer.assignment.id}/revoke",
         headers=staff.headers,
-        json={"reason": "Napustio klub"},
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
     )
     assert revoked.status_code == 200
     assert revoked.json()["status"] == "REVOKED"
 
     assert (
         client.post(
-            f"/roles/{trainer.assignment.id}/revoke", headers=staff.headers, json={}
+            f"/roles/{trainer.assignment.id}/revoke",
+            headers=staff.headers,
+            json={"reason_code": "RESPONSIBILITY_ENDED"},
         ).status_code
         == 409
     )
@@ -266,7 +272,9 @@ def test_assign_role_scope_must_reference_a_real_group_in_this_school(
 def test_last_owner_cannot_be_revoked(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db, role=RoleCode.OWNER)
     resp = client.post(
-        f"/roles/{staff.assignment.id}/revoke", headers=staff.headers, json={}
+        f"/roles/{staff.assignment.id}/revoke",
+        headers=staff.headers,
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
     )
     assert resp.status_code == 409
 
@@ -274,7 +282,9 @@ def test_last_owner_cannot_be_revoked(client: TestClient, db: Session) -> None:
 def test_last_owner_cannot_be_suspended(client: TestClient, db: Session) -> None:
     staff = bootstrap_actor(db, role=RoleCode.OWNER)
     resp = client.post(
-        f"/roles/{staff.assignment.id}/suspend", headers=staff.headers, json={}
+        f"/roles/{staff.assignment.id}/suspend",
+        headers=staff.headers,
+        json={"reason_code": "TEMPORARY_LEAVE"},
     )
     assert resp.status_code == 409
 
@@ -286,12 +296,18 @@ def test_second_owner_can_be_revoked_but_not_the_last(client: TestClient, db: Se
     )
 
     first = client.post(
-        f"/roles/{second_owner.assignment.id}/revoke", headers=staff.headers, json={}
+        f"/roles/{second_owner.assignment.id}/revoke",
+        headers=staff.headers,
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
     )
     assert first.status_code == 200
 
     # Now only one active owner remains, it is protected.
-    second = client.post(f"/roles/{staff.assignment.id}/revoke", headers=staff.headers, json={})
+    second = client.post(
+        f"/roles/{staff.assignment.id}/revoke",
+        headers=staff.headers,
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
+    )
     assert second.status_code == 409
 
 
@@ -344,7 +360,11 @@ def test_transfer_ownership_add_only_keeps_both_owners(client: TestClient, db: S
 
     # Both are now active owners, neither is the sole one, so both are
     # individually revocable.
-    ok = client.post(f"/roles/{staff.assignment.id}/revoke", headers=staff.headers, json={})
+    ok = client.post(
+        f"/roles/{staff.assignment.id}/revoke",
+        headers=staff.headers,
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
+    )
     assert ok.status_code == 200
 
 
@@ -396,7 +416,9 @@ def test_role_admin_does_not_cross_tenants(client: TestClient, db: Session) -> N
     assert resp.status_code == 404  # member_a not visible from org B
 
     suspend_resp = client.post(
-        f"/roles/{member_a.assignment.id}/suspend", headers=org_b.headers, json={}
+        f"/roles/{member_a.assignment.id}/suspend",
+        headers=org_b.headers,
+        json={"reason_code": "TEMPORARY_LEAVE"},
     )
     assert suspend_resp.status_code == 404
 
@@ -568,7 +590,9 @@ def test_a_revoked_role_is_regranted_as_a_new_assignment(
     original_id = trainer.assignment.id
 
     revoked = client.post(
-        f"/roles/{original_id}/revoke", headers=owner.headers, json={"reason": "zavrsio"}
+        f"/roles/{original_id}/revoke",
+        headers=owner.headers,
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
     )
     assert revoked.status_code == 200, revoked.text
 
@@ -617,6 +641,132 @@ def test_the_database_refuses_a_second_open_assignment(db: Session) -> None:
     )
     assert owner.assignment.scope_ref_id is None, "the null case is the one that regressed"
     db.add(duplicate)
+    with pytest.raises(IntegrityError):
+        db.commit()
+    db.rollback()
+
+
+# ---------------------------------------------------------------------------
+# F-49 — the reason vocabulary, the mandatory note, and the stamped triple
+# ---------------------------------------------------------------------------
+
+
+def test_a_note_is_required_for_the_codes_the_contract_marks(
+    client: TestClient, db: Session
+) -> None:
+    """§2.10 marks some codes with `*`: those need a note, the rest do not.
+
+    Both directions matter. Demanding a note everywhere would be the easy
+    over-correction and would make the common cases tedious; demanding it
+    nowhere is the state this replaces. `SECURITY_REVIEW` describes a decision
+    somebody took, and without the note the record says a decision happened
+    and not why.
+    """
+    owner = bootstrap_actor(db, org_name="Beleska", role=RoleCode.OWNER, given="Vlasnik")
+    trainer = add_actor(db, school=owner.school, role=RoleCode.TRAINER, given="Trener")
+
+    missing = client.post(
+        f"/roles/{trainer.assignment.id}/suspend",
+        headers=owner.headers,
+        json={"reason_code": "SECURITY_REVIEW"},
+    )
+    assert missing.status_code == 422, missing.text
+
+    with_note = client.post(
+        f"/roles/{trainer.assignment.id}/suspend",
+        headers=owner.headers,
+        json={"reason_code": "SECURITY_REVIEW", "reason_note": "Prijava sa terena."},
+    )
+    assert with_note.status_code == 200, with_note.text
+
+    db.expire_all()
+    from app.domains.identity.models import RoleAssignment
+
+    row = db.get(RoleAssignment, trainer.assignment.id)
+    assert row is not None
+    assert row.suspend_reason_note == "Prijava sa terena."
+
+
+def test_an_unmarked_code_needs_no_note(client: TestClient, db: Session) -> None:
+    """The other half of the pair above, as its own test so a regression that
+    made every code require a note could not hide behind it."""
+    owner = bootstrap_actor(db, org_name="BezBeleske", role=RoleCode.OWNER, given="Vlasnik")
+    trainer = add_actor(db, school=owner.school, role=RoleCode.TRAINER, given="Trener")
+
+    resp = client.post(
+        f"/roles/{trainer.assignment.id}/revoke",
+        headers=owner.headers,
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
+    )
+    assert resp.status_code == 200, resp.text
+
+    db.expire_all()
+    from app.domains.identity.models import RoleAssignment
+
+    row = db.get(RoleAssignment, trainer.assignment.id)
+    assert row is not None
+    assert row.revoke_reason_note is None
+    assert row.revoke_reason_code is not None
+    assert row.revoked_at is not None
+    assert row.revoked_by_person_id == owner.person.id
+
+
+def test_the_audit_summary_names_the_code_and_not_the_note(
+    client: TestClient, db: Session
+) -> None:
+    """The note stays on the row; the audit log gets the code.
+
+    The predecessor interpolated the free-text reason into the summary, so
+    client-supplied text landed in a trail that is read far more widely than
+    the assignment it describes — the same shape as F-42's leak in a different
+    column. What an audit reader needs is a value they can filter on.
+    """
+    from sqlalchemy import text as sql_text
+
+    owner = bootstrap_actor(db, org_name="Trag49", role=RoleCode.OWNER, given="Vlasnik")
+    trainer = add_actor(db, school=owner.school, role=RoleCode.TRAINER, given="Trener")
+    secret = "Poverljiv detalj iz prijave"
+
+    resp = client.post(
+        f"/roles/{trainer.assignment.id}/revoke",
+        headers=owner.headers,
+        json={"reason_code": "SECURITY_REVOKE", "reason_note": secret},
+    )
+    assert resp.status_code == 200, resp.text
+
+    summaries = [
+        r[0]
+        for r in db.execute(
+            sql_text(
+                "SELECT summary FROM audit_log WHERE entity_type = 'role_assignment'"
+                " AND entity_id = :i"
+            ),
+            {"i": trainer.assignment.id},
+        ).all()
+    ]
+    assert summaries, "the revocation should be audited"
+    joined = " ".join(summaries)
+    assert "SECURITY_REVOKE" in joined
+    assert secret not in joined
+
+
+def test_the_database_refuses_a_half_written_revocation(db: Session) -> None:
+    """§2.5: all three of the triple, or none.
+
+    Written against the constraint because the service always writes all
+    three — which is exactly why the constraint matters. A future code path
+    that set the status and forgot the stamp would leave a revoked assignment
+    that cannot say who revoked it or why, and the audit trail outlives the
+    person who could have told you.
+    """
+    import pytest
+    from app.domains.identity.enums import RoleAssignmentStatus
+    from sqlalchemy.exc import IntegrityError
+
+    owner = bootstrap_actor(db, org_name="PolaTrojke", role=RoleCode.OWNER, given="Vlasnik")
+    trainer = add_actor(db, school=owner.school, role=RoleCode.TRAINER, given="Trener")
+
+    trainer.assignment.status = RoleAssignmentStatus.REVOKED
     with pytest.raises(IntegrityError):
         db.commit()
     db.rollback()

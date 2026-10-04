@@ -2,15 +2,18 @@ from __future__ import annotations
 
 import datetime as dt
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.domains.identity.enums import (
+    REASON_NOTE_REQUIRED,
     InvitationStatus,
     InvitationType,
     PersonIdentityStatus,
     RoleAssignmentStatus,
     RoleCode,
+    RoleRevokeReason,
     RoleScopeType,
+    RoleSuspendReason,
 )
 
 
@@ -125,8 +128,40 @@ class UpdateGrantedAreasRequest(BaseModel):
     granted_areas: list[str] | None = None
 
 
-class RoleTransitionRequest(BaseModel):
-    reason: str | None = Field(default=None, max_length=500)
+class _ReasonedTransition(BaseModel):
+    """A role transition states why, with a code from M05 §2.10.
+
+    `reason` used to be `str | None` with a length limit and nothing else, and
+    it went only into an audit summary's text — so the trail carried whatever
+    the client sent, unaggregatable and unverifiable, and a reason outside any
+    vocabulary returned 200 (F-49).
+
+    The note stays free text because that is what §2.10 asks for, but it is
+    mandatory for the codes the contract marks with `*`: those describe a
+    decision somebody took, and the code alone records that one happened
+    without saying why.
+    """
+
+    reason_note: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def _note_required_for_marked_codes(self) -> _ReasonedTransition:
+        code = getattr(self, "reason_code", None)
+        if code is None:
+            return self
+        if code.value in REASON_NOTE_REQUIRED and not (self.reason_note or "").strip():
+            raise ValueError(
+                f"Razlog „{code.value}“ zahteva i obrazloženje (reason_note)."
+            )
+        return self
+
+
+class SuspendRoleRequest(_ReasonedTransition):
+    reason_code: RoleSuspendReason
+
+
+class RevokeRoleRequest(_ReasonedTransition):
+    reason_code: RoleRevokeReason
 
 
 class RoleAssignmentResponse(BaseModel):

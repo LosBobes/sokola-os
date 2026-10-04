@@ -3951,6 +3951,12 @@ export interface components {
             /** Reason */
             reason?: string | null;
         };
+        /** RevokeRoleRequest */
+        RevokeRoleRequest: {
+            reason_code: components["schemas"]["RoleRevokeReason"];
+            /** Reason Note */
+            reason_note?: string | null;
+        };
         /** RoleAssignmentResponse */
         RoleAssignmentResponse: {
             /** Display Name */
@@ -3980,15 +3986,20 @@ export interface components {
          */
         RoleCode: "OWNER" | "MANAGER" | "ADMIN" | "TRAINER" | "PARENT" | "STUDENT";
         /**
+         * RoleRevokeReason
+         * @enum {string}
+         */
+        RoleRevokeReason: "MEMBERSHIP_ENDED" | "RESPONSIBILITY_ENDED" | "ROLE_REPLACED" | "SECURITY_REVOKE" | "OWNER_TRANSFER";
+        /**
          * RoleScopeType
          * @enum {string}
          */
         RoleScopeType: "SCHOOL" | "BRANCH" | "GROUP";
-        /** RoleTransitionRequest */
-        RoleTransitionRequest: {
-            /** Reason */
-            reason?: string | null;
-        };
+        /**
+         * RoleSuspendReason
+         * @enum {string}
+         */
+        RoleSuspendReason: "SECURITY_REVIEW" | "TEMPORARY_LEAVE" | "ACCESS_PAUSE" | "MEMBERSHIP_SUSPENDED";
         /** RoomResponse */
         RoomResponse: {
             /** Capacity */
@@ -4362,6 +4373,12 @@ export interface components {
              * Format: date-time
              */
             starts_at: string;
+        };
+        /** SuspendRoleRequest */
+        SuspendRoleRequest: {
+            reason_code: components["schemas"]["RoleSuspendReason"];
+            /** Reason Note */
+            reason_note?: string | null;
         };
         /**
          * TenantPublic
@@ -8558,7 +8575,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RoleTransitionRequest"];
+                "application/json": components["schemas"]["RevokeRoleRequest"];
             };
         };
         responses: {
@@ -8600,7 +8617,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RoleTransitionRequest"];
+                "application/json": components["schemas"]["SuspendRoleRequest"];
             };
         };
         responses: {

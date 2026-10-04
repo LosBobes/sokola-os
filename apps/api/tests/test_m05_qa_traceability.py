@@ -2,7 +2,7 @@
 
 Seventh module under the gate. One test per runnable scenario named for its
 id, the rest declared in `BLOCKED` with a reason from a closed vocabulary, and
-a gate that fails if any of the 213 is neither. Nothing is skipped. 34 run.
+a gate that fails if any of the 213 is neither. Nothing is skipped. 35 run.
 
 **What this measurement found, which is not what was predicted.** M05 was
 recorded as blocked on F-29 and F-30, the two undecided role mappings.
@@ -87,7 +87,11 @@ from app.domains.authorization.platform_enums import PlatformRoleKey, PlatformRo
 from app.domains.authorization.platform_models import PlatformRoleAssignment
 from app.domains.authorization.platform_roles import effective_roles
 from app.domains.identity.auth_models import AuthIdentity, UserAccount
-from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
+from app.domains.identity.enums import (
+    RoleAssignmentStatus,
+    RoleCode,
+    RoleSuspendReason,
+)
 from app.domains.identity.models import RoleAssignment
 from app.domains.school.enums import MembershipStatus
 from app.domains.school.models import SchoolMembership
@@ -394,18 +398,6 @@ _block(
 # --- measured divergences, each one a finding ------------------------------
 _block(
     _diverges(
-        "`RoleTransitionRequest.reason` is free text, `str | None` with "
-        "max_length 500 and no vocabulary. Measured: suspending with "
-        "`NIJE_IZ_VOKABULARA_XYZ` returns 200, where the contract requires 422 "
-        "`RBAC_REASON_INVALID` and no change. M05 §2.10 fixes the allowed codes "
-        "per command, so this is a decided change rather than an open question "
-        "— it is a separate increment because it changes the request shape and "
-        "so the generated web client (F-49)"
-    ),
-    23,
-)
-_block(
-    _diverges(
         "a guardian relation is not required at assignment time. Measured: "
         "assigning PARENT to a member with no M07 guardian link returns 201, "
         "where the contract requires 422 `RBAC_GUARDIAN_RELATION_REQUIRED`. "
@@ -458,7 +450,7 @@ _block(
         "this is the module's own acceptance gate, not a behaviour. It "
         "requires 213/213 actually executed with 0 failed and 0 skipped, which "
         "is exactly what this file cannot assert about itself — and which is "
-        "false today in any case: 34 of the 213 run. Declared rather than "
+        "false today in any case: 35 of the 213 run. Declared rather than "
         "implemented so that no green run of this suite can be read as M05 "
         "having passed"
     ),
@@ -824,14 +816,14 @@ def test_m05_qa_021_the_last_active_owner_survives_both_transitions(
     suspended = client.post(
         f"/roles/{owner.assignment.id}/suspend",
         headers=owner.headers,
-        json={"reason": "pokusaj"},
+        json={"reason_code": "TEMPORARY_LEAVE"},
     )
     assert suspended.status_code == 409, suspended.text
 
     revoked = client.post(
         f"/roles/{owner.assignment.id}/revoke",
         headers=owner.headers,
-        json={"reason": "pokusaj"},
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
     )
     assert revoked.status_code == 409, revoked.text
 
@@ -857,7 +849,7 @@ def test_m05_qa_024_a_suspended_assignment_can_be_made_active_again(
     off = client.post(
         f"/roles/{trainer.assignment.id}/suspend",
         headers=owner.headers,
-        json={"reason": "pauza"},
+        json={"reason_code": "TEMPORARY_LEAVE"},
     )
     assert off.status_code == 200, off.text
 
@@ -1021,7 +1013,7 @@ def test_m05_qa_048_the_union_counts_only_active_assignments(
     off = client.post(
         f"/roles/{trainer_assignment.id}/suspend",
         headers=owner.headers,
-        json={"reason": "pauza"},
+        json={"reason_code": "TEMPORARY_LEAVE"},
     )
     assert off.status_code == 200, off.text
 
@@ -1056,7 +1048,9 @@ def test_m05_qa_049_a_known_id_from_another_school_is_a_safe_404(
     assert b.assignment.id not in ids
 
     write = client.post(
-        f"/roles/{b.assignment.id}/revoke", headers=a.headers, json={"reason": "pokusaj"}
+        f"/roles/{b.assignment.id}/revoke",
+        headers=a.headers,
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
     )
     assert write.status_code == 404, write.text
     assert b.school.name not in write.text
@@ -1100,7 +1094,9 @@ def test_m05_qa_050_a_shared_organization_carries_no_access(
     assert shared == [org_of_a], "both schools should now hang off one organization"
 
     denied = client.post(
-        f"/roles/{c.assignment.id}/revoke", headers=a.headers, json={"reason": "pokusaj"}
+        f"/roles/{c.assignment.id}/revoke",
+        headers=a.headers,
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
     )
     assert denied.status_code == 404, denied.text
 
@@ -1122,12 +1118,14 @@ def test_m05_qa_051_an_unknown_id_and_a_foreign_id_answer_identically(
     b = bootstrap_actor(db, org_name="QA051-B", role=RoleCode.OWNER, given="B")
 
     foreign = client.post(
-        f"/roles/{b.assignment.id}/revoke", headers=a.headers, json={"reason": "x"}
+        f"/roles/{b.assignment.id}/revoke",
+        headers=a.headers,
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
     )
     unknown = client.post(
         "/roles/rol_00000000000000000000000000/revoke",
         headers=a.headers,
-        json={"reason": "x"},
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
     )
 
     assert foreign.status_code == unknown.status_code == 404
@@ -1344,14 +1342,14 @@ def test_m05_qa_076_concurrent_owner_removals_cannot_reach_zero(
     gone = client.post(
         f"/roles/{second.assignment.id}/revoke",
         headers=first.headers,
-        json={"reason": "jedan odlazi"},
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
     )
     assert gone.status_code == 200, gone.text
 
     blocked = client.post(
         f"/roles/{first.assignment.id}/revoke",
         headers=first.headers,
-        json={"reason": "i drugi"},
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
     )
     assert blocked.status_code == 409, blocked.text
 
@@ -1719,7 +1717,7 @@ def test_every_m05_scenario_is_implemented_or_declared() -> None:
     assert not missing, f"neither implemented nor declared blocked: {sorted(missing)}"
     stray = (implemented | blocked) - declared
     assert not stray, f"ids not in the contract: {sorted(stray)}"
-    assert len(implemented) == 34, f"the docstring claims 34 run, found {len(implemented)}"
+    assert len(implemented) == 35, f"the docstring claims 35 run, found {len(implemented)}"
 
 
 def test_the_m05_blocked_reasons_name_one_of_four_causes() -> None:
@@ -1806,7 +1804,9 @@ def test_m05_qa_026_a_revoked_assignment_is_not_revived(
     original = trainer.assignment.id
 
     gone = client.post(
-        f"/roles/{original}/revoke", headers=owner.headers, json={"reason": "zavrsio"}
+        f"/roles/{original}/revoke",
+        headers=owner.headers,
+        json={"reason_code": "RESPONSIBILITY_ENDED"},
     )
     assert gone.status_code == 200, gone.text
 
@@ -1883,3 +1883,62 @@ def test_m05_qa_029_a_terminated_membership_closes_its_roles(
         {"i": mgr.assignment.id},
     ).all()
     assert "role_assignment.revoked" in [r[0] for r in trail]
+
+
+def test_m05_qa_023_an_unknown_suspend_reason_changes_nothing(
+    db: Session, client: TestClient
+) -> None:
+    """§2.10: the reason comes from a closed list, and a bad one is a refusal.
+
+    Declared as a divergence when this module was written: `reason` was
+    `str | None` with a length limit and no vocabulary, so suspending with
+    `NIJE_IZ_VOKABULARA_XYZ` returned 200 and the audit trail carried whatever
+    the client sent, interpolated into its summary text (F-49).
+
+    Three things are asserted, in this order, because the first two are what
+    make the third mean anything: the bad code is refused, *nothing changed* as
+    a result, and then the same call with a valid code succeeds and takes the
+    access away. A refusal that still wrote the status would satisfy a test
+    that only checked the 422.
+
+    The scenario also names an expected-version guard, which has no
+    counterpart — `RoleAssignment` carries no version column, declared against
+    QA-081.
+    """
+    owner = bootstrap_actor(db, org_name="QA023", role=RoleCode.OWNER, given="Vlasnik")
+    mgr = add_actor(db, school=owner.school, role=RoleCode.MANAGER, given="Menadzer")
+
+    assert client.get("/roles", headers=mgr.headers).status_code == 200
+
+    refused = client.post(
+        f"/roles/{mgr.assignment.id}/suspend",
+        headers=owner.headers,
+        json={"reason_code": "NIJE_IZ_VOKABULARA_XYZ"},
+    )
+    assert refused.status_code == 422, refused.text
+
+    db.expire_all()
+    untouched = db.get(RoleAssignment, mgr.assignment.id)
+    assert untouched is not None
+    assert untouched.status is RoleAssignmentStatus.ACTIVE
+    assert untouched.suspend_reason_code is None
+    assert untouched.suspended_at is None
+    assert client.get("/roles", headers=mgr.headers).status_code == 200
+
+    accepted = client.post(
+        f"/roles/{mgr.assignment.id}/suspend",
+        headers=owner.headers,
+        json={"reason_code": "TEMPORARY_LEAVE"},
+    )
+    assert accepted.status_code == 200, accepted.text
+
+    db.expire_all()
+    row = db.get(RoleAssignment, mgr.assignment.id)
+    assert row is not None
+    assert row.status is RoleAssignmentStatus.SUSPENDED
+    # §2.5's triple, all three together.
+    assert row.suspend_reason_code is RoleSuspendReason.TEMPORARY_LEAVE
+    assert row.suspended_at is not None
+    assert row.suspended_by_person_id == owner.person.id
+
+    assert client.get("/roles", headers=mgr.headers).status_code == 403

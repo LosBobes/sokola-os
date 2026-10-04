@@ -16,8 +16,9 @@ from app.domains.identity.schemas import (
     InvitationResponse,
     MeResponse,
     RevokeInvitationRequest,
+    RevokeRoleRequest,
     RoleAssignmentResponse,
-    RoleTransitionRequest,
+    SuspendRoleRequest,
     TransferOwnershipRequest,
     TransferOwnershipResponse,
     UpdateGrantedAreasRequest,
@@ -170,7 +171,7 @@ def update_granted_areas(
     responses={409: {"description": "Not active, or the school's last active owner."}},
 )
 def suspend_role_assignment(
-    assignment_id: str, body: RoleTransitionRequest, db: DbDep, context: RolesContext
+    assignment_id: str, body: SuspendRoleRequest, db: DbDep, context: RolesContext
 ) -> RoleAssignmentResponse:
     return roles_service.suspend_assignment(db, context, assignment_id, body)
 
@@ -182,7 +183,7 @@ def suspend_role_assignment(
     responses={409: {"description": "Already revoked, or the school's last active owner."}},
 )
 def revoke_role_assignment(
-    assignment_id: str, body: RoleTransitionRequest, db: DbDep, context: RolesContext
+    assignment_id: str, body: RevokeRoleRequest, db: DbDep, context: RolesContext
 ) -> RoleAssignmentResponse:
     return roles_service.revoke_assignment(db, context, assignment_id, body)
 

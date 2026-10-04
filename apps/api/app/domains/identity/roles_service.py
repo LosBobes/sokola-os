@@ -13,16 +13,23 @@ from app.common.enums import AuditDataClass, RecordStatus
 from app.common.errors import BadRequestError, ConflictError, NotFoundError
 from app.common.pagination import Page, PageParams
 from app.domains.identity import policy, repository
-from app.domains.identity.enums import RoleAssignmentStatus, RoleCode, RoleScopeType
+from app.domains.identity.enums import (
+    RoleAssignmentStatus,
+    RoleCode,
+    RoleRevokeReason,
+    RoleScopeType,
+)
 from app.domains.identity.models import Person, RoleAssignment
 from app.domains.identity.schemas import (
     AssignRoleRequest,
+    RevokeRoleRequest,
     RoleAssignmentResponse,
-    RoleTransitionRequest,
+    SuspendRoleRequest,
     TransferOwnershipRequest,
     TransferOwnershipResponse,
     UpdateGrantedAreasRequest,
 )
+from app.platform import clock
 from app.platform.audit.service import record_audit
 from app.platform.outbox.service import enqueue
 from app.security.context import RequestContext
@@ -190,12 +197,22 @@ def _emit_assignment_transition(
     assignment: RoleAssignment,
     person: Person,
     action: str,
-    reason: str | None,
+    reason_code: str,
 ) -> None:
+    """One audit row and one outbox event, naming the reason by code.
+
+    The code goes into the summary and the free-text note does not. The note is
+    on the row for whoever investigates that assignment; the audit log is read
+    far more widely, and what it needs is a value that can be aggregated and
+    filtered. Interpolating the note here is also how the predecessor put
+    client-supplied text into the trail — the same shape as F-42's leak, in a
+    different column.
+    """
     verb = {"suspended": "suspendovana", "revoked": "opozvana"}[action]
-    summary = f"Dodela uloge {assignment.role_code.value} za „{person.display_name}“ je {verb}."
-    if reason and reason.strip():
-        summary += f" Razlog: {reason.strip()}"
+    summary = (
+        f"Dodela uloge {assignment.role_code.value} za „{person.display_name}“"
+        f" je {verb}. Razlog: {reason_code}."
+    )
     record_audit(
         db,
         data_class=AuditDataClass.ROLE,
@@ -220,29 +237,63 @@ def _emit_assignment_transition(
 
 
 def suspend_assignment(
-    db: Session, context: RequestContext, assignment_id: str, req: RoleTransitionRequest
+    db: Session, context: RequestContext, assignment_id: str, req: SuspendRoleRequest
 ) -> RoleAssignmentResponse:
     assignment, person = _load_assignment(db, context, assignment_id)
     if assignment.status is not RoleAssignmentStatus.ACTIVE:
         raise ConflictError("Dodela uloge nije aktivna.")
     _guard_not_last_owner(db, context.school_id, assignment)
     assignment.status = RoleAssignmentStatus.SUSPENDED
-    _emit_assignment_transition(db, context, assignment, person, "suspended", req.reason)
+    # §2.5's triple, written together — the CHECK refuses a partial one, and
+    # the point of the constraint is that no code path can leave a suspension
+    # that does not say who decided it or why.
+    assignment.suspended_by_person_id = context.person_id
+    assignment.suspended_at = clock.now()
+    assignment.suspend_reason_code = req.reason_code
+    assignment.suspend_reason_note = (req.reason_note or "").strip() or None
+    _emit_assignment_transition(
+        db, context, assignment, person, "suspended", req.reason_code.value
+    )
     db.commit()
     return _assignment_response(assignment, person)
 
 
 def revoke_assignment(
-    db: Session, context: RequestContext, assignment_id: str, req: RoleTransitionRequest
+    db: Session, context: RequestContext, assignment_id: str, req: RevokeRoleRequest
 ) -> RoleAssignmentResponse:
     assignment, person = _load_assignment(db, context, assignment_id)
     if assignment.status is RoleAssignmentStatus.REVOKED:
         raise ConflictError("Dodela uloge je već opozvana.")
     _guard_not_last_owner(db, context.school_id, assignment)
-    assignment.status = RoleAssignmentStatus.REVOKED
-    _emit_assignment_transition(db, context, assignment, person, "revoked", req.reason)
+    _stamp_revocation(assignment, actor_person_id=context.person_id, code=req.reason_code,
+                      note=req.reason_note)
+    _emit_assignment_transition(
+        db, context, assignment, person, "revoked", req.reason_code.value
+    )
     db.commit()
     return _assignment_response(assignment, person)
+
+
+def _stamp_revocation(
+    assignment: RoleAssignment,
+    *,
+    actor_person_id: str | None,
+    code: RoleRevokeReason,
+    note: str | None = None,
+) -> None:
+    """Close an assignment and record who, when and why, together.
+
+    Shared by every path that revokes — the command, ownership transfer, and
+    M06's membership termination — because `ck_role_assignment_revoked_stamp`
+    refuses a REVOKED row with no stamp, and a caller that set only the status
+    would fail at commit with a constraint error rather than a sentence anyone
+    can act on.
+    """
+    assignment.status = RoleAssignmentStatus.REVOKED
+    assignment.revoked_by_person_id = actor_person_id
+    assignment.revoked_at = clock.now()
+    assignment.revoke_reason_code = code
+    assignment.revoke_reason_note = (note or "").strip() or None
 
 
 # ---------------------------------------------------------------------------
@@ -310,7 +361,13 @@ def transfer_ownership(
         # Safe: the new owner is already in place, so this never leaves the
         # school without an active owner even for an instant (§14/M4).
         _guard_not_last_owner(db, context.school_id, old)
-        old.status = RoleAssignmentStatus.REVOKED
+        # §2.10 has a code for exactly this, and it is the reason this path
+        # cannot just set the status: the revocation stamp is required.
+        _stamp_revocation(
+            old,
+            actor_person_id=context.person_id,
+            code=RoleRevokeReason.OWNER_TRANSFER,
+        )
         old_person = repository.get_person(db, req.revoke_from_person_id)
         assert old_person is not None
         record_audit(
