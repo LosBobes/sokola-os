@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import func, select
+from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
 from app.common.enums import RecordStatus
 from app.common.pagination import PageParams
 from app.domains.identity.accounts import login_emails_for_person
 from app.domains.identity.enums import (
+    OPEN_ROLE_ASSIGNMENT_STATUSES,
     InvitationStatus,
     RoleAssignmentStatus,
     RoleCode,
@@ -137,7 +138,7 @@ def get_assignment(db: Session, school_id: str, assignment_id: str) -> RoleAssig
     return db.execute(stmt).scalar_one_or_none()
 
 
-def find_assignment(
+def find_open_assignment(
     db: Session,
     *,
     school_id: str,
@@ -146,13 +147,22 @@ def find_assignment(
     scope_type: RoleScopeType,
     scope_ref_id: str | None,
 ) -> RoleAssignment | None:
-    """The one assignment matching the ``uq_role_assignment`` key, any status."""
+    """The one *open* assignment for this natural key, or none.
+
+    "Open" is `ACTIVE` or `SUSPENDED`, matching `uq_role_assignment_open`
+    exactly — so this returns at most one row by construction rather than by
+    hope. The predecessor filtered on status not at all and ended in
+    `scalar_one_or_none()`, which was correct only while a revoked row could
+    not coexist with a live one. It can now, deliberately: §5.2 makes REVOKED
+    terminal and history stays beside the new grant.
+    """
     stmt = select(RoleAssignment).where(
         RoleAssignment.school_id == school_id,
         RoleAssignment.person_id == person_id,
         RoleAssignment.role_code == role_code,
         RoleAssignment.scope_type == scope_type,
         RoleAssignment.scope_ref_id == scope_ref_id,
+        RoleAssignment.status.in_(OPEN_ROLE_ASSIGNMENT_STATUSES),
     )
     return db.execute(stmt).scalar_one_or_none()
 
@@ -174,8 +184,17 @@ def list_school_assignments(
 
 
 def count_active_owners(db: Session, school_id: str) -> int:
-    """Active OWNER role assignments in this org, the protected-last-owner set."""
-    stmt = select(func.count()).select_from(RoleAssignment).where(
+    """How many *people* actively own this school — the protected-last-owner set.
+
+    Distinct persons, not rows. The last-owner guard asks "would this leave the
+    school ownerless", which is a question about people; counting assignments
+    answered it correctly only while one person could not hold two. Until
+    `uq_role_assignment_open` they could, because the old unique constraint did
+    not bind when `scope_ref_id` was null (F-51) — so a duplicated row read as
+    a second owner and made the guard's answer depend on a bug elsewhere.
+    Counting people is right regardless of what the schema permits.
+    """
+    stmt = select(func.count(distinct(RoleAssignment.person_id))).where(
         RoleAssignment.school_id == school_id,
         RoleAssignment.role_code == RoleCode.OWNER,
         RoleAssignment.status == RoleAssignmentStatus.ACTIVE,
@@ -233,7 +252,7 @@ def expire_stale_pending(db: Session, invitation: Invitation, *, now: dt.datetim
 __all__ = [
     "count_active_owners",
     "expire_stale_pending",
-    "find_assignment",
+    "find_open_assignment",
     "get_assignment",
     "get_guardian_access",
     "get_guardian_relationship",

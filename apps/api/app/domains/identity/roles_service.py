@@ -53,6 +53,9 @@ def assign_role(
         raise BadRequestError(
             "Vlasništvo se dodeljuje isključivo kroz prenos vlasništva (ownership/transfer)."
         )
+    # F-47: before anything is resolved, and before the target is revealed.
+    # An actor who may not grant this role learns nothing about who holds it.
+    policy.validate_assignable_rank(context.role_code, req.role_code)
     person = repository.get_school_person(db, context.school_id, req.person_id)
     if person is None:
         raise NotFoundError("Osoba nije pronađena u ovoj školi.")
@@ -66,7 +69,7 @@ def assign_role(
         actor_granted_areas=context.granted_areas,
     )
 
-    existing = repository.find_assignment(
+    existing = repository.find_open_assignment(
         db,
         school_id=context.school_id,
         person_id=req.person_id,
@@ -78,6 +81,13 @@ def assign_role(
         raise ConflictError("Osoba već ima ovu ulogu.")
 
     if existing is not None:
+        # Only SUSPENDED reaches here now, because the lookup is restricted to
+        # open rows. That is the whole of F-48: reviving a suspended
+        # assignment is what §5.2 asks for (M05-QA-024), and reviving a
+        # *revoked* one is what it forbids (M05-QA-026). Both used to come
+        # down this branch under the same id, so a revocation and its reversal
+        # ended up attached to one row. A revoked assignment is now history and
+        # a fresh grant mints a new id below.
         existing.status = RoleAssignmentStatus.ACTIVE
         existing.record_status = RecordStatus.ACTIVE
         existing.granted_areas = req.granted_areas
@@ -250,7 +260,7 @@ def transfer_ownership(
     if new_owner is None:
         raise NotFoundError("Osoba nije pronađena u ovoj školi.")
 
-    existing = repository.find_assignment(
+    existing = repository.find_open_assignment(
         db,
         school_id=context.school_id,
         person_id=req.new_owner_person_id,
@@ -287,7 +297,7 @@ def transfer_ownership(
 
     revoked_response: RoleAssignmentResponse | None = None
     if req.revoke_from_person_id:
-        old = repository.find_assignment(
+        old = repository.find_open_assignment(
             db,
             school_id=context.school_id,
             person_id=req.revoke_from_person_id,

@@ -51,6 +51,16 @@ class RoleAssignmentStatus(enum.StrEnum):
     REVOKED = "REVOKED"
 
 
+#: The statuses an assignment can still be acted on in. `REVOKED` is terminal
+#: (§5.2), so it is absent — and `uq_role_assignment_open` is defined over
+#: exactly this set, which is what lets a revoked row stay as history beside a
+#: later grant of the same role.
+OPEN_ROLE_ASSIGNMENT_STATUSES = (
+    RoleAssignmentStatus.ACTIVE,
+    RoleAssignmentStatus.SUSPENDED,
+)
+
+
 class InvitationType(enum.StrEnum):
     STAFF = "STAFF"
     PARENT = "PARENT"

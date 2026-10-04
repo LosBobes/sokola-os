@@ -1,11 +1,16 @@
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
 from app.common.enums import RecordStatus
 from app.common.pagination import PageParams
-from app.domains.identity.enums import PersonMergeStatus, RoleAssignmentStatus, RoleCode
+from app.domains.identity.enums import (
+    OPEN_ROLE_ASSIGNMENT_STATUSES,
+    PersonMergeStatus,
+    RoleAssignmentStatus,
+    RoleCode,
+)
 from app.domains.identity.models import Person, PersonMergeRecord, RoleAssignment
 from app.domains.people.models import GuardianRelationship, GuardianSchoolAccess
 from app.domains.people.profile_models import (
@@ -104,9 +109,44 @@ def get_membership(
     return db.execute(stmt).scalar_one_or_none()
 
 
+def revoke_open_role_assignments(
+    db: Session, school_id: str, person_id: str
+) -> list[RoleAssignment]:
+    """Close every open role assignment this person holds in this school.
+
+    Returns the rows it changed, so the caller can audit each one. Flushes
+    rather than commits: §7.1 requires this to land in the same transaction as
+    the membership transition that caused it, and a commit here would make a
+    half-done termination durable.
+    """
+    rows = list(
+        db.execute(
+            select(RoleAssignment).where(
+                RoleAssignment.school_id == school_id,
+                RoleAssignment.person_id == person_id,
+                RoleAssignment.status.in_(OPEN_ROLE_ASSIGNMENT_STATUSES),
+            )
+        ).scalars()
+    )
+    for row in rows:
+        row.status = RoleAssignmentStatus.REVOKED
+    if rows:
+        db.flush()
+    return rows
+
+
 def count_active_owners(db: Session, school_id: str) -> int:
-    """Active OWNER role assignments in this org, the protected-last-owner set."""
-    stmt = select(func.count()).select_from(RoleAssignment).where(
+    """How many *people* actively own this school — the protected-last-owner set.
+
+    Distinct persons, not rows. The last-owner guard asks "would this leave the
+    school ownerless", which is a question about people; counting assignments
+    answered it correctly only while one person could not hold two. Until
+    `uq_role_assignment_open` they could, because the old unique constraint did
+    not bind when `scope_ref_id` was null (F-51) — so a duplicated row read as
+    a second owner and made the guard's answer depend on a bug elsewhere.
+    Counting people is right regardless of what the schema permits.
+    """
+    stmt = select(func.count(distinct(RoleAssignment.person_id))).where(
         RoleAssignment.school_id == school_id,
         RoleAssignment.role_code == RoleCode.OWNER,
         RoleAssignment.status == RoleAssignmentStatus.ACTIVE,

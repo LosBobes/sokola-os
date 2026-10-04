@@ -300,7 +300,11 @@ def _grant_role(
     scope_ref_id: str | None,
     granted_areas: list[str] | None,
 ) -> RoleAssignment:
-    existing = repository.find_assignment(
+    # F-48 again, on the invitation-acceptance path. This revived whatever it
+    # found, so accepting an invitation for a role that had been *revoked*
+    # restored the revoked row rather than granting a new one. Narrowing the
+    # lookup to open rows fixes both call sites with the same change.
+    existing = repository.find_open_assignment(
         db,
         school_id=school_id,
         person_id=person_id,

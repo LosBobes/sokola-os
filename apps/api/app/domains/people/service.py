@@ -153,6 +153,53 @@ def _guard_not_last_owner(db: Session, school_id: str, person_id: str) -> None:
         raise ConflictError(_LAST_OWNER_ERROR)
 
 
+def _revoke_roles_of_ended_membership(
+    db: Session,
+    context: RequestContext,
+    membership: SchoolMembership,
+    person: Person,
+) -> None:
+    """M05 §5.2 / M05-QA-029: a terminated membership closes its roles too.
+
+    This was F-50, and the shape of it is worth stating because the access
+    control was never wrong. The request guard re-proves membership on every
+    call, so a terminated member was already denied — measured 403 with the
+    role row still reading ACTIVE. What survived was the *record*, and a role
+    assignment is keyed on `(person, school)` rather than on the membership
+    episode. So a second episode for the same person — a re-hire, a re-added
+    contact — found the old row still open and handed back whatever it granted,
+    MANAGER included. Measured end to end with a control at each step: 200,
+    then 403 after termination, then 200 again once a new episode existed.
+
+    No product path creates that second episode today (`POST /people` refuses
+    the duplicate, `membership/resume` refuses a terminated row), which is why
+    it was latent rather than live. The contract closes the roles at
+    termination precisely so the safety does not rest on no such path ever
+    being added.
+
+    Audited one row at a time rather than as a summary: each revocation is a
+    security mutation in its own right, and "three roles were closed" is not
+    something a reader can act on six months later.
+    """
+    for assignment in repository.revoke_open_role_assignments(
+        db, context.school_id, person_id=membership.person_id
+    ):
+        record_audit(
+            db,
+            data_class=AuditDataClass.ROLE,
+            action="role_assignment.revoked",
+            entity_type="role_assignment",
+            entity_id=assignment.id,
+            summary=(
+                f"Uloga {assignment.role_code.value} je opozvana jer je "
+                f"članstvo osobe „{person.display_name}“ okončano."
+            ),
+            school_id=context.school_id,
+            actor_person_id=context.person_id,
+            context={"person_id": membership.person_id, "cause": "MEMBERSHIP_ENDED"},
+        )
+
+
 def _emit_membership_change(
     db: Session,
     context: RequestContext,
@@ -241,6 +288,7 @@ def end_membership(
     membership_service.terminate_membership(
         db, membership, reason_code=_reason_code(req.reason, "MEMBERSHIP_ENDED")
     )
+    _revoke_roles_of_ended_membership(db, context, membership, person)
     _emit_membership_change(db, context, membership, person, "ended", req.reason)
     db.commit()
     return _membership_response(db, context.school_id, membership)
