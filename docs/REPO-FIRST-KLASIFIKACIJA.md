@@ -593,6 +593,15 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Primenjeno:** migracija `c58d1f4e7a93` zamenjuje ga parcijalnim unique indeksom nad `ACTIVE` i `SUSPENDED` sa `NULLS NOT DISTINCT` (Postgres 15+; projekat koristi 16). Migracija **odbija da se izvrši** ako već postoje otvoreni duplikati i imenuje ključeve, namerno bez automatske deduplikacije: izbor koje dve ACTIVE dodele ukinuti odlučuje ko zadržava pristup, a redovi ne kažu koja je bila nameravana.
 - **Status:** `OTKLONJENO`; pokriveno testom koji piše direktno protiv constraint-a.
 
+### F-52 — test šema se gradi na dva načina; lokalno `create_all` izostavlja sve što postoji samo u migraciji
+
+- **Nalaz:** `tests/conftest.py` gradi test bazu sa `Base.metadata.create_all(engine)` i ništa više. To pravi tabele, indekse i constraint-e iz modela, ali **ne** objekte koji postoje samo u migraciji — trigere, funkcije, rule-ove, RLS politike.
+- **Konkretan primer:** `audit_log_append_only_guard`, triger iz migracije `b7e2a4c91f08`, je jedina stvar koja sprečava `UPDATE`/`DELETE` nad audit logom. Posle ručnog `DROP DATABASE sokola_test` + `CREATE DATABASE`, šest testova u `test_audit_seal.py` pada sa `DID NOT RAISE` — ne zato što je zaštita pokvarena, nego zato što je u toj bazi nikad nije ni bilo.
+- **Zašto CI ovo ne vidi:** u CI-ju `SOKOLA_DATABASE_URL` pokazuje na bazu `sokola` (ne `sokola_test`), a korak `alembic upgrade head` se izvršava **pre** `pytest`-a. CI, dakle, testira **migriranu** šemu. `os.environ.setdefault` u conftest-u ne menja već postavljenu promenljivu, pa se dve putanje nikad ne sretnu.
+- **Posledica:** test baza nije reproducibilna iz conftest-a. Svako ko je prvi put napravi — nov developer, ili bilo kakva rekreacija — dobija tiho slabiju šemu od one koju CI proverava, i testovi koji dokazuju DB-level zaštite padaju iz pogrešnog razloga. Pada **bučno**, što je bolji ishod od tihog prolaza, ali trošak je ciklus dijagnostike po rekreaciji.
+- **Preporuka (nije primenjeno):** da `conftest` gradi šemu kroz `alembic upgrade head` umesto `create_all`, ili da ostane `create_all` ali da CI i lokalno koriste istu bazu i isti put. Prva opcija je ispravnija jer testira ono što se zaista deploy-uje; druga je manja promena. Ovo je odluka o test infrastrukturi, pa je zapisana a ne odlučena.
+- **Status:** `CHALLENGE_NOT_APPLIED`; nije uzrok ni jednog produkcionog defekta, ali je uzrok lažnih crvenih testova pri rekreaciji test baze.
+
 ## 5. Šta je u ovom radu stvarno urađeno
 
 **Talas 0 — baseline i klasifikacija**
