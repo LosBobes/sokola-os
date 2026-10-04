@@ -26,6 +26,12 @@ scenarios are that, and two of them are findings rather than mere differences:
 * **QA-065** asks that no account be creatable without an invitation attempt.
   `/auth/password/register` does exactly that, deliberately, under M01 §4.9.
 
+QA-057 was a fourth until this change. It asked that acceptance into a school
+deactivated mid-flow be fail-closed, and `accept_invitation` did not read
+`School.status` at all — so the write landed in a school that was off. It is
+now implemented rather than declared, and the guard it tests is the point of
+this increment (F-44).
+
 One defect found here is fixed in this PR rather than recorded: the audit
 summaries for `invitation.sent`, `invitation.revoked` and `invitation.reissued`
 each wrote the **plaintext recipient email** into the audit trail, which §4.3
@@ -44,6 +50,9 @@ from app.domains.identity.auth_enums import GOOGLE_ISSUER, GOOGLE_PROVIDER
 from app.domains.identity.enums import RoleCode
 from app.domains.identity.invite_tokens import hash_token
 from app.domains.identity.models import Person
+from app.domains.school import anchor
+from app.domains.school.enums import SchoolStatus, SchoolStatusReason
+from app.domains.school.models import School
 from app.security.auth import DEV_PERSON_HEADER
 from app.security.deps import CONTEXT_HEADER
 from fastapi.testclient import TestClient
@@ -197,11 +206,6 @@ BLOCKED.update(
             "refused and `INVITATION_ACCOUNT_INACTIVE` does not exist"
         ),
         "M02-QA-052": _absent("no M01 proof is consumed by acceptance, so none can expire"),
-        "M02-QA-057": _diverges(
-            "`accept_invitation` does not read the school's status, so "
-            "acceptance into a school deactivated mid-flow is not fail-closed "
-            "(F-44)"
-        ),
         "M02-QA-058": _absent(
             "an invitation stores the role and areas it will grant but no "
             "policy version, so there is no snapshot to have gone stale"
@@ -1016,3 +1020,84 @@ def test_m02_qa_081_a_profile_from_another_school_cannot_be_targeted(
     assert cross_tenant.json() == nonexistent.json()
     assert "Tudji" not in cross_tenant.text
     assert db.execute(text("SELECT count(*) FROM invitation")).scalar_one() == 0
+
+
+def test_m02_qa_057_a_school_deactivated_mid_flow_refuses_the_acceptance(
+    db: Session, client: TestClient
+) -> None:
+    """§11.4: the final guard is fail-closed on the school, and the account's
+    other schools are untouched.
+
+    This is the scenario F-44 was recorded against. `accept_invitation`
+    checked the invitation's status, its expiry and the recipient's address,
+    and never read `School.status` — so a school deactivated between issue and
+    accept still took the write. No *access* resulted, because the tenant
+    guard refuses a deactivated school on the next request (M04-QA-057 proves
+    that), but a membership and a role assignment were created in a school
+    that was off. Rows nobody expects are their own problem: they are what a
+    later reactivation, export or report reads back as real.
+
+    The refusal reuses `ConflictError`, the same shape as revoked and expired,
+    rather than introducing a code of its own. F-43 is already a finding about
+    acceptance refusals being distinguishable from one another; this change
+    does not add to it.
+
+    Both halves are asserted. The second is the one a careless fix breaks: the
+    person's *other* school must still work, because deactivating one school
+    is not an account-level event.
+    """
+    target = bootstrap_actor(db, org_name="Ugašena škola", given="Ana")
+    other = bootstrap_actor(db, org_name="Druga škola", given="Bora")
+    email = "kasni.prihvat@example.invalid"
+    link_login_email(db, person=other.person, email=email)
+
+    invitation_id, token = _invite(client, target, email=email, role_code="TRAINER")
+
+    # The school goes away after the invitation was issued and before it is
+    # taken up — the race §11.4 names.
+    anchor.transition_status(
+        db,
+        school=db.get(School, target.school.id),
+        to_status=SchoolStatus.DEACTIVATED,
+        reason_code=SchoolStatusReason.OPERATIONAL_PAUSE,
+        actor_ref="test",
+        correlation_id="qa-057",
+    )
+    db.commit()
+
+    before_memberships = db.execute(
+        text("SELECT count(*) FROM school_membership WHERE school_id = :s"),
+        {"s": target.school.id},
+    ).scalar_one()
+
+    refused = _accept(client, other.person, token)
+    assert refused.status_code == 409, refused.text
+
+    # Nothing was written into the school that is off.
+    assert (
+        db.execute(
+            text("SELECT count(*) FROM school_membership WHERE school_id = :s"),
+            {"s": target.school.id},
+        ).scalar_one()
+        == before_memberships
+    )
+    assert (
+        db.execute(
+            text(
+                "SELECT count(*) FROM role_assignment "
+                "WHERE school_id = :s AND person_id = :p"
+            ),
+            {"s": target.school.id, "p": other.person.id},
+        ).scalar_one()
+        == 0
+    )
+    # The invitation is not consumed: it was never accepted.
+    assert (
+        db.execute(
+            text("SELECT status FROM invitation WHERE id = :id"), {"id": invitation_id}
+        ).scalar_one()
+        == "PENDING"
+    )
+
+    # And the account's other school still works.
+    assert client.get("/people", headers=other.headers).status_code == 200
