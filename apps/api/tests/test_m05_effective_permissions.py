@@ -25,10 +25,17 @@ from app.application.effective_permissions import (
 )
 from app.domains.authorization.bindings import PolicyUnavailableError
 from app.domains.identity.enums import RoleCode
-from sqlalchemy import text
+from app.domains.identity.models import RoleAssignment
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from tests.factories import add_membership, assign_role, make_person, make_school
+from tests.factories import (
+    add_membership,
+    assign_role,
+    make_person,
+    make_school,
+    revoke_assignment_row,
+)
 
 
 def _with_roles(db: Session, *roles: RoleCode):
@@ -111,14 +118,18 @@ def test_another_schools_role_grants_nothing_here(db: Session) -> None:
 
 
 def test_a_revoked_assignment_grants_nothing(db: Session) -> None:
+    """The row goes through the factory helper rather than a bare status
+    UPDATE: §2.5's revocation stamp is a CHECK now, so an unstamped REVOKED
+    row cannot exist at all, and a test that wrote one would fail at commit
+    for a reason unrelated to what it is asserting."""
     person, school = _with_roles(db, RoleCode.OWNER)
-    db.execute(
-        text(
-            "UPDATE role_assignment SET status = 'REVOKED'"
-            " WHERE person_id = :p AND school_id = :s"
-        ),
-        {"p": person.id, "s": school.id},
-    )
+    assignment = db.execute(
+        select(RoleAssignment).where(
+            RoleAssignment.person_id == person.id,
+            RoleAssignment.school_id == school.id,
+        )
+    ).scalars().one()
+    revoke_assignment_row(db, assignment, actor_person_id=person.id)
     db.commit()
     assert effective_permissions(db, person_id=person.id, school_id=school.id) == frozenset()
 

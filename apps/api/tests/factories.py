@@ -11,7 +11,7 @@ from app.common.ids import new_id
 from app.common.slug import slugify
 from app.domains.identity.accounts import create_account_with_identity
 from app.domains.identity.auth_enums import GOOGLE_ISSUER, GOOGLE_PROVIDER
-from app.domains.identity.enums import RoleCode
+from app.domains.identity.enums import RoleAssignmentStatus, RoleCode, RoleRevokeReason
 from app.domains.identity.models import Person, RoleAssignment
 from app.domains.organization.enums import OrganizationSchoolChangeReason
 from app.domains.organization.models import Organization
@@ -177,6 +177,37 @@ def bootstrap_actor(
     add_membership(db, person=person, school=org)
     assignment = assign_role(db, person=person, school=org, role=role)
     return Actor(person=person, school=org, assignment=assignment)
+
+
+def revoke_assignment_row(
+    db: Session,
+    assignment: RoleAssignment,
+    *,
+    actor_person_id: str,
+    code: RoleRevokeReason = RoleRevokeReason.RESPONSIBILITY_ENDED,
+) -> RoleAssignment:
+    """Close an assignment directly, with the stamp §2.5 requires.
+
+    `ck_role_assignment_revoke_triple` is all-or-none and
+    `ck_role_assignment_revoked_stamp` refuses a REVOKED row with no stamp, so
+    a test that set only the status now fails at commit with a constraint
+    error. Tests that want the revoked *state* come through here; tests about
+    the command should call the endpoint, so the service's own stamping is
+    what is under test.
+
+    `actor_person_id` has no default on purpose. The triple is all-or-none, so
+    there is no such thing as a revocation with a reason and no actor — and a
+    helper that quietly passed `None` would write exactly the half-triple the
+    constraint exists to refuse. In a state fixture the attribution is
+    nominal, so callers pass whichever person is in scope; the point is that
+    they have to decide.
+    """
+    assignment.status = RoleAssignmentStatus.REVOKED
+    assignment.revoked_by_person_id = actor_person_id
+    assignment.revoked_at = clock.now()
+    assignment.revoke_reason_code = code
+    db.flush()
+    return assignment
 
 
 def add_actor(
