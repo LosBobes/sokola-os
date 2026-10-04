@@ -550,6 +550,37 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Širi problem, neispravljen:** **nijedna** zavisnost u `pyproject.toml` nema gornju granicu. Isto se ponovilo i ponoviće se sa `fastapi`, `starlette`, `pydantic-core` i ostalima — svaka od njih danas ima noviju verziju od instalirane. To je odluka za vlasnika: ili lockfile (`uv.lock`/`requirements.txt` sa hash-evima) ili gornje granice po paketu. Pojedinačni pin ovde rešava današnji otkaz, ne klasu otkaza.
 - **Status:** `OTKLONJENO za SQLAlchemy`; klasa problema otvorena.
 
+### F-47 — OWNER, MANAGER i ADMIN imaju identičan set oblasti; MANAGER može da dodeli MANAGER-a
+
+- **Nalaz:** `ROLE_DEFAULT_AREAS` daje `OWNER`, `MANAGER` i `ADMIN` **isti** `_STAFF_AREAS`. Administracija uloga je zaštićena jednom od tih oblasti (`PermissionArea.ROLES`), pa MANAGER prolazi isti guard kao OWNER.
+- **Izmereno, ne pretpostavljeno:** MANAGER koji poziva `POST /roles` sa `role_code=MANAGER` dobija **201**. Ugovor (M05-QA-015) zahteva 403 `RBAC_ROLE_ASSIGNMENT_NOT_ALLOWED`.
+- **Posledica:** cela rang struktura iz §2.4 nema protivtežu u repo-u. Menadžer pravi menadžere; ADMIN i MANAGER su autorizaciono nerazlučivi. Jedina stvarna razlika koju repo pravi su prenos vlasništva i zaštita poslednjeg vlasnika, koji su posebno kodirani.
+- **Zašto nije ispravljeno ovde:** uvođenje ranga menja ko šta može da dodeli u postojećim školama — to je odluka o proizvodu, ne čišćenje koda. Popravka bez odluke bi tiho oduzela prava ljudima koji ih danas koriste.
+- **Status:** `CHALLENGE_NOT_APPLIED`; M05-QA-015 je deklarisan kao divergencija.
+
+### F-48 — REVOKED dodela uloge nije terminalna; `assign_role` je oživljava pod istim ID-em
+
+- **Nalaz:** `assign_role` nađe postojeći red i vrati ga na `ACTIVE` uz audit `role_assignment.reactivated`, bez obzira na to da li je bio `SUSPENDED` ili `REVOKED`.
+- **Izmereno:** opoziv TRAINER dodele, pa ponovna dodela istoj osobi → **201 sa *originalnim* `assignment_id`**, red ponovo `ACTIVE`. Ugovor (M05-QA-026) zahteva 409 `RBAC_ROLE_INVALID_TRANSITION` i nov ID.
+- **Bitna nijansa:** oživljavanje `SUSPENDED` dodele je **ispravno** — M05-QA-024 ga izričito traži i implementiran je. Defekt je što `REVOKED`, koji ugovor čini terminalnim, ide istom putanjom. Popravka mora da razdvoji dva statusa, ne da ukloni putanju.
+- **Posledica:** opoziv i njegovo poništenje završavaju vezani za jedan red, pa istorija ne razlikuje „uloga je bila opozvana i vraćena" od „uloga je bila pauzirana i vraćena".
+- **Status:** `CHALLENGE_NOT_APPLIED`.
+
+### F-49 — razlozi za suspenziju i opoziv uloge su slobodan tekst
+
+- **Nalaz:** `RoleTransitionRequest.reason` je `str | None` sa `max_length=500` i bez vokabulara.
+- **Izmereno:** suspenzija sa `reason="NIJE_IZ_VOKABULARA_XYZ"` vraća **200**. Ugovor (M05-QA-023) zahteva 422 `RBAC_REASON_INVALID` i nepromenjeno stanje.
+- **Posledica:** razlog ne može da se agregira, filtrira ni proveri. Audit trag sadrži ono što je klijent poslao, uključujući i prazno.
+- **Status:** `CHALLENGE_NOT_APPLIED`.
+
+### F-50 — okončanje članstva ne opoziva uloge, a dodela je vezana za (osoba, škola) a ne za epizodu članstva
+
+- **Nalaz:** `POST /people/{id}/membership/end` ostavlja sve `RoleAssignment` redove te osobe `ACTIVE`. `RoleAssignment` nema `school_membership_id`; ključ je `(person_id, school_id)`.
+- **Izmereno sa pozitivnom kontrolom:** MANAGER sa aktivnim članstvom → `GET /roles` **200**; posle `membership/end` → **403** (guard ispravno ponovo dokazuje članstvo), a red uloge je i dalje `ACTIVE`; posle ubacivanja **druge** `ACTIVE` epizode članstva → ponovo **200**, sa vraćenom MANAGER ulogom.
+- **Latentno, ne aktivno:** nijedna proizvodna putanja danas ne pravi tu drugu epizodu — `POST /people` vraća 409 na duplikat, a `membership/resume` odbija okončano članstvo („Okončano članstvo se ne može nastaviti"). Ranjivost je u tome što bezbednost zavisi od toga da takva putanja nikada ne nastane.
+- **Zašto ugovor traži drugačije:** M05-QA-029 zahteva da svi otvoreni role/grant zapisi te epizode budu atomarno `REVOKED` i da **nova epizoda ne oživljava** — upravo zato da ponovni prijem osobe ne vrati prava koja je imala.
+- **Status:** `CHALLENGE_NOT_APPLIED`; preporučena popravka je opoziv uloga u istoj transakciji sa okončanjem članstva.
+
 ## 5. Šta je u ovom radu stvarno urađeno
 
 **Talas 0 — baseline i klasifikacija**
