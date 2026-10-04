@@ -25,15 +25,29 @@ from app.domains.authorization.models import (
 )
 
 
-class PolicyUnavailableError(AppError):
-    """§3.1: an unavailable policy store is a deny, not an empty answer.
+class PermissionsUnavailableError(AppError):
+    """§3.1: when a permission set cannot be computed, the answer is a refusal
+    — never an empty set.
 
-    Returning an empty permission set would be indistinguishable from "this
-    person may do nothing", and the two need very different handling — one is
-    a correct answer, the other is an outage.
+    An empty set would be indistinguishable from "this person may do nothing",
+    and the two need very different handling: one is a correct answer, the
+    other is an outage or an undecided mapping.
+
+    This base exists so a caller wiring the resolver into a guard can catch
+    *every* "I cannot answer" in one place. The subclasses say which condition
+    it was, because the remedies differ — one is operational, the other is a
+    decision nobody has taken — but no caller should have to enumerate them to
+    fail closed. Catching only one and letting the other escape as a bare 500
+    is the drift this prevents.
     """
 
     status_code = 500
+    code = "PERMISSIONS_UNAVAILABLE"
+
+
+class PolicyUnavailableError(PermissionsUnavailableError):
+    """The policy store has no ACTIVE revision: an outage, not an answer."""
+
     code = "AUTHORIZATION_POLICY_UNAVAILABLE"
 
 

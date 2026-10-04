@@ -20,8 +20,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.common.errors import AppError
 from app.domains.authorization.bindings import (
+    PermissionsUnavailableError,
     active_revision_id,
     permissions_for_role_keys,
 )
@@ -29,7 +29,7 @@ from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
 from app.domains.identity.models import RoleAssignment
 
 
-class RoleMappingUnavailableError(AppError):
+class RoleMappingUnavailableError(PermissionsUnavailableError):
     """This repo's role has no M05 counterpart, so no permission set can be
     computed for it. `STUDENT` is the remaining case (F-29 settled `ADMIN`).
 
@@ -39,7 +39,6 @@ class RoleMappingUnavailableError(AppError):
     without ever being told there was one.
     """
 
-    status_code = 500
     code = "ROLE_MAPPING_UNAVAILABLE"
 
 
@@ -114,6 +113,7 @@ def effective_permissions(
 #: The implementations moved into the authorization domain, where the tables
 #: they read live; see `app/domains/authorization/bindings.py`.
 __all__ = [
+    "PermissionsUnavailableError",
     "RoleMappingUnavailableError",
     "active_revision_id",
     "canonical_role_key",
