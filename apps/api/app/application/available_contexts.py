@@ -51,12 +51,12 @@ MAX_PAGE_SIZE = 100
 #: apart as two roles get, so borrowing this one would grant `ADMIN` a
 #: permission set on the strength of a mapping chosen for a different question.
 #:
-#: Only the *workspace* mapping, and only because that part is settled while
-#: the permission mapping is not (F-29). The ambiguity there is `ADMIN`: it
-#: could become `MANAGER` or `LIMITED_ADMIN`, and those differ sharply in what
-#: they may do. They do not differ here — §2.4 puts `OWNER`, `MANAGER` and
-#: `LIMITED_ADMIN` all in the `ADMIN` workspace — so a chooser can be built on
-#: this today without pre-deciding F-29.
+#: Only the *workspace* mapping. F-29 has since been decided the same way for
+#: permissions (`ADMIN` → `MANAGER`), but the two maps stay separate: here the
+#: answer is forced, because §2.4 puts `OWNER`, `MANAGER` and `LIMITED_ADMIN`
+#: all in the `ADMIN` workspace and the choice cannot matter; there it is a
+#: judgement about authority. If `ADMIN` is ever narrowed to `LIMITED_ADMIN`
+#: for permissions, this must not move with it.
 #:
 #: `STUDENT` is absent on purpose. M05 has no student role, so there is no
 #: workspace to offer, and inventing one would be exactly the guess F-29 is
@@ -65,7 +65,7 @@ MAX_PAGE_SIZE = 100
 _WORKSPACE_ROLE_KEY: dict[RoleCode, str] = {
     RoleCode.OWNER: "OWNER",
     RoleCode.MANAGER: "MANAGER",
-    # Both candidate resolutions of F-29 land in the ADMIN workspace.
+    # F-29 settled this the same way, but for its own reason (see above).
     RoleCode.ADMIN: "MANAGER",
     RoleCode.TRAINER: "INSTRUCTOR",
     RoleCode.PARENT: "GUARDIAN",
