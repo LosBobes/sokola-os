@@ -1480,6 +1480,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/schools/{school_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Platform Deactivate School
+         * @description SCH-05 as §3.6 describes it: performed by the platform, not the school.
+         *
+         *     The TEN-04 access-version bump rides along inside
+         *     `anchor.transition_status`, in the same transaction, so there is no window
+         *     where the school reads DEACTIVATED while issued contexts still resolve
+         *     against it.
+         */
+        post: operations["platformDeactivateSchool"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/schools/{school_id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Platform Reactivate School
+         * @description SCH-06. Coming back is as much a security boundary as going away:
+         *     `transition_status` bumps the tenant access version here too, so contexts
+         *     built while the school was off do not simply resume.
+         */
+        post: operations["platformReactivateSchool"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/programs": {
         parameters: {
             query?: never;
@@ -3737,6 +3784,21 @@ export interface components {
             identity_status: components["schemas"]["PersonIdentityStatus"];
             member_type: components["schemas"]["MembershipType"];
         };
+        /**
+         * PlatformLifecycleRequest
+         * @description §8.1.2: a platform lifecycle change names its reason and its case.
+         *
+         *     Both are mandatory. A platform actor turning a school off without saying
+         *     which registry reason applies, and under which case, is the thing the
+         *     status history exists to make impossible.
+         */
+        PlatformLifecycleRequest: {
+            /** Case Reference */
+            case_reference: string;
+            reason_code: components["schemas"]["SchoolStatusReason"];
+            /** Reason Note */
+            reason_note?: string | null;
+        };
         /** PostBillingRunRequest */
         PostBillingRunRequest: {
             /** Amount */
@@ -4021,6 +4083,15 @@ export interface components {
          * @enum {string}
          */
         SchoolStatus: "IN_PREPARATION" | "ACTIVE" | "DEACTIVATED";
+        /**
+         * SchoolStatusReason
+         * @description §8.1.2. Closed registry for :class:`SchoolStatusTransition.reason_code`.
+         *
+         *     The first three are system codes the client never chooses; the rest are the
+         *     SCH-05 / SCH-06 registries, which a platform actor must pick from.
+         * @enum {string}
+         */
+        SchoolStatusReason: "SCHOOL_CREATED" | "INITIAL_ACTIVATION" | "INITIAL_OWNER_ACCEPTED" | "PILOT_PAUSED" | "CONTRACT_TERMINATED" | "SECURITY_INCIDENT" | "LEGAL_REQUEST" | "CREATED_IN_ERROR" | "OPERATIONAL_PAUSE" | "PILOT_RESUMED" | "CONTRACT_RESTORED" | "SECURITY_REMEDIATED" | "LEGAL_RESTRICTION_LIFTED" | "OPERATIONAL_RESUME";
         /**
          * SchoolType
          * @enum {string}
@@ -7756,6 +7827,118 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProgressNoteResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platformDeactivateSchool: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                school_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformLifecycleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchoolResponse"];
+                };
+            };
+            /** @description Caller holds no platform lifecycle permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description School not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Already deactivated, or reason outside SCH-05. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platformReactivateSchool: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                school_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformLifecycleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchoolResponse"];
+                };
+            };
+            /** @description Caller holds no platform lifecycle permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description School not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Already active, or reason outside SCH-06. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
