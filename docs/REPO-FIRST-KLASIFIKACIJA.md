@@ -519,12 +519,14 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Zašto je to jedan nalaz, a ne četrdeset:** popravka je ista koverta na svakom od tih mesta. Zbog toga QA fajl razdvaja razlog `no command envelope` od `feature absent` — prvo je omotač oko koda koji već radi, drugo je modul koji treba napisati.
 - **Status:** `NALAZ`.
 
-### F-41 — deaktivaciju škole u repou radi **vlasnik**, a ugovor kaže da je platform-only
+### F-41 — deaktivaciju radi i vlasnik i platforma (OBA PUTA, NAMERNO)
 
-- **Nalaz:** `POST /schools/current/deactivate` je zaštićen `RolesContext`-om, a `reactivate_school` proverava aktivnu OWNER ulogu nad imenovanom školom. §3.5–3.6 kaže da aktivaciju može samo primary owner, a de/reaktivaciju **samo platform**, i da manager dobija 403.
-- **Posledica:** M04-QA-054 ne može da prođe ne zato što nedostaje provera, nego zato što repo sprovodi drugo pravilo. Test koji bi to „prošao" morao bi da tvrdi ponašanje koje kod nema.
-- **Nije očigledno pogrešno:** u repou ne postoji platform akter (isto kao F-37 okruženje i M03-QA-024), pa bi platform-only deaktivacija danas značila da je niko ne može izvršiti. Ovo je zato prijava razlike, ne ispravka.
-- **Status:** `CHALLENGE_NOT_APPLIED` — čeka odluku o platform akteru zajedno sa F-29/F-30.
+- **Ranije stanje:** repo je dozvoljavao samo vlasniku (`POST /schools/current/deactivate`), a §3.5–3.6 kaže da de/reaktivaciju radi **samo platforma**.
+- **Odluka vlasnika proizvoda:** oba puta, za vreme prelaza. Dodat je platformski put (`POST /platform/schools/{school_id}/deactivate|reactivate`, uz `platform.schools.lifecycle.manage`), a vlasnički je **netaknut**.
+- **Zašto ne odmah platform-only:** nijedna `PlatformRoleAssignment` ne postoji dok se ne pokrene operatorska skripta. Uklanjanje vlasničkog puta pre toga znači da školu **niko** ne može da deaktivira. To nije pooštravanje nego gašenje mogućnosti.
+- **Što je time ipak dobijeno:** ugovorni put sada postoji i radi, sa pravim guardom, pravim razlog-registrima (SCH-05/SCH-06; sistemski kodovi kao `INITIAL_ACTIVATION` se odbijaju) i TEN-04 bump-om u istoj transakciji. Prelaz na platform-only je od sada brisanje dve rute, ne nova funkcionalnost.
+- **Test koji ovo drži:** `test_the_owner_path_still_works_alongside_the_platform_one` tvrdi vlasnički put izričito, da ga neko ne „popravi" misleći da je zaostatak.
+- **Status:** `OTVORENO NAMERNO` — zatvara se kad se platform-only uključi.
 
 ### F-42 — recipient email pozivnice stoji u plaintext-u, i stajao je u audit tragu (audit deo OTKLONJEN)
 
@@ -550,6 +552,18 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Oblik odbijanja:** isti `ConflictError` kao opozvana i istekla pozivnica, namerno bez sopstvenog koda. F-43 je već prijava da su odbijanja pri prihvatanju međusobno razlučiva; ova izmena tome ne doprinosi.
 - **Posledica za QA mapu:** M02-QA-057 je prešao iz `BLOCKED` u implementiran. Test je probijen obrnuto — pre ispravke vraća 200 i kreira role assignment u školi „Ugašena škola"; posle ispravke vraća 409 i ne ostavlja nijedan red.
 - **Status:** `OTKLONJENO`.
+
+### F-45 — platformska role mutacija nema step-up autentifikaciju
+
+- **Nalaz:** M05 §2 traži step-up za svaku promenu platformske uloge, i `platform.roles.manage` je CRITICAL risk. U repou **ne postoji nikakav mehanizam ponovne autentifikacije** — M02-QA-018 je blokiran na istom nedostatku. `grant/suspend/resume/revoke_platform_role` zato rade bez njega.
+- **Odluka vlasnika proizvoda:** ići dalje bez step-up-a, umesto da se prvo gradi M01 re-autentifikacija. Prijavljeno ovde, ne prećutano.
+- **Šta ublažava posledicu, i što je namerno tako:**
+  1. svaka mutacija zahteva `platform.roles.manage`, koji registry vezuje **isključivo** za `PLATFORM_SECURITY_ADMIN`;
+  2. **prva** dodela se ne može napraviti kroz komandu — radi je `scripts/grant_platform_role.py`, kojoj treba konekcija na bazu, ne sesija. Napadač sa sesijom, koliko god privilegovanom, ne može da stvori platformski pristup iz ničega;
+  3. poslednji bezbednosni administrator se ne može ukloniti, i provera računa **efektivne** držaoce, ne status kolonu;
+  4. svaka promena ostavlja audit zapis sa ulogom, statusom i ticket referencom.
+- **Šta ostaje nepokriveno:** otet session postojećeg security admina može da dodeli platformsku ulogu bez ponovne potvrde identiteta. To je tačno ono što step-up sprečava.
+- **Status:** `NALAZ` — čeka M01 step-up; tada se dodaje jedan guard na četiri komande.
 
 ## 5. Šta je u ovom radu stvarno urađeno
 

@@ -4399,6 +4399,38 @@
         "title": "PersonSummary",
         "type": "object"
       },
+      "PlatformLifecycleRequest": {
+        "description": "\u00a78.1.2: a platform lifecycle change names its reason and its case.\n\nBoth are mandatory. A platform actor turning a school off without saying\nwhich registry reason applies, and under which case, is the thing the\nstatus history exists to make impossible.",
+        "properties": {
+          "case_reference": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Case Reference",
+            "type": "string"
+          },
+          "reason_code": {
+            "$ref": "#/components/schemas/SchoolStatusReason"
+          },
+          "reason_note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Note"
+          }
+        },
+        "required": [
+          "reason_code",
+          "case_reference"
+        ],
+        "title": "PlatformLifecycleRequest",
+        "type": "object"
+      },
       "PostBillingRunRequest": {
         "properties": {
           "amount": {
@@ -5168,6 +5200,27 @@
           "DEACTIVATED"
         ],
         "title": "SchoolStatus",
+        "type": "string"
+      },
+      "SchoolStatusReason": {
+        "description": "\u00a78.1.2. Closed registry for :class:`SchoolStatusTransition.reason_code`.\n\nThe first three are system codes the client never chooses; the rest are the\nSCH-05 / SCH-06 registries, which a platform actor must pick from.",
+        "enum": [
+          "SCHOOL_CREATED",
+          "INITIAL_ACTIVATION",
+          "INITIAL_OWNER_ACCEPTED",
+          "PILOT_PAUSED",
+          "CONTRACT_TERMINATED",
+          "SECURITY_INCIDENT",
+          "LEGAL_REQUEST",
+          "CREATED_IN_ERROR",
+          "OPERATIONAL_PAUSE",
+          "PILOT_RESUMED",
+          "CONTRACT_RESTORED",
+          "SECURITY_REMEDIATED",
+          "LEGAL_RESTRICTION_LIFTED",
+          "OPERATIONAL_RESUME"
+        ],
+        "title": "SchoolStatusReason",
         "type": "string"
       },
       "SchoolType": {
@@ -11042,6 +11095,130 @@
         "summary": "Create Progress Note",
         "tags": [
           "progress"
+        ]
+      }
+    },
+    "/platform/schools/{school_id}/deactivate": {
+      "post": {
+        "description": "SCH-05 as \u00a73.6 describes it: performed by the platform, not the school.\n\nThe TEN-04 access-version bump rides along inside\n`anchor.transition_status`, in the same transaction, so there is no window\nwhere the school reads DEACTIVATED while issued contexts still resolve\nagainst it.",
+        "operationId": "platformDeactivateSchool",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "school_id",
+            "required": true,
+            "schema": {
+              "title": "School Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformLifecycleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Caller holds no platform lifecycle permission."
+          },
+          "404": {
+            "description": "School not found."
+          },
+          "409": {
+            "description": "Already deactivated, or reason outside SCH-05."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Platform Deactivate School",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/platform/schools/{school_id}/reactivate": {
+      "post": {
+        "description": "SCH-06. Coming back is as much a security boundary as going away:\n`transition_status` bumps the tenant access version here too, so contexts\nbuilt while the school was off do not simply resume.",
+        "operationId": "platformReactivateSchool",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "school_id",
+            "required": true,
+            "schema": {
+              "title": "School Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformLifecycleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Caller holds no platform lifecycle permission."
+          },
+          "404": {
+            "description": "School not found."
+          },
+          "409": {
+            "description": "Already active, or reason outside SCH-06."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Platform Reactivate School",
+        "tags": [
+          "platform"
         ]
       }
     },

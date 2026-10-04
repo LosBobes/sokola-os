@@ -15,6 +15,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import __version__
+from app.application.platform_school_lifecycle import (
+    router as platform_school_router,
+)
 from app.application.tenant_router import router as tenancy_router
 from app.common.errors import register_exception_handlers
 from app.config import Settings, get_settings
@@ -112,6 +115,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(privacy_router)
     app.include_router(data_import_router)
     app.include_router(tenancy_router)
+    app.include_router(platform_school_router)
     app.include_router(search_router)
     app.include_router(reports_router)
 
