@@ -555,16 +555,18 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Nalaz:** `ROLE_DEFAULT_AREAS` daje `OWNER`, `MANAGER` i `ADMIN` **isti** `_STAFF_AREAS`. Administracija uloga je zaštićena jednom od tih oblasti (`PermissionArea.ROLES`), pa MANAGER prolazi isti guard kao OWNER.
 - **Izmereno, ne pretpostavljeno:** MANAGER koji poziva `POST /roles` sa `role_code=MANAGER` dobija **201**. Ugovor (M05-QA-015) zahteva 403 `RBAC_ROLE_ASSIGNMENT_NOT_ALLOWED`.
 - **Posledica:** cela rang struktura iz §2.4 nema protivtežu u repo-u. Menadžer pravi menadžere; ADMIN i MANAGER su autorizaciono nerazlučivi. Jedina stvarna razlika koju repo pravi su prenos vlasništva i zaštita poslednjeg vlasnika, koji su posebno kodirani.
-- **Zašto nije ispravljeno ovde:** uvođenje ranga menja ko šta može da dodeli u postojećim školama — to je odluka o proizvodu, ne čišćenje koda. Popravka bez odluke bi tiho oduzela prava ljudima koji ih danas koriste.
-- **Status:** `CHALLENGE_NOT_APPLIED`; M05-QA-015 je deklarisan kao divergencija.
+- **Odluka vlasnika (2026-10-04):** MANAGER može da dodeli samo uloge **strogo nižeg** ranga. Rang je kopija §2.4 u `app/domains/identity/policy.py` (arhitekturni gate zabranjuje da `policy` modul uvozi drugi domen), a test `test_the_local_ranks_match_the_registry` pada ako kopija odstupi od registra.
+- **Primenjeno:** `policy.validate_assignable_rank` se poziva na početku `assign_role`, pre razrešavanja ciljne osobe — ko ne može da dodeli ulogu ne saznaje ni ko je drži. Dva postojeća testa su prebačena na OWNER actora jer su se oslanjala na MANAGER→MANAGER; svaki od njih testira članstvo odnosno tenant granicu, ne rang.
+- **Status:** `OTKLONJENO`; M05-QA-015 se sada izvršava.
 
 ### F-48 — REVOKED dodela uloge nije terminalna; `assign_role` je oživljava pod istim ID-em
 
 - **Nalaz:** `assign_role` nađe postojeći red i vrati ga na `ACTIVE` uz audit `role_assignment.reactivated`, bez obzira na to da li je bio `SUSPENDED` ili `REVOKED`.
 - **Izmereno:** opoziv TRAINER dodele, pa ponovna dodela istoj osobi → **201 sa *originalnim* `assignment_id`**, red ponovo `ACTIVE`. Ugovor (M05-QA-026) zahteva 409 `RBAC_ROLE_INVALID_TRANSITION` i nov ID.
 - **Bitna nijansa:** oživljavanje `SUSPENDED` dodele je **ispravno** — M05-QA-024 ga izričito traži i implementiran je. Defekt je što `REVOKED`, koji ugovor čini terminalnim, ide istom putanjom. Popravka mora da razdvoji dva statusa, ne da ukloni putanju.
-- **Posledica:** opoziv i njegovo poništenje završavaju vezani za jedan red, pa istorija ne razlikuje „uloga je bila opozvana i vraćena" od „uloga je bila pauzirana i vraćena".
-- **Status:** `CHALLENGE_NOT_APPLIED`.
+- **Pravi uzrok bila je šema:** `uq_role_assignment` je bio **totalan** unique constraint, pa insert novog reda sa istim prirodnim ključem Postgres nikada ne bi primio — oživljavanje je bila jedina opcija koju je šema dopuštala.
+- **Primenjeno:** parcijalni unique indeks samo nad otvorenim statusima (vidi F-51) i `find_open_assignment` koji traži samo otvoren red. REVOKED red ostaje kao istorija, nova dodela dobija nov `id`. Isti defekt je postojao i na putanji prihvatanja pozivnice (`identity/service.py`) i ispravljen je istom promenom.
+- **Status:** `OTKLONJENO`; M05-QA-026 se sada izvršava, a M05-QA-024 (oživljavanje SUSPENDED dodele, što ugovor traži) i dalje prolazi.
 
 ### F-49 — razlozi za suspenziju i opoziv uloge su slobodan tekst
 
@@ -579,7 +581,17 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Izmereno sa pozitivnom kontrolom:** MANAGER sa aktivnim članstvom → `GET /roles` **200**; posle `membership/end` → **403** (guard ispravno ponovo dokazuje članstvo), a red uloge je i dalje `ACTIVE`; posle ubacivanja **druge** `ACTIVE` epizode članstva → ponovo **200**, sa vraćenom MANAGER ulogom.
 - **Latentno, ne aktivno:** nijedna proizvodna putanja danas ne pravi tu drugu epizodu — `POST /people` vraća 409 na duplikat, a `membership/resume` odbija okončano članstvo („Okončano članstvo se ne može nastaviti"). Ranjivost je u tome što bezbednost zavisi od toga da takva putanja nikada ne nastane.
 - **Zašto ugovor traži drugačije:** M05-QA-029 zahteva da svi otvoreni role/grant zapisi te epizode budu atomarno `REVOKED` i da **nova epizoda ne oživljava** — upravo zato da ponovni prijem osobe ne vrati prava koja je imala.
-- **Status:** `CHALLENGE_NOT_APPLIED`; preporučena popravka je opoziv uloga u istoj transakciji sa okončanjem članstva.
+- **Primenjeno:** `_revoke_roles_of_ended_membership` u `people/service.py` zatvara sve otvorene dodele u **istoj transakciji** sa okončanjem članstva, uz po jedan audit zapis za svaku. Takođe `count_active_owners` sada broji **različite osobe**, ne redove — guard pita da li bi škola ostala bez vlasnika, a to je pitanje o ljudima.
+- **Status:** `OTKLONJENO`; M05-QA-029 se sada izvršava i proverava oba dela, uključujući da nova epizoda ne vraća staru ulogu.
+
+### F-51 — `uq_role_assignment` nije važio u uobičajenom slučaju; dva ACTIVE reda po osobi su bila dozvoljena
+
+- **Nalaz:** `role_assignment` je imao totalan unique constraint nad `(person_id, school_id, role_code, scope_type, scope_ref_id)`. `scope_ref_id` je `NULL` za svaku school-scoped ulogu (podrazumevani `scope_type` je `SCHOOL` i ništa ga ne puni), a Postgres u unique indeksu tretira `NULL` vrednosti kao **različite** — pa constraint u uobičajenom slučaju nije vezivao ništa.
+- **Izmereno:** direktan insert drugog reda prolazi i ostavlja **dva ACTIVE OWNER reda za istu osobu u istoj školi**. Jedina zaštita bila je `find_assignment` + provera u servisu, dakle read-then-insert — tačno utrka koju §7.1 traži da uhvati baza kao poslednja linija.
+- **Druga posledica:** pošto je bio totalan, isti constraint je i iznudio F-48 (oživljavanje REVOKED reda je bio jedini insert koji baza prima).
+- **Treća posledica:** `count_active_owners` je brojao redove, pa je duplikat čitao kao „drugi vlasnik" — odgovor last-owner guarda je zavisio od ovog propusta.
+- **Primenjeno:** migracija `c58d1f4e7a93` zamenjuje ga parcijalnim unique indeksom nad `ACTIVE` i `SUSPENDED` sa `NULLS NOT DISTINCT` (Postgres 15+; projekat koristi 16). Migracija **odbija da se izvrši** ako već postoje otvoreni duplikati i imenuje ključeve, namerno bez automatske deduplikacije: izbor koje dve ACTIVE dodele ukinuti odlučuje ko zadržava pristup, a redovi ne kažu koja je bila nameravana.
+- **Status:** `OTKLONJENO`; pokriveno testom koji piše direktno protiv constraint-a.
 
 ## 5. Šta je u ovom radu stvarno urađeno
 
