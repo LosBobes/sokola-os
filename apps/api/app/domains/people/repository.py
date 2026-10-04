@@ -112,7 +112,7 @@ def get_membership(
 
 
 def revoke_open_role_assignments(
-    db: Session, school_id: str, person_id: str, *, actor_person_id: str | None
+    db: Session, school_id: str, person_id: str, *, actor_person_id: str
 ) -> list[RoleAssignment]:
     """Close every open role assignment this person holds in this school.
 
@@ -120,6 +120,13 @@ def revoke_open_role_assignments(
     rather than commits: §7.1 requires this to land in the same transaction as
     the membership transition that caused it, and a commit here would make a
     half-done termination durable.
+
+    `actor_person_id` is `str`, not `str | None`. §2.5's revocation triple is
+    all-or-none, so an actor-less revocation carrying a reason is precisely the
+    half-triple `ck_role_assignment_revoke_triple` refuses — and an optional
+    parameter would let a future caller write one and discover it at commit
+    time. `RequestContext.person_id` is non-optional, so nothing is lost by
+    saying so here.
     """
     rows = list(
         db.execute(
