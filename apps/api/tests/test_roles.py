@@ -54,7 +54,14 @@ def test_assign_role_rejects_owner_use_transfer_instead(
 
 
 def test_assign_role_requires_school_membership(client: TestClient, db: Session) -> None:
-    staff = bootstrap_actor(db)
+    """The actor is an OWNER so that the 404 is attributable to the membership.
+
+    It used to be the default MANAGER, which worked only while a MANAGER could
+    assign MANAGER. Since F-47 that is refused on rank, before the target is
+    resolved — so the same call would now return 403 and prove nothing about
+    membership. Rank has its own tests below.
+    """
+    staff = bootstrap_actor(db, role=RoleCode.OWNER)
     stranger = make_person(db, given="Stranac")
     resp = client.post(
         "/roles", headers=staff.headers, json={"person_id": stranger.id, "role_code": "MANAGER"}
@@ -371,10 +378,16 @@ def test_only_roles_area_can_administer_roles(client: TestClient, db: Session) -
 
 
 def test_role_admin_does_not_cross_tenants(client: TestClient, db: Session) -> None:
+    """Org B's *owner* is used, for the same reason as the test above.
+
+    A MANAGER would now be refused on rank before the tenant check ran, which
+    would leave this asserting the wrong thing entirely. With an OWNER the
+    refusal is the tenant boundary again, which is what the test is for.
+    """
     org_a = bootstrap_actor(db, org_name="Klub A")
     member_a = add_actor(db, school=org_a.school, role=RoleCode.STUDENT, given="A")
 
-    org_b = bootstrap_actor(db, org_name="Klub B")
+    org_b = bootstrap_actor(db, org_name="Klub B", role=RoleCode.OWNER)
     resp = client.post(
         "/roles",
         headers=org_b.headers,
@@ -438,3 +451,172 @@ def test_reactivate_unknown_school_is_not_found(client: TestClient, db: Session)
         headers={DEV_PERSON_HEADER: person.id},
     )
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# F-47 — §2.4 rank: an actor assigns only strictly below themselves
+# ---------------------------------------------------------------------------
+
+
+def test_a_manager_cannot_assign_a_manager_or_an_admin(
+    client: TestClient, db: Session
+) -> None:
+    """F-47, and the positive control is the point.
+
+    `ROLE_DEFAULT_AREAS` gives OWNER, MANAGER and ADMIN the same areas, and
+    role administration is gated on one of them — so before this a MANAGER
+    assigning MANAGER returned 201, and each manager it created could create
+    more. ADMIN is refused for the same reason: F-29 resolved it to M05
+    MANAGER, so it carries MANAGER's rank.
+
+    The TRAINER case runs in the same test rather than separately, because a
+    rank guard that refused *everything* would satisfy the two negatives and
+    break the product. Both halves have to hold together.
+    """
+    mgr = bootstrap_actor(db, org_name="Rang", role=RoleCode.MANAGER, given="Menadzer")
+    target = make_person(db, given="Cilj", family="Osoba")
+    from tests.factories import add_membership
+
+    add_membership(db, person=target, school=mgr.school)
+    db.commit()
+
+    for refused in ("MANAGER", "ADMIN"):
+        resp = client.post(
+            "/roles",
+            headers=mgr.headers,
+            json={"person_id": target.id, "role_code": refused},
+        )
+        assert resp.status_code == 403, (refused, resp.text)
+        assert resp.json()["error"]["code"] == "FORBIDDEN"
+
+    allowed = client.post(
+        "/roles", headers=mgr.headers, json={"person_id": target.id, "role_code": "TRAINER"}
+    )
+    assert allowed.status_code == 201, allowed.text
+
+
+def test_an_owner_may_still_assign_a_manager(client: TestClient, db: Session) -> None:
+    """The rank rule is "strictly below", so OWNER keeps what it had.
+
+    Worth its own test: the cheap way to implement F-47 is to forbid granting
+    MANAGER at all, which would pass the test above and quietly take the
+    ability away from owners too.
+    """
+    owner = bootstrap_actor(db, org_name="RangO", role=RoleCode.OWNER, given="Vlasnik")
+    target = make_person(db, given="Novi", family="Menadzer")
+    from tests.factories import add_membership
+
+    add_membership(db, person=target, school=owner.school)
+    db.commit()
+
+    resp = client.post(
+        "/roles", headers=owner.headers, json={"person_id": target.id, "role_code": "MANAGER"}
+    )
+    assert resp.status_code == 201, resp.text
+
+
+def test_the_local_ranks_match_the_registry() -> None:
+    """The copy in `identity/policy.py` must not drift from M05 §2.4.
+
+    The ranks are duplicated on purpose — the architecture gate forbids a
+    domain's `policy` module importing another domain, so `policy.py` cannot
+    read the authorization registry. A duplicated constant with nothing
+    watching it is how the two quietly disagree, and the disagreement would
+    show up as the wrong people being allowed to grant roles.
+
+    The mapping from this repo's `RoleCode` to M05's role keys is F-29 and
+    F-30's; `STUDENT` has no counterpart and is excluded, which is why it
+    carries a rank below every assignable role rather than a mirrored one.
+    """
+    from app.application.effective_permissions import canonical_role_key
+    from app.domains.authorization import registry
+    from app.domains.identity.policy import _ADMINISTRATIVE_RANK
+
+    registry_rank = {role.key: role.administrative_rank for role in registry.ROLES}
+
+    checked = 0
+    for role_code, local_rank in _ADMINISTRATIVE_RANK.items():
+        if role_code is RoleCode.STUDENT:
+            continue
+        key = canonical_role_key(role_code)
+        assert key in registry_rank, key
+        assert local_rank == registry_rank[key], (role_code, key, local_rank)
+        checked += 1
+    assert checked >= 5, checked
+    assert _ADMINISTRATIVE_RANK[RoleCode.STUDENT] < min(
+        rank for code, rank in _ADMINISTRATIVE_RANK.items() if code is not RoleCode.STUDENT
+    )
+
+
+# ---------------------------------------------------------------------------
+# F-48 / F-51 — REVOKED is history, and the database says so
+# ---------------------------------------------------------------------------
+
+
+def test_a_revoked_role_is_regranted_as_a_new_assignment(
+    client: TestClient, db: Session
+) -> None:
+    """F-48: the revoked row stays, and the new grant is a different id.
+
+    Previously the only thing the schema allowed was reviving the revoked row,
+    so one id ended up carrying a revocation and its reversal. The old row is
+    asserted still REVOKED, not merely absent from the response — the point is
+    that the history survives beside the new grant.
+    """
+    owner = bootstrap_actor(db, org_name="Ponovo", role=RoleCode.OWNER, given="Vlasnik")
+    trainer = add_actor(db, school=owner.school, role=RoleCode.TRAINER, given="Trener")
+    original_id = trainer.assignment.id
+
+    revoked = client.post(
+        f"/roles/{original_id}/revoke", headers=owner.headers, json={"reason": "zavrsio"}
+    )
+    assert revoked.status_code == 200, revoked.text
+
+    again = client.post(
+        "/roles",
+        headers=owner.headers,
+        json={"person_id": trainer.person.id, "role_code": "TRAINER"},
+    )
+    assert again.status_code == 201, again.text
+    assert again.json()["id"] != original_id
+
+    db.expire_all()
+    from app.domains.identity.enums import RoleAssignmentStatus
+    from app.domains.identity.models import RoleAssignment
+
+    old = db.get(RoleAssignment, original_id)
+    assert old is not None
+    assert old.status is RoleAssignmentStatus.REVOKED
+    fresh = db.get(RoleAssignment, again.json()["id"])
+    assert fresh is not None
+    assert fresh.status is RoleAssignmentStatus.ACTIVE
+
+
+def test_the_database_refuses_a_second_open_assignment(db: Session) -> None:
+    """F-51: the index binds even though `scope_ref_id` is null.
+
+    This is the case the old constraint missed. Nulls are distinct inside a
+    normal unique index, and `scope_ref_id` is null for every school-scoped
+    role, so two ACTIVE rows for one person, school and role were accepted and
+    only the service's read-then-insert stood in the way. Written against the
+    constraint directly because that is the only way to reach it — the point of
+    a last-resort guard is that it holds when the application check loses a
+    race.
+    """
+    import pytest
+    from app.domains.identity.models import RoleAssignment
+    from sqlalchemy.exc import IntegrityError
+
+    owner = bootstrap_actor(db, org_name="Duplikat", role=RoleCode.OWNER, given="Vlasnik")
+    duplicate = RoleAssignment(
+        person_id=owner.person.id,
+        school_id=owner.school.id,
+        role_code=RoleCode.OWNER,
+        scope_type=owner.assignment.scope_type,
+        scope_ref_id=None,
+    )
+    assert owner.assignment.scope_ref_id is None, "the null case is the one that regressed"
+    db.add(duplicate)
+    with pytest.raises(IntegrityError):
+        db.commit()
+    db.rollback()

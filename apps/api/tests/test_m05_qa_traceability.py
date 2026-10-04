@@ -2,7 +2,7 @@
 
 Seventh module under the gate. One test per runnable scenario named for its
 id, the rest declared in `BLOCKED` with a reason from a closed vocabulary, and
-a gate that fails if any of the 213 is neither. Nothing is skipped. 31 run.
+a gate that fails if any of the 213 is neither. Nothing is skipped. 34 run.
 
 **What this measurement found, which is not what was predicted.** M05 was
 recorded as blocked on F-29 and F-30, the two undecided role mappings.
@@ -26,26 +26,43 @@ are structural:
   is 57 scenarios. Their permission keys are seeded, bound to roles, and read
   by nothing.
 
-Four divergences found here are findings rather than mere differences. Each
-was measured by running it, with a positive control, rather than read off the
-code:
+This module found five divergences that are findings rather than mere
+differences. Each was measured by running it, with a positive control, rather
+than read off the code — and four are now **fixed**, which is why the
+scenarios below run instead of being declared:
 
-* **QA-015** — a MANAGER successfully assigns MANAGER (F-47). The one with a
-  direct security consequence: role administration is gated on an area OWNER
-  and MANAGER share, so a manager mints managers.
-* **QA-029** — ending a membership leaves its role assignments ACTIVE, and the
-  assignment is keyed on `(person, school)` rather than on the membership
-  episode. Insert a second episode and the former MANAGER role comes back with
-  it (F-50). Latent rather than live: `POST /people` refuses the duplicate and
-  `membership/resume` refuses a terminated row, so no product path creates that
-  second episode today. The contract revokes the roles at termination so that
-  the safety does not depend on no such path ever existing.
-* **QA-026** — `assign_role` revives a REVOKED assignment under its *original*
-  id. SUSPENDED being revivable is correct (QA-024 asks for it); the defect is
-  that REVOKED, which the contract makes terminal, goes down the same path
-  (F-48).
-* **QA-023** — suspend and revoke reasons are free text; one outside any
-  vocabulary returns 200 (F-49).
+* **QA-015 / F-47 — fixed.** A MANAGER successfully assigned MANAGER (201, not
+  403). The one with a direct security consequence: role administration is
+  gated on an area OWNER, MANAGER and ADMIN hold identically, so a manager
+  minted managers and each new one could mint more. Now refused on rank,
+  strictly below.
+* **QA-029 / F-50 — fixed.** Ending a membership left its role assignments
+  ACTIVE, and an assignment is keyed on `(person, school)` rather than on the
+  membership episode, so a second episode handed the former MANAGER role back.
+  Access was never wrong — the guard re-proves membership — but the record
+  survived, and the contract closes the roles at termination precisely so the
+  safety does not rest on no path ever creating that episode. It now closes
+  them in the same transaction.
+* **QA-026 / F-48 — fixed.** `assign_role` revived a REVOKED assignment under
+  its *original* id. The schema forced it: a total unique constraint left
+  reviving as the only insert Postgres would accept. SUSPENDED being revivable
+  is correct and still is (QA-024); only the terminal case changed.
+* **F-51 — found while fixing F-48, and fixed.** The unique constraint that
+  forced the revival was also enforcing nothing in the ordinary case:
+  `scope_ref_id` is null for every school-scoped role and Postgres treats
+  nulls as distinct, so two ACTIVE rows for one person, school and role were
+  accepted and only the service's read-then-insert stood in the way — the race
+  §7.1 says the database must catch. Now a partial unique index over the open
+  statuses with `NULLS NOT DISTINCT`.
+* **QA-023 / F-49 — still open.** Suspend and revoke reasons are free text; a
+  reason outside any vocabulary returns 200. §2.10 fixes the allowed codes per
+  command, so this is decided rather than undecided — it is a separate
+  increment because it changes the request shape and therefore the generated
+  web client.
+
+QA-019 remains declared as a bounded divergence: a PARENT role can be granted
+with no M07 guardian link, and M07 checks the link when a child record is
+read, so the role alone opens no child data.
 
 One gap found here was fixed rather than recorded, because it was in code from
 the same increment: **QA-079**, a platform security admin granting themselves a
@@ -72,6 +89,8 @@ from app.domains.authorization.platform_roles import effective_roles
 from app.domains.identity.auth_models import AuthIdentity, UserAccount
 from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
 from app.domains.identity.models import RoleAssignment
+from app.domains.school.enums import MembershipStatus
+from app.domains.school.models import SchoolMembership
 from app.domains.tenancy import security as tenant_security
 from app.platform import clock
 from app.platform.inbox.service import claim as inbox_claim
@@ -375,32 +394,15 @@ _block(
 # --- measured divergences, each one a finding ------------------------------
 _block(
     _diverges(
-        "no §2.4 rank restriction exists. `ROLE_DEFAULT_AREAS` gives OWNER, "
-        "MANAGER and ADMIN an identical area set, and role administration is "
-        "gated on one of them (`PermissionArea.ROLES`), so a MANAGER assigns "
-        "MANAGER successfully. Measured: 201, against the contract's 403 (F-47)"
-    ),
-    15,
-)
-_block(
-    _diverges(
-        "`RoleTransitionRequest.reason` is free text — `str | None`, "
-        "max_length 500, no vocabulary. Measured: suspending with "
+        "`RoleTransitionRequest.reason` is free text, `str | None` with "
+        "max_length 500 and no vocabulary. Measured: suspending with "
         "`NIJE_IZ_VOKABULARA_XYZ` returns 200, where the contract requires 422 "
-        "`RBAC_REASON_INVALID` and no change (F-49)"
+        "`RBAC_REASON_INVALID` and no change. M05 §2.10 fixes the allowed codes "
+        "per command, so this is a decided change rather than an open question "
+        "— it is a separate increment because it changes the request shape and "
+        "so the generated web client (F-49)"
     ),
     23,
-)
-_block(
-    _diverges(
-        "REVOKED is not terminal here. `assign_role` finds the existing row "
-        "and sets it back to ACTIVE, emitting `role_assignment.reactivated`. "
-        "Measured: re-assigning a revoked TRAINER returns 201 carrying the "
-        "*original* assignment id. SUSPENDED being revivable is correct — "
-        "QA-024 asks for it, and is implemented below — the defect is that "
-        "REVOKED goes down the same path (F-48)"
-    ),
-    26,
 )
 _block(
     _diverges(
@@ -413,21 +415,6 @@ _block(
         "refusal happens late instead of at the point of grant"
     ),
     19,
-)
-_block(
-    _diverges(
-        "ending a membership does not revoke its role assignments, and the "
-        "assignment is keyed on `(person, school)` rather than on the "
-        "membership episode. Measured with a positive control: MANAGER with "
-        "an active membership 200; after `membership/end` 403, with the role "
-        "row still ACTIVE; after inserting a second ACTIVE membership episode "
-        "200 again, the former MANAGER role restored. Latent rather than live "
-        "— `POST /people` refuses the duplicate and `membership/resume` "
-        "refuses a terminated row, so no product path creates that episode "
-        "today. The contract revokes the roles at termination precisely so "
-        "that the safety does not rest on no such path ever existing (F-50)"
-    ),
-    29,
 )
 _block(
     _absent(
@@ -471,7 +458,7 @@ _block(
         "this is the module's own acceptance gate, not a behaviour. It "
         "requires 213/213 actually executed with 0 failed and 0 skipped, which "
         "is exactly what this file cannot assert about itself — and which is "
-        "false today in any case: 31 of the 213 run. Declared rather than "
+        "false today in any case: 34 of the 213 run. Declared rather than "
         "implemented so that no green run of this suite can be read as M05 "
         "having passed"
     ),
@@ -1732,7 +1719,7 @@ def test_every_m05_scenario_is_implemented_or_declared() -> None:
     assert not missing, f"neither implemented nor declared blocked: {sorted(missing)}"
     stray = (implemented | blocked) - declared
     assert not stray, f"ids not in the contract: {sorted(stray)}"
-    assert len(implemented) == 31, f"the docstring claims 31 run, found {len(implemented)}"
+    assert len(implemented) == 34, f"the docstring claims 34 run, found {len(implemented)}"
 
 
 def test_the_m05_blocked_reasons_name_one_of_four_causes() -> None:
@@ -1756,3 +1743,143 @@ def test_the_m05_blocked_reasons_name_one_of_four_causes() -> None:
                 "no validity or version model",
             )
         ), f"{scenario} has an unrecognised blocking reason: {reason}"
+
+
+# ===========================================================================
+# Implemented in the same increment as this file's second revision
+# ===========================================================================
+
+
+def test_m05_qa_015_a_manager_cannot_assign_a_manager(
+    db: Session, client: TestClient
+) -> None:
+    """§2.4: an actor assigns only strictly below their own rank.
+
+    Declared as a divergence when this module was first written, because the
+    repo answered 201 — `ROLE_DEFAULT_AREAS` gives OWNER, MANAGER and ADMIN an
+    identical area set and role administration is gated on one of them, so a
+    manager could mint managers and each new one could mint more (F-47).
+
+    The refusal is checked by error code rather than status, and ADMIN is
+    included: F-29 resolved ADMIN to M05 MANAGER, so it carries MANAGER's rank
+    and a manager may not grant it either. The TRAINER call is the control —
+    a guard that refused everything would satisfy the negatives and break the
+    product.
+    """
+    from tests.factories import add_membership
+
+    mgr = bootstrap_actor(db, org_name="QA015", role=RoleCode.MANAGER, given="Menadzer")
+    target = make_person(db, given="Cilj", family="Osoba")
+    add_membership(db, person=target, school=mgr.school)
+    db.commit()
+
+    for refused in ("MANAGER", "ADMIN"):
+        resp = client.post(
+            "/roles", headers=mgr.headers, json={"person_id": target.id, "role_code": refused}
+        )
+        assert resp.status_code == 403, (refused, resp.text)
+        assert resp.json()["error"]["code"] == "FORBIDDEN"
+
+    allowed = client.post(
+        "/roles", headers=mgr.headers, json={"person_id": target.id, "role_code": "TRAINER"}
+    )
+    assert allowed.status_code == 201, allowed.text
+
+
+def test_m05_qa_026_a_revoked_assignment_is_not_revived(
+    db: Session, client: TestClient
+) -> None:
+    """§5.2: REVOKED is terminal, and a later grant needs a new id.
+
+    Declared as a divergence first time round: `assign_role` found the revoked
+    row and set it back to ACTIVE, so one id carried a revocation and its
+    reversal (F-48). The schema was what forced it — a total unique constraint
+    left reviving as the only insert Postgres would accept.
+
+    The old row is asserted still REVOKED rather than just absent from the
+    response, because the property is that history survives *beside* the new
+    grant. QA-024's suspended case is the deliberate contrast and still
+    revives under the same id.
+    """
+    owner = bootstrap_actor(db, org_name="QA026", role=RoleCode.OWNER, given="Vlasnik")
+    trainer = add_actor(db, school=owner.school, role=RoleCode.TRAINER, given="Trener")
+    original = trainer.assignment.id
+
+    gone = client.post(
+        f"/roles/{original}/revoke", headers=owner.headers, json={"reason": "zavrsio"}
+    )
+    assert gone.status_code == 200, gone.text
+
+    again = client.post(
+        "/roles",
+        headers=owner.headers,
+        json={"person_id": trainer.person.id, "role_code": "TRAINER"},
+    )
+    assert again.status_code == 201, again.text
+    assert again.json()["id"] != original
+
+    db.expire_all()
+    old = db.get(RoleAssignment, original)
+    assert old is not None
+    assert old.status is RoleAssignmentStatus.REVOKED
+
+
+def test_m05_qa_029_a_terminated_membership_closes_its_roles(
+    db: Session, client: TestClient
+) -> None:
+    """§5.2: the episode's open role records are revoked with it, and a new
+    episode does not revive them.
+
+    This was F-50, and the access control was never the problem — the request
+    guard re-proves membership, so a terminated member was already denied. What
+    survived was the record, and an assignment is keyed on `(person, school)`
+    rather than on the episode, so inserting a second ACTIVE membership handed
+    the former MANAGER role straight back.
+
+    Both halves are asserted, in order, each against a control: the role row
+    goes REVOKED at termination, and a *new* episode afterwards does not
+    restore access. The second half is the one the contract names explicitly
+    ("nova epizoda ih ne oživljava") and the one that would silently come back
+    if the cascade were moved out of the termination's transaction.
+
+    A MANAGER is used because MANAGER holds the ROLES area, so 200 before and
+    403 after can only be the membership proof moving — with a TRAINER both
+    calls return 403 and the test would prove nothing.
+    """
+    owner = bootstrap_actor(db, org_name="QA029", role=RoleCode.OWNER, given="Vlasnik")
+    mgr = add_actor(db, school=owner.school, role=RoleCode.MANAGER, given="Menadzer")
+
+    assert client.get("/roles", headers=mgr.headers).status_code == 200
+
+    ended = client.post(
+        f"/people/{mgr.person.id}/membership/end",
+        headers=owner.headers,
+        json={"reason_code": "OTHER"},
+    )
+    assert ended.status_code == 200, ended.text
+
+    db.expire_all()
+    row = db.get(RoleAssignment, mgr.assignment.id)
+    assert row is not None
+    assert row.status is RoleAssignmentStatus.REVOKED, "the role must close with the episode"
+    assert client.get("/roles", headers=mgr.headers).status_code == 403
+
+    # A genuinely new episode, which is what the contract refuses to let revive.
+    fresh = SchoolMembership(
+        school_id=mgr.school.id, person_id=mgr.person.id, status=MembershipStatus.ACTIVE
+    )
+    db.add(fresh)
+    db.commit()
+
+    assert client.get("/roles", headers=mgr.headers).status_code == 403, (
+        "a new membership episode must not restore the previous role"
+    )
+
+    trail = db.execute(
+        text(
+            "SELECT action FROM audit_log WHERE entity_type = 'role_assignment'"
+            " AND entity_id = :i ORDER BY created_at"
+        ),
+        {"i": mgr.assignment.id},
+    ).all()
+    assert "role_assignment.revoked" in [r[0] for r in trail]

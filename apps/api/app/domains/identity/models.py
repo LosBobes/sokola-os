@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
@@ -109,13 +110,32 @@ class RoleAssignment(Base, TimestampMixin, RecordStatusMixin):
 
     __tablename__ = "role_assignment"
     __table_args__ = (
-        UniqueConstraint(
+        # One *open* assignment per natural key. Two things changed here, and
+        # both were holes rather than preferences.
+        #
+        # It is partial, over ACTIVE and SUSPENDED only, because M05 §5.2 makes
+        # REVOKED terminal: a revoked assignment is history, and a later grant
+        # of the same role must be able to mint a new row beside it rather than
+        # revive the old one. A full constraint made reviving the only option
+        # the schema allowed, which is how F-48 happened.
+        #
+        # It is `NULLS NOT DISTINCT` because the predecessor was not, and
+        # `scope_ref_id` is null for every school-scoped role — the ordinary
+        # case. Postgres treats nulls as distinct in a unique index, so the old
+        # constraint silently permitted two ACTIVE rows for the same person,
+        # school and role, and the only thing standing in the way was the
+        # application's own read-then-insert. That is exactly the race §7.1
+        # says the database must catch (F-51).
+        Index(
+            "uq_role_assignment_open",
             "person_id",
             "school_id",
             "role_code",
             "scope_type",
             "scope_ref_id",
-            name="uq_role_assignment",
+            unique=True,
+            postgresql_where=text("status IN ('ACTIVE', 'SUSPENDED')"),
+            postgresql_nulls_not_distinct=True,
         ),
         # Tenant + person + role as a referenceable key, so a foreign key
         # elsewhere can require all four at once (see

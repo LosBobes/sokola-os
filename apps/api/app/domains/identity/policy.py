@@ -21,6 +21,58 @@ from app.security.permissions import ROLE_DEFAULT_AREAS, effective_areas, parse_
 
 _STAFF_ROLE_CODES = frozenset({RoleCode.OWNER, RoleCode.MANAGER, RoleCode.ADMIN, RoleCode.TRAINER})
 
+#: M05 §2.4's `administrative_rank`, for the roles this repo's `RoleCode`
+#: covers, resolved through the mappings F-29 and F-30 settled.
+#:
+#: The numbers are copied from `app/domains/authorization/registry.py` rather
+#: than read from it, because a domain's `policy` module may not import another
+#: domain (the architecture gate, and the module docstring above). The copy is
+#: narrow and the drift is bounded: if a rank moves in the registry, the test
+#: `test_the_local_ranks_match_the_registry` fails.
+#:
+#: `STUDENT` has no §2.4 counterpart at all, so it gets a rank below every
+#: assignable role. That is the conservative reading — it keeps the rule from
+#: silently forbidding something the contract never spoke about — and it is why
+#: the rank is 0 rather than absent.
+_ADMINISTRATIVE_RANK: dict[RoleCode, int] = {
+    RoleCode.OWNER: 100,
+    RoleCode.MANAGER: 80,
+    # F-29: ADMIN resolves to M05 MANAGER, so it carries MANAGER's rank. The
+    # consequence is deliberate — an ADMIN may not mint a MANAGER either.
+    RoleCode.ADMIN: 80,
+    RoleCode.TRAINER: 40,
+    RoleCode.PARENT: 20,
+    RoleCode.STUDENT: 0,
+}
+
+
+def validate_assignable_rank(actor_role_code: RoleCode, target: RoleCode) -> None:
+    """§2.4: an actor may assign only strictly *below* their own rank.
+
+    This is F-47. `ROLE_DEFAULT_AREAS` gives OWNER, MANAGER and ADMIN an
+    identical set of areas, and role administration is gated on one of them
+    (`PermissionArea.ROLES`) — so before this, a MANAGER assigning MANAGER was
+    indistinguishable from an OWNER doing it and returned 201. A manager could
+    mint managers, and each new one could mint more.
+
+    Strictly below, not "at or below", is the contract's rule and the one that
+    matters: equal rank is exactly the peer-promotion case M05-QA-015 names.
+    Assigning *upward* was already impossible for OWNER (the generic path
+    refuses the role code outright, M05-QA-020) but not for MANAGER, and this
+    closes both directions with one comparison.
+    """
+    actor_rank = _ADMINISTRATIVE_RANK.get(actor_role_code)
+    target_rank = _ADMINISTRATIVE_RANK.get(target)
+    if actor_rank is None or target_rank is None:
+        # An unranked role is not a licence. Fail closed rather than fall
+        # through to "allowed", which is how a new RoleCode would quietly
+        # become assignable by anyone.
+        raise ForbiddenError("Ova uloga se ne može dodeliti iz vašeg konteksta.")
+    if target_rank >= actor_rank:
+        raise ForbiddenError(
+            "Možete dodeliti samo uloge nižeg nivoa od svoje."
+        )
+
 
 def role_code_for_invitation(inv_type: InvitationType, requested: RoleCode | None) -> RoleCode:
     """PARENT/STUDENT invites imply their own role; STAFF invites choose one of
@@ -144,6 +196,7 @@ def ensure_invitation_allowed_during_onboarding(
 __all__ = [
     "ensure_invitation_allowed_during_onboarding",
     "role_code_for_invitation",
+    "validate_assignable_rank",
     "validate_granted_areas",
     "validate_scope",
 ]
