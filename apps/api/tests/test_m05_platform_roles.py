@@ -339,6 +339,41 @@ def test_a_security_admin_may_grant_and_the_grant_is_audited(db: Session) -> Non
     assert target.id not in joined.replace(assignment.id, "")
 
 
+def test_a_security_admin_cannot_grant_a_role_to_themselves(db: Session) -> None:
+    """M05-QA-079: self-assignment is refused even though the caller holds the
+    permission.
+
+    This is the one escalation the permission guard cannot see. A security
+    admin legitimately holds `platform.roles.manage`, so every check above
+    passes; what is wrong is that the actor and the subject are the same
+    account. Without this, one security admin reaches every other platform
+    role — billing, operations, incident command — one call at a time, with no
+    second person involved anywhere, and the audit trail reads as a normal
+    grant.
+
+    The refusal is not about the role being a *different* one, so it is
+    asserted for a second platform role rather than for a duplicate of the one
+    already held: a duplicate would be refused anyway by the open-assignment
+    conflict, which would make this test pass for the wrong reason.
+    """
+    admin = _account(db, "sub-selfgrant")
+    _seed_assignment(db, admin)
+
+    with pytest.raises(ForbiddenError):
+        grant_platform_role(
+            db,
+            actor_account_id=admin.id,
+            user_account_id=admin.id,
+            role_key=PlatformRoleKey.PLATFORM_BILLING_ADMIN,
+            source_ticket_ref="SEC-9",
+        )
+    db.rollback()
+
+    assert effective_roles(db, user_account_id=admin.id) == {
+        PlatformRoleKey.PLATFORM_SECURITY_ADMIN.value
+    }
+
+
 def test_one_open_assignment_per_account_and_role(db: Session) -> None:
     """§2, and the index is partial so history does not block a re-grant.
 

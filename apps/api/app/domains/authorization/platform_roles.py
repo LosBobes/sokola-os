@@ -215,6 +215,20 @@ def grant_platform_role(
     )
     assert actor_account_id is not None  # the guard above refuses None
 
+    # M05-QA-079: a security admin may not grant themselves a further platform
+    # role. Holding `platform.roles.manage` is otherwise enough to reach every
+    # other platform role one call at a time — billing, operations, incident
+    # command — with no second person involved anywhere in the chain. The
+    # permission guard above cannot catch it, because the caller genuinely has
+    # the permission; what is wrong is that actor and subject are the same
+    # account.
+    #
+    # The operator bootstrap is unaffected: it writes the row directly, having
+    # no session to act in, which is also why the first security admin cannot
+    # come from here.
+    if user_account_id == actor_account_id:
+        raise ForbiddenError("Platformsku ulogu ne možete dodeliti sami sebi.")
+
     if role_key in NON_TEMPORAL_PLATFORM_ROLES and valid_until is not None:
         raise ConflictError("Ova platformska uloga ne može imati rok važenja.")
 
