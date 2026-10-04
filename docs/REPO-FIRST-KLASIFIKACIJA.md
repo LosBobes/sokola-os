@@ -564,6 +564,14 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
   4. svaka promena ostavlja audit zapis sa ulogom, statusom i ticket referencom.
 - **Šta ostaje nepokriveno:** otet session postojećeg security admina može da dodeli platformsku ulogu bez ponovne potvrde identiteta. To je tačno ono što step-up sprečava.
 - **Status:** `NALAZ` — čeka M01 step-up; tada se dodaje jedan guard na četiri komande.
+### F-46 — nijedna zavisnost nema gornju granicu; SQLAlchemy 2.1 je oborio `main` bez ijednog commita
+
+- **Nalaz:** `main` je pao na `mypy` koraku 2026-10-04, na kodu koji je prošao CI 2026-09-19. Nijedan commit između. CI radi `pip install -e '.[dev]'` na svakom pokretanju, a `pyproject.toml` je imao `sqlalchemy>=2.0.36` **bez gornje granice**, pa je 2.1.3 ušao na dan izlaska.
+- **Šta je 2.1 promenio:** statički tip redova iz `Result.all()`. Umesto precizne tuple vrste vraća `tuple[object, ...]` odnosno `tuple[Base, ...]`, pa **12 komprehenzija u 6 repository modula** prestaje da prolazi `mypy`. Nema promene u ponašanju u runtime-u — samo u tipovima.
+- **Reprodukovano, ne pretpostavljeno:** sa `SQLAlchemy==2.0.54` lokalni `mypy app` prolazi; sa `2.1.3` daje tačno tih 12 grešaka u `reports/`, `search/`, `people/`, `groups/`, `billing/` i `identity/` repozitorijumima. Verzija `mypy`-ja nije uzrok — i 2.3.1 i 2.4.0 prolaze na 2.0.54.
+- **Primenjeno:** `sqlalchemy>=2.0.36,<2.1`. Vraća rezoluciju koja je bila zelena i prebacuje prelaz na 2.1 u namernu radnu stavku.
+- **Širi problem, neispravljen:** **nijedna** zavisnost u `pyproject.toml` nema gornju granicu. Isto se ponovilo i ponoviće se sa `fastapi`, `starlette`, `pydantic-core` i ostalima — svaka od njih danas ima noviju verziju od instalirane. To je odluka za vlasnika: ili lockfile (`uv.lock`/`requirements.txt` sa hash-evima) ili gornje granice po paketu. Pojedinačni pin ovde rešava današnji otkaz, ne klasu otkaza.
+- **Status:** `OTKLONJENO za SQLAlchemy`; klasa problema otvorena.
 
 ## 5. Šta je u ovom radu stvarno urađeno
 

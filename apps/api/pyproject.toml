@@ -8,7 +8,15 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
-    "sqlalchemy>=2.0.36",
+    # Upper bound deliberate. SQLAlchemy 2.1 changed the static type of
+    # `Result.all()` rows from the precise tuple to `tuple[object, ...]` /
+    # `tuple[Base, ...]`, which makes 12 row-unpacking comprehensions across
+    # six repository modules fail `mypy` with no runtime change at all. CI
+    # installs fresh on every run, so an unbounded spec meant 2.1.3 arrived
+    # on its release day and turned `main` red without a single commit.
+    # Moving to 2.1 is a deliberate piece of work, not something that
+    # happens overnight; see F-46.
+    "sqlalchemy>=2.0.36,<2.1",
     "alembic>=1.14",
     "psycopg[binary]>=3.2",
     "python-ulid>=3.0",
