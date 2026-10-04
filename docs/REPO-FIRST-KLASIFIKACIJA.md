@@ -384,34 +384,27 @@ shell-a, ali binding ekran→ugovor nije rađen. Klasifikacija: `VERIFY_IN_REPO`
 - **Ne otključava M05.** M05 QA i dalje čeka F-30; ovo je jedna od dve potrebne odluke.
 - **Status:** `ODLUČENO I PRIMENJENO`.
 
-### F-30 — M05 registry revizije 1.3 nije u §3.3; 39 redova nosi nedefinisanu grupu uloga
+### F-30 — dve ispravke: nije 39 nego **6**, i **nijedan od tih ključeva ne postoji u repou** (ODLUČENO, NEPRIMENLJIVO ZASAD)
 
-- **Ugovor:** M05 §3.3 daje tabelu permission ključeva. Dva dokumenta u istoj fascikli — `03-M05-PERMISSION-REGISTRY-M17-M21-M28.md` i `04-M05-PERMISSION-REGISTRY-M06-M07.md` — svaki se otvara rečenicom da su „normativni nastavak M05 §3.3". Dakle registry revizije 1.3 su sva tri dokumenta zajedno, ne samo §3.3.
-- **Repo dokaz (prebrojano nad spec fajlovima):** §3.3 ima **38** ključeva, fajl 04 ima **16**, fajl 03 ima **59** — ukupno **113**. Prvi isečak (PR #100) je zasejao samo §3.3, pa pet uloga (`LIMITED_ADMIN`, `INSTRUCTOR`, `SUBSTITUTE_INSTRUCTOR`, `GUARDIAN`, `PAYER`) nema **nijedan** binding: njihova prava su tačno ono što živi u ta dva nastavka.
-- **Stvarna prepreka:** oba nastavka koriste više oblika tabele, a dva zaglavlja imenuju grupu uloga koju **nijedan dokument ne definiše**:
+**Prva ispravka — obim.** F-30 je tvrdio da „39 redova nosi nedefinisanu grupu uloga". `39` je ukupan broj redova u tabelama koje *imaju* takvu kolonu (25 + 6 + 8), a ne broj dodela koje je koriste. Izmereno:
 
-  | fajl | kolona za ulogu | redova | jednoznačno? |
-  |---|---|---:|---|
-  | 03 | `Default binding` | 18 | da (isti oblik kao §3.3) |
-  | 03 | `INSTRUCTOR/SUBSTITUTE` | 10 | da (kosa crta = dve uloge, po napomeni u istom fajlu) |
-  | 03 | `STAFF` | 25 | **ne** |
-  | 03 | `Ostale role` | 6 | **ne** |
-  | 04 | `INSTRUCTOR/SUBSTITUTE` | 8 | da |
-  | 04 | `STAFF` | 8 | **ne** |
+| tabela · kolona | redova | označeno |
+|---|---:|---:|
+| `03-…M17-M21-M28.md` · `STAFF` | 25 | **6** |
+| `03-…M17-M21-M28.md` · `Ostale role` | 6 | **0** |
+| `04-…M06-M07.md` · `STAFF` | 8 | **0** |
 
-  `STAFF` bi moglo da znači `INSTRUCTOR` + `SUBSTITUTE_INSTRUCTOR` (jer `LIMITED_ADMIN`, `GUARDIAN` i `PAYER` imaju sopstvene kolone u istoj tabeli), ali to je zaključivanje, ne ugovor. `Ostale role` se ne da pogoditi uopšte.
-- **Posledica:** **74 od 113** ključeva se mogu zasejati direktno iz ugovora (38 iz §3.3 + 36 iz nastavaka). Preostalih **39** traži presudu vlasnika ugovora — pogađanje bi upisalo binding koji niko nije odobrio, u tabelu koja je autoritet za autorizaciju. `STAFF` pogađa i M07 (staratelji i platioci), ne samo M17–M28.
-- **Ispravka ranijeg stava (dva puta):**
-  1. Prvo sam zapisao da revizija 1.3 ne sme da se objavi dok nije potpuna. Tačniji stav je: ne sme da se objavi **nepotpuna iz nepažnje**. Pošto 39 redova *nije određeno ugovorom*, revizija 1.3 se objavljuje sa 74 ključa i zapisanim jazom; §2.2 ionako predviđa da dopune stižu kao nova revizija. Držati ceo registry (a sa njim TEN-Q01 i resolver) taocem nejasnih redova bilo bi gore od zapisanog jaza.
-  2. Zatim sam u prvoj verziji ovog nalaza napisao **82 zasejiva / 31 nejasan**. To je bilo pogrešno: gledao sam samo fajl 03 kad sam tražio nedefinisana zaglavlja, a `STAFF` se pojavljuje i u fajlu 04. Tačno je **74 / 39**.
-- **Još dva nedostajuća obavezna polja (nađeno pri pisanju seed generatora):** §2.3 traži `delegation_class` i `child_data_class` kao **obavezna** polja svakog `PermissionDefinition`-a. Nastavci ih uglavnom ne daju:
-  - `delegation_class` je naveden u prozi za **12 od 36** odredivih redova; za preostala 24 ga nema.
-  - `child_data_class` se **ne pominje nijednom** ni u jednom od dva nastavka.
-- **Zašto to nije „stavi default":**
-  - Za `delegation_class` fail-closed default **jeste** branjiv: `ROLE_ONLY` znači da se pravo ne može delegirati direct grantom. Kasnija revizija ga može olabaviti; nikad se ne širi tiho. To je preporuka.
-  - Za `child_data_class` default **nije** bezbedan. §2.3 formalno daje `NONE`, ali `school.people.basic.view` i `school.participant.safety.view` očigledno dodiruju podatke dece, a `NONE` bi slagao svakoj masking/retention logici koja to polje čita. Suprotno — sve proglasiti `SPECIAL_CATEGORY` — učinilo bi polje beskorisnim. Ovo polje postoji baš da bi maskiranje znalo šta drži, pa pogrešna vrednost nije konzervativna, nego netačna.
-- **Ukupno stanje odredivosti nastavaka:** 36 redova ima jasne role binding-e, ali čak i za njih 24 nema `delegation_class`, a svih 36 nema `child_data_class`. Registry nastavaka je, dakle, bitno nedodefinisan — ne samo u dve kolone uloga.
-- **Status:** `CHALLENGE_NOT_APPLIED` za 39 redova (nedefinisana grupa uloga) i dodatno za `delegation_class`/`child_data_class`. Traži se: definicija `STAFF` i `Ostale role`; potvrda da je `ROLE_ONLY` ispravan fail-closed default za nenavedeni `delegation_class`; i `child_data_class` po ključu (ili pravilo po kome se izvodi). Do tada ti ključevi nisu u nijednoj reviziji i zato su fail-closed deny, što je ispravno ponašanje.
+`Ostale role` ne traži nikakvu odluku — nijedan red je ne koristi. Zaostala kolona.
+
+**Šest redova koji koriste `STAFF`** su svi iz M17: `privacy.notices.view`, `privacy.consents.view`, `privacy.consents.decide_self`, `privacy.requests.create_self`, `privacy.requests.view`, `privacy.exports.download`. Sve šest su **`S`, ne `A`** — po legendi istog dokumenta `A` je default binding, a `S` binding koji **uvek** zahteva navedeni subject guard. Guard tekstovi: „Isključivo `ADULT_SELF`; bez direct grant-a u tuđe ime", „Samo actor Person", „Samo autorizovani request/subject". U četiri od šest i `OWNER` i `MANAGER` su `S`. Dakle nisu administrativne dozvole nego **prava subjekta nad sopstvenim podacima**, koja drži svaka uloga.
+
+**Odluka vlasnika proizvoda:** `STAFF` → {`MANAGER`, `LIMITED_ADMIN`, `INSTRUCTOR`, `SUBSTITUTE_INSTRUCTOR`}. Ne širi pristup, jer sve ostaje subject-guarded; dodaje samo da zaposleni vidi i odlučuje o **svojim** saglasnostima i preuzima **svoj** export. `SUBSTITUTE_INSTRUCTOR` je uključen namerno: izostavljanje bi značilo da zamena nema prava nad sopstvenim podacima.
+
+**Druga ispravka — nema šta da se primeni.** `app/domains/authorization/registry.py` sadrži **38** permission spec-ova: 14 `school.*` i 24 `platform.*`, tj. §3.3 jezgro. **Nijedan `privacy.*` ključ ne postoji u repou.** M17–M21/M28 continuation registry nije implementiran. Odluka je dakle zabeležena, ali se ne može primeniti dok ti ključevi ne postanu `PermissionDefinition` redovi; tada ulazi bez ponovnog odlučivanja.
+
+**Posledica za M05 QA:** F-30 više nije otvorena odluka. Da li M05 QA i dalje nečim stoji treba **izmeriti po scenariju**, ne pretpostaviti — dva puta zaredom je tvrdnja o F-30 pala na merenju, pa „M05 je blokiran na F-29 i F-30" treba proveriti isto tako.
+
+- **Status:** `ODLUČENO`; primena čeka M17 continuation registry.
 
 ### F-31 — M07 presuda za `guardian_relationship`: podela nije namerna, ugovor traži tenant-scoped vezu
 
