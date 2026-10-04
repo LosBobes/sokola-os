@@ -51,7 +51,7 @@ from app.domains.identity import sessions
 from app.domains.identity.accounts import create_account_with_identity
 from app.domains.identity.auth_enums import GOOGLE_ISSUER, GOOGLE_PROVIDER
 from app.domains.identity.auth_models import AuthIdentity, AuthSession, UserAccount
-from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
+from app.domains.identity.enums import RoleCode
 from app.domains.identity.models import Person, RoleAssignment
 from app.domains.organization.enums import OrganizationSchoolChangeReason
 from app.domains.organization.models import Organization
@@ -92,6 +92,7 @@ from tests.factories import (
     make_child_with_guardian,
     make_person,
     make_school,
+    revoke_assignment_row,
 )
 
 _QA_DOC = (
@@ -1014,7 +1015,7 @@ def test_m03_qa_032_losing_the_role_behind_a_workspace_withdraws_the_option(
             RoleAssignment.role_code == RoleCode.TRAINER,
         )
     ).scalar_one()
-    assignment.status = RoleAssignmentStatus.REVOKED
+    revoke_assignment_row(db, assignment, actor_person_id=person.id)
     db.commit()
 
     after = _chooser(db, person, account).items

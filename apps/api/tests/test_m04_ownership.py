@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 from app.common.errors import ConflictError, NotFoundError
 from app.common.ids import new_id
-from app.domains.identity.enums import RoleAssignmentStatus, RoleCode
+from app.domains.identity.enums import RoleCode
 from app.domains.identity.models import RoleAssignment
 from app.domains.school import ownership
 from app.domains.school.ownership_enums import (
@@ -26,7 +26,13 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from tests.factories import add_membership, assign_role, make_person, make_school
+from tests.factories import (
+    add_membership,
+    assign_role,
+    make_person,
+    make_school,
+    revoke_assignment_row,
+)
 
 
 def _member(db: Session, school, *, given: str, role: RoleCode | None = None):
@@ -670,8 +676,7 @@ def test_the_last_owner_rule_still_catches_an_already_broken_school(db: Session)
     # Revoke the primary's role behind the guard's back.
     original = db.get(RoleAssignment, term.owner_role_assignment_id)
     assert original is not None
-    original.status = RoleAssignmentStatus.REVOKED
-    db.flush()
+    revoke_assignment_row(db, original, actor_person_id=second.id)
 
     with pytest.raises(ConflictError, match="bez aktivnog vlasnika"):
         ownership.ensure_owner_role_may_be_removed(

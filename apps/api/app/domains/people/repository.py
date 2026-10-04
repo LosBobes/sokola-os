@@ -10,6 +10,7 @@ from app.domains.identity.enums import (
     PersonMergeStatus,
     RoleAssignmentStatus,
     RoleCode,
+    RoleRevokeReason,
 )
 from app.domains.identity.models import Person, PersonMergeRecord, RoleAssignment
 from app.domains.people.models import GuardianRelationship, GuardianSchoolAccess
@@ -19,6 +20,7 @@ from app.domains.people.profile_models import (
 )
 from app.domains.school.enums import MembershipStatus, MembershipType
 from app.domains.school.models import SchoolMembership
+from app.platform import clock
 
 
 def find_duplicate_candidates(
@@ -110,7 +112,7 @@ def get_membership(
 
 
 def revoke_open_role_assignments(
-    db: Session, school_id: str, person_id: str
+    db: Session, school_id: str, person_id: str, *, actor_person_id: str
 ) -> list[RoleAssignment]:
     """Close every open role assignment this person holds in this school.
 
@@ -118,6 +120,13 @@ def revoke_open_role_assignments(
     rather than commits: §7.1 requires this to land in the same transaction as
     the membership transition that caused it, and a commit here would make a
     half-done termination durable.
+
+    `actor_person_id` is `str`, not `str | None`. §2.5's revocation triple is
+    all-or-none, so an actor-less revocation carrying a reason is precisely the
+    half-triple `ck_role_assignment_revoke_triple` refuses — and an optional
+    parameter would let a future caller write one and discover it at commit
+    time. `RequestContext.person_id` is non-optional, so nothing is lost by
+    saying so here.
     """
     rows = list(
         db.execute(
@@ -128,8 +137,15 @@ def revoke_open_role_assignments(
             )
         ).scalars()
     )
+    now = clock.now()
     for row in rows:
+        # §2.5's triple, and `ck_role_assignment_revoked_stamp` refuses a
+        # REVOKED row without it. `MEMBERSHIP_ENDED` is the code §2.10 lists
+        # for exactly this cause, which is why the cascade needs no note.
         row.status = RoleAssignmentStatus.REVOKED
+        row.revoked_by_person_id = actor_person_id
+        row.revoked_at = now
+        row.revoke_reason_code = RoleRevokeReason.MEMBERSHIP_ENDED
     if rows:
         db.flush()
     return rows

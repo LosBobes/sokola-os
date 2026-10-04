@@ -29,7 +29,9 @@ from app.domains.identity.enums import (
     PersonMergeStatus,
     RoleAssignmentStatus,
     RoleCode,
+    RoleRevokeReason,
     RoleScopeType,
+    RoleSuspendReason,
 )
 
 
@@ -148,6 +150,41 @@ class RoleAssignment(Base, TimestampMixin, RecordStatusMixin):
             "role_code",
             name="uq_role_assignment_tenant_person_role",
         ),
+        # §2.5: all three or none of each triple.
+        CheckConstraint(
+            "(suspended_at IS NULL) = (suspended_by_person_id IS NULL) "
+            "AND (suspended_at IS NULL) = (suspend_reason_code IS NULL)",
+            name="ck_role_assignment_suspend_triple",
+        ),
+        CheckConstraint(
+            "(revoked_at IS NULL) = (revoked_by_person_id IS NULL) "
+            "AND (revoked_at IS NULL) = (revoke_reason_code IS NULL)",
+            name="ck_role_assignment_revoke_triple",
+        ),
+        # A REVOKED row carries its revocation stamp and a live one does not.
+        # Suspension is deliberately *not* paired this way: §5.2 allows a
+        # suspended assignment to be reactivated, and the record of why it was
+        # suspended should survive that — otherwise the history says the
+        # suspension never happened.
+        CheckConstraint(
+            "(status = 'REVOKED') = (revoked_at IS NOT NULL)",
+            name="ck_role_assignment_revoked_stamp",
+        ),
+        # §2.10 marks some codes as needing a note. Enforced here as well as in
+        # the service, because the service is one caller and the column outlives
+        # it.
+        CheckConstraint(
+            "suspend_reason_code IS NULL"
+            " OR suspend_reason_code NOT IN ('SECURITY_REVIEW', 'ACCESS_PAUSE')"
+            " OR (suspend_reason_note IS NOT NULL AND length(trim(suspend_reason_note)) > 0)",
+            name="ck_role_assignment_suspend_note_required",
+        ),
+        CheckConstraint(
+            "revoke_reason_code IS NULL"
+            " OR revoke_reason_code <> 'SECURITY_REVOKE'"
+            " OR (revoke_reason_note IS NOT NULL AND length(trim(revoke_reason_note)) > 0)",
+            name="ck_role_assignment_revoke_note_required",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("rol"))
@@ -172,6 +209,26 @@ class RoleAssignment(Base, TimestampMixin, RecordStatusMixin):
     granted_areas: Mapped[list[str] | None] = mapped_column(
         ARRAY(String(40)), nullable=True
     )
+    #: §2.5's suspend and revoke triples: who, when, and a code from §2.10's
+    #: closed list. "All or none" is a CHECK rather than a convention, because
+    #: a half-written triple is exactly the row that reads as explained and is
+    #: not — the audit trail outlives the person who could say what happened.
+    suspended_by_person_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    suspended_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    suspend_reason_code: Mapped[RoleSuspendReason | None] = mapped_column(
+        enum_type(RoleSuspendReason), nullable=True
+    )
+    suspend_reason_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    revoked_by_person_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    revoked_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    revoke_reason_code: Mapped[RoleRevokeReason | None] = mapped_column(
+        enum_type(RoleRevokeReason), nullable=True
+    )
+    revoke_reason_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
 
 class StudentLoginAuthorization(Base, TimestampMixin):

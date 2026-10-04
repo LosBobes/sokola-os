@@ -182,7 +182,10 @@ def _revoke_roles_of_ended_membership(
     something a reader can act on six months later.
     """
     for assignment in repository.revoke_open_role_assignments(
-        db, context.school_id, person_id=membership.person_id
+        db,
+        context.school_id,
+        person_id=membership.person_id,
+        actor_person_id=context.person_id,
     ):
         record_audit(
             db,
